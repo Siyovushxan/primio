@@ -1,0 +1,2 @@
+# primio
+reklama berish
