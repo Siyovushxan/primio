@@ -8,16 +8,17 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Ads — anyone can read, only owner can write
+    // Ads — anyone can read active ads (leaderboard); owner manages own ads
     match /ads/{adId} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update: if request.auth != null && request.auth.uid == resource.data.advertiserUID;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.advertiserUID;
     }
 
-    // Payments — only owner can read, no client writes
-    match /payments/{paymentId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+    // Transactions — only owner can read; Admin SDK writes (no client writes)
+    match /transactions/{txId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.uid;
       allow write: if false;
     }
 

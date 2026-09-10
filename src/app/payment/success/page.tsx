@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { doc, onSnapshot, updateDoc, addDoc, collection, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ad } from "@/types";
@@ -18,7 +18,7 @@ function PaymentSuccessInner() {
   const [verifyError, setVerifyError] = useState("");
   const [processing, setProcessing] = useState(true);
 
-  // Step 1: Verify Stripe session server-side, then update Firestore from client
+  // Verify payment server-side — webhook handles Firestore updates
   useEffect(() => {
     if (!sessionId || !adId) { setProcessing(false); return; }
 
@@ -28,50 +28,8 @@ function PaymentSuccessInner() {
       body: JSON.stringify({ sessionId }),
     })
       .then((r) => r.json())
-      .then(async (data) => {
-        if (data.error) { setVerifyError(data.error); setProcessing(false); return; }
-
-        const adRef = doc(db, "ads", adId);
-        const adSnap = await getDoc(adRef);
-        if (!adSnap.exists()) { setVerifyError("Reklama topilmadi"); setProcessing(false); return; }
-
-        const adData = adSnap.data();
-        if (adData.externalTxId === sessionId) { setProcessing(false); return; } // already done
-
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + adData.durationDays * 24 * 60 * 60 * 1000);
-        const advertiserUID = data.advertiserUID;
-
-        const userSnap = await getDoc(doc(db, "users", advertiserUID));
-        const isNew = userSnap.exists() ? userSnap.data().isNewAccount : false;
-        const newStatus = isNew ? "pending_verification" : "active";
-
-        await updateDoc(adRef, {
-          status: newStatus,
-          startsAt: isNew ? null : serverTimestamp(),
-          expiresAt: isNew ? null : expiresAt,
-          totalPaidCents: data.amountTotal,
-          externalTxId: sessionId,
-          paymentMethod: "card",
-        });
-
-        await addDoc(collection(db, "transactions"), {
-          uid: advertiserUID,
-          adId,
-          type: "purchase",
-          amountCents: data.amountTotal,
-          externalTxId: sessionId,
-          paymentMethod: "card",
-          createdAt: serverTimestamp(),
-        });
-
-        if (userSnap.exists()) {
-          await updateDoc(doc(db, "users", advertiserUID), {
-            totalSpentCents: (userSnap.data().totalSpentCents || 0) + (data.amountTotal || 0),
-            isNewAccount: false,
-          });
-        }
-
+      .then((data) => {
+        if (data.error) { setVerifyError(data.error); }
         setProcessing(false);
       })
       .catch(() => { setVerifyError("Server bilan ulanishda xato"); setProcessing(false); });

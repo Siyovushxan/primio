@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebaseAdmin";
+
+export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-08-26.dahlia" as any,
@@ -16,11 +17,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the ad exists and is in pending status
-    const adSnap = await getDoc(doc(db, "ads", adId));
-    if (!adSnap.exists()) {
+    const adSnap = await adminDb.doc(`ads/${adId}`).get();
+    if (!adSnap.exists) {
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }
-    const ad = adSnap.data();
+    const ad = adSnap.data()!;
     if (ad.status !== "pending") {
       return NextResponse.json({ error: "Ad is not in pending status" }, { status: 400 });
     }
