@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb } from "@/lib/firebaseAdmin";
+
+export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-08-26.dahlia" as any,
@@ -15,19 +16,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
-    // Verify the ad exists and is in pending status
-    const adSnap = await getDoc(doc(db, "ads", adId));
-    if (!adSnap.exists()) {
+    const adSnap = await adminDb.doc(`ads/${adId}`).get();
+    if (!adSnap.exists) {
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }
-    const ad = adSnap.data();
+    const ad = adSnap.data()!;
     if (ad.status !== "pending") {
       return NextResponse.json({ error: "Ad is not in pending status" }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://primio.com.uz";
 
-    // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
         {
           price_data: {
             currency: "usd",
-            unit_amount: amount, // already in cents
+            unit_amount: amount,
             product_data: {
               name: `PRIMIO Reklama — ${ad.title}`,
               description: `${ad.durationDays} kunlik reklama · ${ad.category} toifasi`,
