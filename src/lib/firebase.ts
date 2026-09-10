@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp as getExistingApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder",
@@ -12,9 +12,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Only initialize in browser — during Next.js build (Node.js) this stays null
+// to prevent auth/invalid-api-key errors when real env vars are not present.
+const isBrowser = typeof window !== "undefined";
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+const app: FirebaseApp = isBrowser
+  ? getApps().length ? getExistingApp() : initializeApp(firebaseConfig)
+  : null as unknown as FirebaseApp;
+
+export const auth: Auth = isBrowser ? getAuth(app) : null as unknown as Auth;
+export const db: Firestore = isBrowser ? getFirestore(app) : null as unknown as Firestore;
+export const storage: FirebaseStorage = isBrowser ? getStorage(app) : null as unknown as FirebaseStorage;
 export default app;
