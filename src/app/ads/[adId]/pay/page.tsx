@@ -73,12 +73,14 @@ export default function PaymentPage() {
     <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
       <div style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-          <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
-            <rect width="100" height="100" rx="24" fill="#7C3AED"/>
-            <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
-            <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
-          </svg>
-          <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
+            <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+              <rect width="100" height="100" rx="24" fill="#7C3AED"/>
+              <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
+              <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
+            </svg>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+          </Link>
           <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "#6D5B8E" }}>
             To&apos;lov
           </span>
@@ -133,8 +135,8 @@ export default function PaymentPage() {
       <DashHeader />
 
       <div style={{ maxWidth: 940, margin: "0 auto", padding: "38px 26px 60px", animation: "fade .35s ease both" }}>
-        <Link href={`/ads/${adId}/pending`} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 16 }}>
-          ← Reklamam
+        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 16 }}>
+          ← Reklamalarim
         </Link>
 
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 100, background: "rgba(52,211,153,.12)", border: "1px solid #10B981", marginBottom: 14, marginLeft: 12 }}>

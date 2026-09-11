@@ -83,6 +83,29 @@ export default function EditAdPage() {
     reader.readAsDataURL(file);
   };
 
+  const compressForModeration = (file: File): Promise<{ base64: string; mimeType: string }> =>
+    new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX = 512;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas not supported")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        URL.revokeObjectURL(img.src);
+        resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
   const handleSubmit = async () => {
     setError("");
     if (!title.trim()) return setError("Sarlavha kiriting");
@@ -100,10 +123,11 @@ export default function EditAdPage() {
 
     try {
       let imageBase64: string | undefined;
-      let mimeType: string | undefined;
+      let imageBase64Mod: string | undefined;
+      let imageMimeTypeMod: string | undefined;
       let finalImageURL = existingImageURL;
 
-      // If new image selected, encode it
+      // If new image selected, encode original + compressed for moderation
       if (newImageFile) {
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -111,16 +135,18 @@ export default function EditAdPage() {
           reader.onerror = reject;
           reader.readAsDataURL(newImageFile);
         });
-        mimeType = newImageFile.type;
+        const compressed = await compressForModeration(newImageFile);
+        imageBase64Mod = compressed.base64;
+        imageMimeTypeMod = compressed.mimeType;
       }
 
-      // Run AI moderation
+      // Run AI moderation — compressed rasm bilan (512px, JPEG 0.75)
       const modRes = await fetch("/api/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64,
-          mimeType,
+          imageBase64: imageBase64Mod,
+          mimeType: imageMimeTypeMod,
           title: title.trim(),
           description: description.trim(),
           destinationURL: url.trim(),

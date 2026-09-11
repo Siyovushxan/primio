@@ -287,6 +287,31 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
     }
   };
 
+  // Moderatsiya uchun rasmni kichraytirish (Groq API limit uchun)
+  const compressForModeration = (file: File): Promise<{ base64: string; mimeType: string }> =>
+    new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX = 512;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+          else { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { reject(new Error("Canvas not supported")); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        URL.revokeObjectURL(img.src);
+        resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!firebaseUser) return;
@@ -301,24 +326,22 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
 
     setSubmitting(true);
     try {
-      // 1. Rasmni base64 ga o'girish
+      // 1. Original base64 (ImgBB uchun) + kichraytirilgan (Groq uchun)
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(",")[1]); // strip "data:image/...;base64,"
-        };
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
         reader.onerror = reject;
         reader.readAsDataURL(imageFile);
       });
+      const { base64: imageBase64Mod, mimeType: imageMimeTypeMod } = await compressForModeration(imageFile);
 
-      // 2. AI moderatsiya — Firebase ga tegmasdan
+      // 2. AI moderatsiya — kichraytirilgan rasm bilan (512px, JPEG 0.75)
       const modRes = await fetch("/api/moderation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageBase64,
-          mimeType: imageFile.type,
+          imageBase64: imageBase64Mod,
+          mimeType: imageMimeTypeMod,
           title: title.trim(),
           description: description.trim(),
           destinationURL: url.trim(),
@@ -331,7 +354,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
         return;
       }
 
-      // 3. Tasdiqlangan rasm ImgBB ga yuklanadi (bepul, Firebase Storage shart emas)
+      // 3. Tasdiqlangan rasm ImgBB ga yuklanadi — original sifat bilan
       const imgForm = new FormData();
       imgForm.append("image", imageBase64);
       const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
