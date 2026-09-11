@@ -55,7 +55,7 @@ const T = {
     sideNoAdsTitle: "Reklama joylashtiring",
     sideNoAdsBody: "Hamyon tayyor. Bitta formada reklama yaratasiz.",
     sideOkTitle: "Hamyon holati",
-    sideOkBody: "Reklamalaringiz jonli. Taklifni istalgan vaqt oshirish mumkin.",
+    sideOkBody: "Faol reklamalaringiz reytingda ko'rinmoqda. Raqiblar oshirsa — siz ham taklifni istalgan vaqt yangilay olasiz.",
     sideCta: "Reklama berish",
     catNames: {
       technology: "Texnologiya", food: "Ovqat", fashion: "Moda",
@@ -124,7 +124,7 @@ const T = {
     sideNoAdsTitle: "Place an ad",
     sideNoAdsBody: "Wallet ready. Create an ad in one form.",
     sideOkTitle: "Wallet status",
-    sideOkBody: "Your ads are live. You can raise bids any time.",
+    sideOkBody: "Your active ads are visible in the ranking. If outbid, update your bid at any time.",
     sideCta: "Place ad",
     catNames: {
       technology: "Technology", food: "Food", fashion: "Fashion",
@@ -181,11 +181,11 @@ const inp: React.CSSProperties = {
 
 // ─── App Header ───────────────────────────────────────────────────────────────
 function AppHeader({
-  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet,
+  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet, onGoAll,
 }: {
   lang: Lang; setLang: (l: Lang) => void;
   totalSpentCents: number; brandName: string; brandInitial: string;
-  onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void;
+  onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void; onGoAll: () => void;
 }) {
   const t = T[lang];
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
@@ -198,7 +198,7 @@ function AppHeader({
             <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
             <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
           </svg>
-          <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+          <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
           <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
@@ -707,12 +707,18 @@ function WalletView({ lang, myAds, userProfile, uid }: {
           {pendingAds.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "18px 20px", borderRadius: 16, background: "rgba(245,158,11,.1)", border: "1px solid #F59E0B" }}>
               <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: ".93rem", fontWeight: 700, color: "#FCD34D", marginBottom: 4 }}>{(t as any).dueTitle}</div>
+                <div style={{ fontSize: ".93rem", fontWeight: 700, color: "#FCD34D", marginBottom: 4 }}>
+                  {lang === "uz" ? "To'lov kutilmoqda" : "Payment required"}
+                </div>
                 <div style={{ fontSize: ".83rem", color: "#A78BFA", lineHeight: 1.55 }}>
-                  {pendingAds.length} {lang === "uz" ? "ta reklama AI tomonidan tasdiqlangan, toʻlov kutmoqda" : "ad(s) approved by AI, awaiting payment"}
+                  {lang === "uz"
+                    ? `${pendingAds.length} ta reklamangiz AI tomonidan tasdiqlandi va to'lovni kutmoqda. To'lovdan so'ng reklama darhol reytingga kiritiladi.`
+                    : `${pendingAds.length} ad(s) approved by AI and awaiting payment. After payment the ad goes live immediately.`}
                 </div>
               </div>
-              <button onClick={() => router.push(`/ads/${pendingAds[0].id}/pay`)} style={{ padding: "12px 19px", borderRadius: 11, border: "none", background: "#F59E0B", color: "#1A1230", fontSize: ".85rem", fontWeight: 700, cursor: "pointer" }}>{(t as any).payNow}</button>
+              <button onClick={() => router.push(`/ads/${pendingAds[0].id}/pay`)} style={{ padding: "12px 19px", borderRadius: 11, border: "none", background: "#F59E0B", color: "#1A1230", fontSize: ".85rem", fontWeight: 700, cursor: "pointer" }}>
+                {lang === "uz" ? "To'lash →" : "Pay now →"}
+              </button>
             </div>
           )}
 
@@ -815,20 +821,35 @@ const FORM_RULES = [
 ];
 
 function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOut: () => void }) {
-  const { firebaseUser, userProfile, refreshProfile } = useAuth();
+  const { firebaseUser, userProfile } = useAuth();
   const [brandName, setBrandName] = useState(userProfile?.displayName || "");
   const [email, setEmail]         = useState(userProfile?.email || firebaseUser?.email || "");
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
-  const [notifs, setNotifs]       = useState({ approved: true, rejected: true, expiry: true, outbid: true });
+  const defaultNotifs = { approved: true, rejected: true, expiry: true, outbid: true };
+  const [notifs, setNotifs] = useState(defaultNotifs);
   const t = T[lang];
+
+  // Load notif prefs from Firestore on mount
+  useEffect(() => {
+    if (userProfile) {
+      const saved = (userProfile as any).notifPrefs;
+      if (saved) setNotifs({ ...defaultNotifs, ...saved });
+      if (userProfile.displayName) setBrandName(userProfile.displayName);
+      if (userProfile.email) setEmail(userProfile.email);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile?.uid]);
 
   const handleSave = async () => {
     if (!firebaseUser) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, "users", firebaseUser.uid), { displayName: brandName.trim(), email: email.trim() }, { merge: true });
-      await refreshProfile();
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        displayName: brandName.trim(),
+        email: email.trim(),
+        notifPrefs: notifs,
+      }, { merge: true });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } finally { setSaving(false); }
   };
@@ -872,8 +893,8 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
             <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 16, color: "#EDE9FE" }}>Akkaunt ma&apos;lumotlari</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 7 }}>Brend nomi</label>
-                <input value={brandName} onChange={(e) => setBrandName(e.target.value)} style={inp} placeholder="Brend nomingiz" />
+                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 7 }}>Foydalanuvchi nomi</label>
+                <input value={brandName} onChange={(e) => setBrandName(e.target.value)} style={inp} placeholder="Foydalanuvchi nomingiz" />
                 <div style={{ fontSize: ".75rem", color: "#6D5B8E", marginTop: 6, lineHeight: 1.55 }}>Reklamada ko&apos;rinadigan nom. Istalgan vaqt o&apos;zgartirish mumkin.</div>
               </div>
               <div>
@@ -1002,6 +1023,7 @@ export default function DashboardPage() {
           totalSpentCents={spent}
           brandName={brand} brandInitial={initial}
           onGoCreate={handleGoCreate}
+          onGoAll={() => setScreen("all")}
           onGoProfile={() => setScreen("profile")}
           onGoWallet={() => setScreen("wallet")}
         />
