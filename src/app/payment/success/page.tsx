@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { doc, onSnapshot, updateDoc, addDoc, collection, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ad } from "@/types";
@@ -17,8 +17,9 @@ function PaymentSuccessInner() {
   const [ad, setAd] = useState<Ad | null>(null);
   const [verifyError, setVerifyError] = useState("");
   const [processing, setProcessing] = useState(true);
+  const [paymentType, setPaymentType] = useState<string>("purchase");
 
-  // Step 1: Verify Stripe session server-side, then update Firestore from client
+  // Step 1: Verify Stripe session server-side (all Firestore writes happen on server)
   useEffect(() => {
     if (!sessionId || !adId) { setProcessing(false); return; }
 
@@ -28,50 +29,9 @@ function PaymentSuccessInner() {
       body: JSON.stringify({ sessionId }),
     })
       .then((r) => r.json())
-      .then(async (data) => {
-        if (data.error) { setVerifyError(data.error); setProcessing(false); return; }
-
-        const adRef = doc(db, "ads", adId);
-        const adSnap = await getDoc(adRef);
-        if (!adSnap.exists()) { setVerifyError("Reklama topilmadi"); setProcessing(false); return; }
-
-        const adData = adSnap.data();
-        if (adData.externalTxId === sessionId) { setProcessing(false); return; } // already done
-
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + adData.durationDays * 24 * 60 * 60 * 1000);
-        const advertiserUID = data.advertiserUID;
-
-        const userSnap = await getDoc(doc(db, "users", advertiserUID));
-        const isNew = userSnap.exists() ? userSnap.data().isNewAccount : false;
-        const newStatus = isNew ? "pending_verification" : "active";
-
-        await updateDoc(adRef, {
-          status: newStatus,
-          startsAt: isNew ? null : serverTimestamp(),
-          expiresAt: isNew ? null : expiresAt,
-          totalPaidCents: data.amountTotal,
-          externalTxId: sessionId,
-          paymentMethod: "card",
-        });
-
-        await addDoc(collection(db, "transactions"), {
-          uid: advertiserUID,
-          adId,
-          type: "purchase",
-          amountCents: data.amountTotal,
-          externalTxId: sessionId,
-          paymentMethod: "card",
-          createdAt: serverTimestamp(),
-        });
-
-        if (userSnap.exists()) {
-          await updateDoc(doc(db, "users", advertiserUID), {
-            totalSpentCents: (userSnap.data().totalSpentCents || 0) + (data.amountTotal || 0),
-            isNewAccount: false,
-          });
-        }
-
+      .then((data) => {
+        if (data.error) { setVerifyError(data.error); }
+        else { setPaymentType(data.type || "purchase"); }
         setProcessing(false);
       })
       .catch(() => { setVerifyError("Server bilan ulanishda xato"); setProcessing(false); });
@@ -86,6 +46,7 @@ function PaymentSuccessInner() {
     return unsub;
   }, [adId]);
 
+  const isBidUpgrade = paymentType === "bid_upgrade";
   const isActive = ad?.status === "active";
   const isVerifying = ad?.status === "pending_verification";
   const initials = userProfile?.displayName?.charAt(0).toUpperCase() || "?";
@@ -157,11 +118,23 @@ function PaymentSuccessInner() {
                 <p style={{ color: "#F87171", fontSize: 14, marginBottom: 24 }}>{verifyError}</p>
                 <Link href="/dashboard" style={btnPrimary}>Dashboard</Link>
               </>
-            ) : (processing || (!isActive && !isVerifying)) ? (
+            ) : processing ? (
               <>
                 <div style={{ width: 64, height: 64, borderRadius: "50%", border: "4px solid rgba(124,58,237,0.2)", borderTop: "4px solid #7C3AED", margin: "0 auto 24px", animation: "spin 1s linear infinite" }} />
                 <h1 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 8 }}>To'lov qayta ishlanmoqda...</h1>
                 <p style={{ color: "#9CA3AF", fontSize: 14 }}>Bir necha soniya kuting.</p>
+              </>
+            ) : isBidUpgrade ? (
+              <>
+                <div style={{ fontSize: 56, marginBottom: 20 }}>🏆</div>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Bid muvaffaqiyatli oshirildi!</h1>
+                <p style={{ color: "#9CA3AF", fontSize: 14, marginBottom: 6 }}>Reklamangiz yangi bid bilan reytingda yuqoriga ko'tarildi.</p>
+                {ad && <p style={{ color: "#C4B5FD", fontWeight: 600, fontSize: 14, marginBottom: 24 }}>{ad.title}</p>}
+                <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 28 }}>
+                  <p style={{ fontSize: 13, color: "#34D399" }}>✓ Yangi bid faollashtirildi</p>
+                </div>
+                <Link href="/dashboard" style={btnPrimary}>Dashboard →</Link>
+                <Link href="/" style={btnSecondary}>Bosh sahifa</Link>
               </>
             ) : isActive ? (
               <>
