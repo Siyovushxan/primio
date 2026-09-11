@@ -45,7 +45,7 @@ async function groqChat(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
+    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens, reasoning_effort: "none" }),
   });
 
   if (!res.ok) {
