@@ -1,33 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-08-26.dahlia" as any,
-});
+const DODO_BASE =
+  process.env.DODO_LIVE_MODE === "true"
+    ? "https://live.dodopayments.com"
+    : "https://test.dodopayments.com";
 
 export async function POST(req: NextRequest) {
   try {
-    const { sessionId } = await req.json();
-    if (!sessionId) return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
-
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-    if (session.payment_status !== "paid") {
-      return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
-    }
-
-    const adId = session.metadata?.adId;
-    const advertiserUID = session.metadata?.advertiserUID;
-    const type = session.metadata?.type || "purchase";
-    const newDailyBidCents = parseInt(session.metadata?.newDailyBidCents || "0");
-
-    if (!adId || !advertiserUID) {
-      return NextResponse.json({ error: "Invalid session metadata" }, { status: 400 });
-    }
+    const { adId } = await req.json();
+    if (!adId) return NextResponse.json({ error: "Missing adId" }, { status: 400 });
 
     const adRef = adminDb.doc(`ads/${adId}`);
     const adSnap = await adRef.get();
@@ -36,33 +21,65 @@ export async function POST(req: NextRequest) {
     }
     const ad = adSnap.data()!;
 
-    // Idempotency: already processed
-    if (ad.externalTxId === sessionId) {
-      return NextResponse.json({ paid: true, type, adId, advertiserUID, alreadyProcessed: true });
+    const paymentId = ad.pendingPaymentId || ad.externalTxId;
+    if (!paymentId) {
+      return NextResponse.json({ error: "Payment not initiated" }, { status: 400 });
     }
 
+    // Idempotency: already processed
+    if (ad.externalTxId === paymentId && ad.status !== "pending") {
+      return NextResponse.json({
+        paid: true,
+        type: ad.paymentType || "purchase",
+        adId,
+        advertiserUID: ad.advertiserUID,
+        alreadyProcessed: true,
+      });
+    }
+
+    const res = await fetch(`${DODO_BASE}/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${process.env.DODO_API_KEY}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Dodo get payment error:", err);
+      return NextResponse.json({ error: "To'lov ma'lumotini olib bo'lmadi" }, { status: 500 });
+    }
+
+    const payment = await res.json();
+
+    if (payment.status !== "succeeded") {
+      return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
+    }
+
+    const metadata = payment.metadata || {};
+    const advertiserUID = metadata.advertiserUID || ad.advertiserUID;
+    const type = metadata.type || "purchase";
+    const newDailyBidCents = parseInt(metadata.newDailyBidCents || "0");
+    const amountTotal = payment.total_amount || 0;
+
     if (type === "bid_upgrade") {
-      // Bid upgrade: update dailyBidCents, keep status active
       await adRef.update({
         dailyBidCents: newDailyBidCents,
-        externalTxId: sessionId,
+        externalTxId: paymentId,
+        pendingPaymentId: FieldValue.delete(),
       });
 
       await adminDb.collection("transactions").add({
         uid: advertiserUID,
         adId,
         type: "bid_upgrade",
-        amountCents: session.amount_total,
-        externalTxId: sessionId,
+        amountCents: amountTotal,
+        externalTxId: paymentId,
         paymentMethod: "card",
         createdAt: FieldValue.serverTimestamp(),
       });
 
       await adminDb.doc(`users/${advertiserUID}`).update({
-        totalSpentCents: FieldValue.increment(session.amount_total || 0),
+        totalSpentCents: FieldValue.increment(amountTotal),
       });
     } else {
-      // New ad purchase: activate ad
       const userSnap = await adminDb.doc(`users/${advertiserUID}`).get();
       const isNew = userSnap.exists ? userSnap.data()?.isNewAccount === true : false;
       const newStatus = isNew ? "pending_verification" : "active";
@@ -74,28 +91,29 @@ export async function POST(req: NextRequest) {
         status: newStatus,
         startsAt: isNew ? null : FieldValue.serverTimestamp(),
         expiresAt: isNew ? null : expiresAt,
-        totalPaidCents: session.amount_total,
-        externalTxId: sessionId,
+        totalPaidCents: amountTotal,
+        externalTxId: paymentId,
         paymentMethod: "card",
+        pendingPaymentId: FieldValue.delete(),
       });
 
       await adminDb.collection("transactions").add({
         uid: advertiserUID,
         adId,
         type: "purchase",
-        amountCents: session.amount_total,
-        externalTxId: sessionId,
+        amountCents: amountTotal,
+        externalTxId: paymentId,
         paymentMethod: "card",
         createdAt: FieldValue.serverTimestamp(),
       });
 
       await adminDb.doc(`users/${advertiserUID}`).update({
-        totalSpentCents: FieldValue.increment(session.amount_total || 0),
+        totalSpentCents: FieldValue.increment(amountTotal),
         isNewAccount: false,
       });
     }
 
-    return NextResponse.json({ paid: true, type, adId, advertiserUID, amountTotal: session.amount_total });
+    return NextResponse.json({ paid: true, type, adId, advertiserUID, amountTotal });
   } catch (err: any) {
     console.error("Verify session error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

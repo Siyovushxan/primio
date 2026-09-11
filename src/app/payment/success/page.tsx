@@ -11,7 +11,6 @@ import Link from "next/link";
 function PaymentSuccessInner() {
   const searchParams = useSearchParams();
   const adId = searchParams.get("adId");
-  const sessionId = searchParams.get("session_id");
   const { userProfile } = useAuth();
 
   const [ad, setAd] = useState<Ad | null>(null);
@@ -19,14 +18,14 @@ function PaymentSuccessInner() {
   const [processing, setProcessing] = useState(true);
   const [paymentType, setPaymentType] = useState<string>("purchase");
 
-  // Step 1: Verify Stripe session server-side (all Firestore writes happen on server)
+  // Step 1: Verify Dodo payment server-side (all Firestore writes happen on server)
   useEffect(() => {
-    if (!sessionId || !adId) { setProcessing(false); return; }
+    if (!adId) { setProcessing(false); return; }
 
     fetch("/api/payment/verify-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId }),
+      body: JSON.stringify({ adId }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -35,7 +34,7 @@ function PaymentSuccessInner() {
         setProcessing(false);
       })
       .catch(() => { setVerifyError("Server bilan ulanishda xato"); setProcessing(false); });
-  }, [sessionId, adId]);
+  }, [adId]);
 
   // Step 2: Listen for Firestore status
   useEffect(() => {

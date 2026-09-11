@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
 import { adminDb } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-08-26.dahlia" as any,
-});
+const DODO_BASE =
+  process.env.DODO_LIVE_MODE === "true"
+    ? "https://live.dodopayments.com"
+    : "https://test.dodopayments.com";
+
+const DODO_PRODUCT_ID = "pdt_0NnMK7juPTBBNjaJIZmgz";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +25,6 @@ export async function POST(req: NextRequest) {
     const ad = adSnap.data()!;
 
     const isBidUpgrade = type === "bid_upgrade";
-
     if (isBidUpgrade) {
       if (ad.status !== "active") {
         return NextResponse.json({ error: "Ad is not active" }, { status: 400 });
@@ -34,39 +35,65 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Get user email for Dodo customer record
+    let customerEmail = `user_${ad.advertiserUID}@primio.com.uz`;
+    try {
+      const userSnap = await adminDb.doc(`users/${ad.advertiserUID}`).get();
+      if (userSnap.exists && userSnap.data()?.email) {
+        customerEmail = userSnap.data()!.email;
+      }
+    } catch {}
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://primio.com.uz";
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            unit_amount: amount,
-            product_data: {
-              name: `PRIMIO Reklama — ${ad.title}`,
-              description: isBidUpgrade
-                ? `Bid oshirish: $${(ad.dailyBidCents / 100).toFixed(2)} → $${((newDailyBidCents || 0) / 100).toFixed(2)}/kun`
-                : `${ad.durationDays} kunlik reklama · ${ad.category} toifasi`,
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        adId,
-        advertiserUID: ad.advertiserUID,
-        type: isBidUpgrade ? "bid_upgrade" : "purchase",
-        newDailyBidCents: String(newDailyBidCents || ""),
+    const res = await fetch(`${DODO_BASE}/payments`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.DODO_API_KEY}`,
       },
-      success_url: `${baseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}&adId=${adId}`,
-      cancel_url: isBidUpgrade ? `${baseUrl}/ads/${adId}/bid` : `${baseUrl}/ads/${adId}/pay`,
+      body: JSON.stringify({
+        billing: { country: "UZ" },
+        customer: {
+          name: ad.title || "PRIMIO Customer",
+          email: customerEmail,
+        },
+        product_cart: [
+          {
+            product_id: DODO_PRODUCT_ID,
+            quantity: 1,
+            amount, // override product price with actual amount in cents
+          },
+        ],
+        metadata: {
+          adId,
+          advertiserUID: ad.advertiserUID,
+          type: isBidUpgrade ? "bid_upgrade" : "purchase",
+          newDailyBidCents: String(newDailyBidCents || ""),
+        },
+        payment_link: true,
+        return_url: `${baseUrl}/payment/success?adId=${adId}`,
+      }),
     });
 
-    return NextResponse.json({ url: session.url });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Dodo create payment error:", err);
+      return NextResponse.json({ error: "To'lov yaratishda xato" }, { status: 500 });
+    }
+
+    const data = await res.json();
+
+    if (!data.payment_link) {
+      return NextResponse.json({ error: "To'lov havolasi yaratilmadi" }, { status: 500 });
+    }
+
+    // Pre-save payment_id to Firestore so verify-session can look it up
+    await adminDb.doc(`ads/${adId}`).update({ pendingPaymentId: data.payment_id });
+
+    return NextResponse.json({ url: data.payment_link });
   } catch (err: any) {
-    console.error("Stripe session error:", err);
+    console.error("Create session error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

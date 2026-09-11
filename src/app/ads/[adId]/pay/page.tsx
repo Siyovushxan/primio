@@ -205,7 +205,7 @@ export default function PaymentPage() {
             {/* Security */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12, background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", fontSize: ".82rem", color: "#A78BFA" }}>
               <span>🔒</span>
-              <span>To&apos;lov ma&apos;lumotlari PRIMIO serverida saqlanmaydi. Stripe PCI DSS Level 1 sertifikatlangan.</span>
+              <span>To&apos;lov ma&apos;lumotlari PRIMIO serverida saqlanmaydi. Dodo Payments orqali xavfsiz shifrlangan.</span>
             </div>
 
             {/* Pay button */}
@@ -261,7 +261,7 @@ export default function PaymentPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: ".79rem", color: "#A78BFA", lineHeight: 1.5 }}>
                 <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Moderatsiyadan o&apos;tmasa — to&apos;liq qaytarish</div>
                 <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Texnik xatolik bo&apos;lsa — ko&apos;rib chiqiladi</div>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Stripe PCI DSS Level 1 himoya</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Dodo Payments xavfsiz to'lov tizimi</div>
               </div>
             </div>
           </div>
