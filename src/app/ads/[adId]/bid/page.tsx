@@ -44,9 +44,10 @@ export default function BidUpgradePage() {
     setError("");
     setPaying(true);
     try {
+      const idToken = await firebaseUser!.getIdToken();
       const res = await fetch("/api/payment/create-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           adId: ad.id,
           amount: Math.round(extraToPay * 100),

@@ -141,9 +141,10 @@ export default function EditAdPage() {
       }
 
       // Run AI moderation — compressed rasm bilan (512px, JPEG 0.75)
+      const idToken = await firebaseUser.getIdToken();
       const modRes = await fetch("/api/moderation", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           imageBase64: imageBase64Mod,
           mimeType: imageMimeTypeMod,
@@ -158,17 +159,17 @@ export default function EditAdPage() {
         return;
       }
 
-      // Upload new image to ImgBB if provided
+      // Upload new image via server-side API
       if (imageBase64) {
-        const imgForm = new FormData();
-        imgForm.append("image", imageBase64);
-        const imgRes = await fetch(
-          `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
-          { method: "POST", body: imgForm }
-        );
+        const idToken = await firebaseUser!.getIdToken();
+        const imgRes = await fetch("/api/upload/image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ imageBase64 }),
+        });
         const imgData = await imgRes.json();
-        if (!imgData.success) throw new Error("Rasm yuklanmadi");
-        finalImageURL = imgData.data.url;
+        if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || "Rasm yuklanmadi");
+        finalImageURL = imgData.url;
       }
 
       // Update Firestore — keep status as "pending"

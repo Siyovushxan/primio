@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { adminAuth } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,13 @@ yoki
 REJECTED: [o'zbek tilida aniq sabab, 1 jumla]`;
 
 export async function POST(req: NextRequest) {
+  // Verify Firebase auth token
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try { await adminAuth.verifyIdToken(token); } catch {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   try {
     const { imageBase64, mimeType, title, description, destinationURL } = await req.json();
 

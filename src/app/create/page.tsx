@@ -336,9 +336,10 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
       const { base64: imageBase64Mod, mimeType: imageMimeTypeMod } = await compressForModeration(imageFile);
 
       // 2. AI moderatsiya — kichraytirilgan rasm bilan (512px, JPEG 0.75)
+      const idToken = await firebaseUser.getIdToken();
       const modRes = await fetch("/api/moderation", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({
           imageBase64: imageBase64Mod,
           mimeType: imageMimeTypeMod,
@@ -354,16 +355,15 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
         return;
       }
 
-      // 3. Tasdiqlangan rasm ImgBB ga yuklanadi — original sifat bilan
-      const imgForm = new FormData();
-      imgForm.append("image", imageBase64);
-      const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`, {
+      // 3. Tasdiqlangan rasm server API orqali ImgBB ga yuklanadi
+      const imgRes = await fetch("/api/upload/image", {
         method: "POST",
-        body: imgForm,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ imageBase64 }),
       });
       const imgData = await imgRes.json();
-      if (!imgData.success) throw new Error("Rasm yuklanmadi. Qayta urinib ko'ring.");
-      const imageURL: string = imgData.data.url;
+      if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || "Rasm yuklanmadi. Qayta urinib ko'ring.");
+      const imageURL: string = imgData.url;
 
       const adRef = await addDoc(collection(db, "ads"), {
         advertiserUID: firebaseUser.uid,

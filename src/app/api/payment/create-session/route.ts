@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,17 @@ const DODO_BASE =
 const DODO_PRODUCT_ID = "pdt_0NnMK7juPTBBNjaJIZmgz";
 
 export async function POST(req: NextRequest) {
+  // Verify caller is authenticated
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let callerUid: string;
+  try {
+    const decoded = await adminAuth.verifyIdToken(token);
+    callerUid = decoded.uid;
+  } catch {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   try {
     const { adId, amount, type, newDailyBidCents } = await req.json();
 
@@ -23,6 +34,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }
     const ad = adSnap.data()!;
+
+    // Verify caller owns this ad
+    if (ad.advertiserUID !== callerUid) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    };
 
     const isBidUpgrade = type === "bid_upgrade";
     if (isBidUpgrade) {

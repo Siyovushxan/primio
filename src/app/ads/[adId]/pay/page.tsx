@@ -49,9 +49,10 @@ export default function PaymentPage() {
     setPaying(true);
     setError("");
     try {
+      const idToken = await firebaseUser.getIdToken();
       const res = await fetch("/api/payment/create-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
         body: JSON.stringify({ adId: ad.id, amount: ad.dailyBidCents * ad.durationDays, method }),
       });
       const data = await res.json();
