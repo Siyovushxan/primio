@@ -1,8 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 
 export const dynamic = "force-dynamic";
 
-const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Domains/keywords that are clearly adult/illegal — fast pre-check
+const BLOCKED_PATTERNS = [
+  /\bsex\b/i, /\bporn\b/i, /\bxxx\b/i, /\bnude\b/i, /\berotic\b/i,
+  /\bcasino\b/i, /\bgambl/i, /\bdrug\b/i, /\bnasha\b/i, /\bweed\b/i,
+  /\bescort\b/i, /\bprostit/i, /\bsindr\b/i,
+];
+
+function domainBlocked(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    for (const p of BLOCKED_PATTERNS) {
+      if (p.test(hostname)) return `Sayt domeni ruxsat etilmagan kontent bilan bog'liq: ${hostname}`;
+    }
+  } catch {
+    return "URL formati noto'g'ri";
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,109 +32,99 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const result = await runModeration({ imageBase64, mimeType, title, description, destinationURL });
-    return NextResponse.json(result);
+    // 1. Fast domain/keyword check — no AI needed
+    const domainErr = domainBlocked(destinationURL);
+    if (domainErr) {
+      return NextResponse.json({ approved: false, reason: domainErr });
+    }
+
+    // 2. Text/domain keyword check on title+description
+    const allText = [title, description, destinationURL].filter(Boolean).join(" ");
+    for (const p of BLOCKED_PATTERNS) {
+      if (p.test(allText)) {
+        return NextResponse.json({ approved: false, reason: "Matn yoki URL taqiqlangan kalit so'z o'z ichiga olmoqda" });
+      }
+    }
+
+    // 3. URL reachability check
+    try {
+      const urlCheck = await fetch(destinationURL, {
+        method: "HEAD",
+        signal: AbortSignal.timeout(6000),
+        redirect: "follow",
+      });
+      if (!urlCheck.ok && urlCheck.status !== 405 && urlCheck.status !== 403) {
+        return NextResponse.json({ approved: false, reason: `Sayt ishlamayapti (${urlCheck.status}). To'g'ri URL kiriting.` });
+      }
+    } catch {
+      return NextResponse.json({ approved: false, reason: "URL manzilga ulanib bo'lmadi. Saytni tekshiring." });
+    }
+
+    // 4. Claude AI deep moderation (image + text together)
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // Fail closed: if no API key, reject rather than auto-approve
+      return NextResponse.json({ approved: false, reason: "Moderatsiya xizmati hozirda mavjud emas. Keyinroq urinib ko'ring." });
+    }
+
+    const textPrompt = `Sen reklama moderatorisan. Quyidagi reklamani tekshir va FAQAT quyidagi formatda javob ber:
+
+APPROVED
+yoki
+REJECTED: [o'zbek tilida sabab]
+
+Reklama ma'lumotlari:
+- Sarlavha: "${title}"
+- Tavsif: "${description || "(yo'q)"}"
+- Veb-sayt: ${destinationURL}
+
+Rad etish shartlari:
+- 18+ yoki jinsiy kontent
+- Zo'ravonlik yoki tahdid
+- Noqonuniy tovar/xizmat (nasha, qurol, aldov)
+- Kumor, loteriya
+- Firib, noto'g'ri va'dalar ("100% daromad", "tez boyish")
+- Haqorat yoki kamsituvchi mazmun
+- Shaxsiy ma'lumot o'g'irlash niyati
+- Escort, prostitusiya
+
+Oddiy tovar/xizmat reklamalari, do'konlar, ta'lim, texnologiya — APPROVED.`;
+
+    const contentParts: Anthropic.MessageParam["content"] = [];
+
+    // Add image if provided
+    if (imageBase64 && mimeType) {
+      const validMimes: Anthropic.Base64ImageSource["media_type"][] = [
+        "image/jpeg", "image/png", "image/gif", "image/webp",
+      ];
+      const mediaType = validMimes.includes(mimeType as any)
+        ? (mimeType as Anthropic.Base64ImageSource["media_type"])
+        : "image/jpeg";
+
+      contentParts.push({
+        type: "image",
+        source: { type: "base64", media_type: mediaType, data: imageBase64 },
+      });
+    }
+
+    contentParts.push({ type: "text", text: textPrompt });
+
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      messages: [{ role: "user", content: contentParts }],
+    });
+
+    const reply = (response.content[0] as any).text?.trim() || "";
+
+    if (reply.startsWith("REJECTED")) {
+      const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Reklama moderatsiya talablariga javob bermadi";
+      return NextResponse.json({ approved: false, reason });
+    }
+
+    return NextResponse.json({ approved: true });
   } catch (err: any) {
     console.error("Moderation error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // On unexpected error, fail closed
+    return NextResponse.json({ approved: false, reason: "Moderatsiya tekshiruvida xato yuz berdi. Qayta urinib ko'ring." });
   }
-}
-
-async function groqChat(model: string, messages: any[]): Promise<string> {
-  const res = await fetch(GROQ_API, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: 150 }),
-  });
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || "";
-}
-
-async function runModeration(params: {
-  imageBase64?: string;
-  mimeType?: string;
-  title: string;
-  description?: string;
-  destinationURL: string;
-}): Promise<{ approved: boolean; reason?: string }> {
-  const { imageBase64, mimeType, title, description, destinationURL } = params;
-  const apiKey = process.env.GROQ_API_KEY;
-
-  // 1. URL faolligini tekshirish
-  try {
-    const urlCheck = await fetch(destinationURL, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!urlCheck.ok && urlCheck.status !== 405) {
-      return { approved: false, reason: `Sayt ishlamayapti (${urlCheck.status})` };
-    }
-  } catch {
-    return { approved: false, reason: "URL manzilga ulanib bo'lmadi. Saytni tekshiring." };
-  }
-
-  if (!apiKey) return { approved: true };
-
-  // 2. Rasm tekshiruvi (base64 orqali — Firebase Storage shart emas)
-  if (imageBase64 && mimeType) {
-    try {
-      const dataUrl = `data:${mimeType};base64,${imageBase64}`;
-      const imageReply = await groqChat("meta-llama/llama-4-scout-17b-16e-instruct", [
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: dataUrl } },
-            {
-              type: "text",
-              text: `You are an ad image moderator. Does this image contain: adult/sexual content (18+), graphic violence, nudity, drug use, or illegal content?
-
-Reply EXACTLY:
-SAFE
-or
-UNSAFE: [reason in Uzbek]`,
-            },
-          ],
-        },
-      ]);
-
-      if (imageReply.startsWith("UNSAFE")) {
-        const reason = imageReply.replace(/^UNSAFE:?/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
-        return { approved: false, reason };
-      }
-    } catch (e) {
-      console.error("Image moderation failed:", e);
-    }
-  }
-
-  // 3. Matn tekshiruvi
-  try {
-    const text = [title, description].filter(Boolean).join(". ");
-    const textReply = await groqChat("llama-3.1-8b-instant", [
-      {
-        role: "system",
-        content: `Sen reklama matn moderatorisan. Faqat APPROVE yoki REJECT: [sabab] deb javob ber.
-
-Qoidalar:
-- 18+ yoki jinsiy kontent → REJECT
-- Zo'ravonlik, qo'rqitish → REJECT
-- Firib, aldov, noto'g'ri va'dalar → REJECT
-- Noqonuniy mahsulot/xizmat → REJECT
-- Haqorat, kamsitish → REJECT
-- Oddiy reklama → APPROVE`,
-      },
-      { role: "user", content: `Reklama matni: "${text}"` },
-    ]);
-
-    if (textReply.startsWith("REJECT")) {
-      const reason = textReply.replace(/^REJECT:?/i, "").trim() || "Matn moderatsiya talablariga javob bermadi";
-      return { approved: false, reason };
-    }
-  } catch (e) {
-    console.error("Text moderation failed:", e);
-  }
-
-  return { approved: true };
 }
