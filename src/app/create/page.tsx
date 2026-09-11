@@ -253,7 +253,9 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [bidCents, setBidCents] = useState(Math.max(100, defaultBidCents));
-  const [duration, setDuration] = useState<7 | 14 | 30>(7);
+  const [duration, setDuration] = useState<number>(7);
+  const [isCustomDur, setIsCustomDur] = useState(false);
+  const [customDays, setCustomDays] = useState("");
   const [category, setCategory] = useState<Category | null>(defaultCat);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -527,15 +529,15 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
             {/* Duration */}
             <div>
               <label style={label}>{t.durLabel} <span style={{ color: "#F87171" }}>*</span></label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {([7, 14, 30] as const).map((d) => {
-                  const active = duration === d;
+                  const active = !isCustomDur && duration === d;
                   const dayTotal = (bidCents * d / 100).toFixed(2);
                   return (
                     <button
                       key={d}
                       type="button"
-                      onClick={() => setDuration(d)}
+                      onClick={() => { setDuration(d); setIsCustomDur(false); setCustomDays(""); }}
                       style={{
                         padding: "14px 10px", borderRadius: 13,
                         border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`,
@@ -559,7 +561,51 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     </button>
                   );
                 })}
+                {/* Custom duration button */}
+                <button
+                  type="button"
+                  onClick={() => { setIsCustomDur(true); setCustomDays(""); }}
+                  style={{
+                    padding: "14px 10px", borderRadius: 13,
+                    border: `1px solid ${isCustomDur ? "#7C3AED" : "#2D1F50"}`,
+                    background: isCustomDur ? "rgba(124,58,237,.12)" : "#160F2A",
+                    color: isCustomDur ? "#A855F7" : "#A78BFA",
+                    cursor: "pointer", textAlign: "center", transition: "all .15s",
+                  }}
+                >
+                  <div style={{ fontSize: ".9rem", fontWeight: 700 }}>
+                    {lang === "uz" ? "O'zim" : "Custom"}
+                  </div>
+                  <div style={{ fontSize: ".72rem", color: isCustomDur ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
+                    {lang === "uz" ? "belgilayman" : "duration"}
+                  </div>
+                  <div style={{ fontSize: ".8rem", fontWeight: 600, color: isCustomDur && customDays ? "#EDE9FE" : "#6D5B8E", marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>
+                    {isCustomDur && customDays ? `$${(bidCents * parseInt(customDays) / 100).toFixed(2)}` : "?"}
+                  </div>
+                </button>
               </div>
+              {/* Custom days input */}
+              {isCustomDur && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={customDays}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomDays(val);
+                      const n = parseInt(val);
+                      if (!isNaN(n) && n >= 1 && n <= 365) setDuration(n);
+                    }}
+                    placeholder={lang === "uz" ? "Kunlar sonini kiriting (1–365)" : "Enter number of days (1–365)"}
+                    style={{ ...inp, flex: 1 }}
+                  />
+                  <span style={{ fontSize: ".84rem", color: "#6D5B8E", whiteSpace: "nowrap" }}>
+                    {lang === "uz" ? "kun" : "days"}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Total summary */}
