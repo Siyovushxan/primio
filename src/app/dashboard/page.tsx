@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   collection, query, where, onSnapshot,
-  doc, setDoc,
+  doc, setDoc, deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -514,10 +514,24 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
 // ─── My Ads view ──────────────────────────────────────────────────────────────
 function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boolean; lang: Lang; onGoCreate: () => void }) {
   const t = T[lang];
+  const router = useRouter();
   const active = ads.filter((a) => a.status === "active").length;
   const spent = ads.reduce((s, a) => s + (a.totalPaidCents || 0), 0);
   const imp = ads.reduce((s, a) => s + (a.impressions || 0), 0);
   const clicks = ads.reduce((s, a) => s + (a.clicks || 0), 0);
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async (adId: string) => {
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "ads", adId));
+    } finally {
+      setDeleting(false);
+      setConfirmDeleteId(null);
+    }
+  };
 
   const statusColor: Record<string, string> = {
     active: "#34D399", pending: "#FCD34D", pending_verification: "#FCD34D",
@@ -570,8 +584,8 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
       {!loading && ads.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {ads.map((ad) => (
-            <div key={ad.id} style={{ ...card, borderRadius: 16, padding: "18px 20px", borderLeft: `3px solid ${statusColor[ad.status] || "#2D1F50"}` }}>
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div key={ad.id} style={{ ...card, borderRadius: 16, overflow: "hidden", borderLeft: `3px solid ${statusColor[ad.status] || "#2D1F50"}` }}>
+              <div style={{ padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 5 }}>
                     <span style={{ fontSize: ".98rem", fontWeight: 700, color: "#EDE9FE" }}>{ad.title}</span>
@@ -583,7 +597,7 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
                     {CATEGORIES[ad.category]?.emoji} {T[lang].catNames[ad.category]} · {fmtBid(ad.dailyBidCents)}/kun · {ad.durationDays} kun
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
                   {ad.status === "active" && (
                     <Link href={`/ads/${ad.id}/bid`} style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".79rem", fontWeight: 700, textDecoration: "none" }}>Taklifni oshirish</Link>
                   )}
@@ -593,8 +607,40 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
                   {ad.status === "pending" && (
                     <Link href={`/ads/${ad.id}/pay`} style={{ padding: "8px 14px", borderRadius: 9, background: "#F59E0B", border: "none", color: "#1A1230", fontSize: ".79rem", fontWeight: 700, textDecoration: "none" }}>To&apos;lash</Link>
                   )}
+                  {(ad.status === "pending" || ad.status === "rejected") && (
+                    <button
+                      onClick={() => router.push(`/ads/${ad.id}/edit`)}
+                      style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(99,102,241,.12)", border: "1px solid rgba(99,102,241,.4)", color: "#818CF8", fontSize: ".79rem", fontWeight: 700, cursor: "pointer" }}
+                    >Tahrirlash</button>
+                  )}
+                  {(ad.status === "pending" || ad.status === "rejected") && (
+                    <button
+                      onClick={() => setConfirmDeleteId(ad.id)}
+                      style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.3)", color: "#F87171", fontSize: ".79rem", fontWeight: 700, cursor: "pointer" }}
+                    >O&apos;chirish</button>
+                  )}
                 </div>
               </div>
+
+              {/* Delete confirmation panel */}
+              {confirmDeleteId === ad.id && (
+                <div style={{ padding: "14px 20px", background: "rgba(248,113,113,.07)", borderTop: "1px solid rgba(248,113,113,.2)", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: ".83rem", color: "#F87171", flex: 1 }}>
+                    Reklamani o&apos;chirishni tasdiqlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.
+                  </span>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      style={{ padding: "7px 16px", borderRadius: 8, background: "transparent", border: "1px solid #2D1F50", color: "#A78BFA", fontSize: ".8rem", fontWeight: 600, cursor: "pointer" }}
+                    >Bekor qilish</button>
+                    <button
+                      onClick={() => handleDelete(ad.id)}
+                      disabled={deleting}
+                      style={{ padding: "7px 16px", borderRadius: 8, background: "#F87171", border: "none", color: "#1A1230", fontSize: ".8rem", fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer" }}
+                    >{deleting ? "O'chirilmoqda..." : "Ha, o'chirish"}</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
