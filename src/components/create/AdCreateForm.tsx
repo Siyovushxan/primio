@@ -23,7 +23,9 @@ export default function AdCreateForm({ category }: Props) {
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
   const [dailyBid, setDailyBid] = useState(3);
-  const [duration, setDuration] = useState<7 | 14 | 30>(7);
+  const [duration, setDuration] = useState<number>(7);
+  const [customDays, setCustomDays] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -57,6 +59,8 @@ export default function AdCreateForm({ category }: Props) {
     if (!url.trim() || !url.startsWith("https://")) return setError("URL https:// bilan boshlanishi kerak");
     if (!imageFile) return setError("Rasm yuklang");
     if (dailyBid < 1) return setError("Minimal kunlik narx $1");
+    if (duration < 1) return setError("Minimal davr 1 kun");
+    if (duration > 365) return setError("Maksimal davr 365 kun");
     if (description.length > 200) return setError("Tavsif 200 belgidan oshmasin");
 
     setSubmitting(true);
@@ -226,25 +230,58 @@ export default function AdCreateForm({ category }: Props) {
         <label className="text-xs text-muted font-medium mb-3 block">
           Davr <span className="text-danger">*</span>
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {([7, 14, 30] as const).map((d) => (
             <button
               key={d}
               type="button"
-              onClick={() => setDuration(d)}
+              onClick={() => { setDuration(d); setIsCustom(false); setCustomDays(""); }}
               className={`py-3 rounded-xl border text-sm font-semibold transition-all ${
-                duration === d
+                !isCustom && duration === d
                   ? "border-violet bg-violet/10 text-violet-light"
                   : "border-border text-muted hover:border-violet/40"
               }`}
             >
               {d} kun
-              <div className={`text-xs font-normal mt-0.5 ${duration === d ? "text-violet-light/70" : "text-muted/60"}`}>
+              <div className={`text-xs font-normal mt-0.5 ${!isCustom && duration === d ? "text-violet-light/70" : "text-muted/60"}`}>
                 ${dailyBid * d}
               </div>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => { setIsCustom(true); setCustomDays(""); }}
+            className={`py-3 rounded-xl border text-sm font-semibold transition-all ${
+              isCustom
+                ? "border-violet bg-violet/10 text-violet-light"
+                : "border-border text-muted hover:border-violet/40"
+            }`}
+          >
+            O'zim belgilayman
+            <div className={`text-xs font-normal mt-0.5 ${isCustom ? "text-violet-light/70" : "text-muted/60"}`}>
+              {isCustom && customDays ? `$${dailyBid * parseInt(customDays)}` : "necha kun?"}
+            </div>
+          </button>
         </div>
+        {isCustom && (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={customDays}
+              onChange={(e) => {
+                const val = e.target.value;
+                setCustomDays(val);
+                const n = parseInt(val);
+                if (!isNaN(n) && n >= 1) setDuration(n);
+              }}
+              placeholder="Kunlar sonini kiriting (1–365)"
+              className="flex-1 px-4 py-2.5 bg-code border border-border rounded-xl text-sm text-text placeholder:text-muted focus:outline-none focus:border-violet"
+            />
+            <span className="text-sm text-muted whitespace-nowrap">kun</span>
+          </div>
+        )}
       </div>
 
       {/* Total summary */}
