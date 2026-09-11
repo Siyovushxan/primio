@@ -37,7 +37,7 @@ export default function Header() {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex" style={{ display: "flex", gap: 2 }}>
+        <nav className="hidden md:flex" style={{ gap: 2 }}>
           {NAV_ITEMS.map((n) => (
             <Link
               key={n.href}
@@ -97,8 +97,9 @@ export default function Header() {
                   </Link>
                 </>
               ) : (
-                <Link href="/auth" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>
-                  Kirish / Ro&apos;yxatdan o&apos;tish
+                <Link href="/auth" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                  <span className="hidden md:inline">Kirish / Ro&apos;yxatdan o&apos;tish</span>
+                  <span className="md:hidden">Kirish</span>
                 </Link>
               )}
             </>

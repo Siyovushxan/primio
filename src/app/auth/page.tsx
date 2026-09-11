@@ -83,8 +83,8 @@ function AuthPageInner() {
   };
 
   return (
-    <div style={{ minHeight: "calc(100vh - 64px)", padding: "44px 26px 60px", maxWidth: 1180, margin: "0 auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 430px", gap: 40, alignItems: "start" }}>
+    <div style={{ minHeight: "calc(100vh - 64px)", padding: "44px 20px 60px", maxWidth: 1180, margin: "0 auto" }}>
+      <div className="rg-auth">
 
         {/* LEFT */}
         <div>
@@ -123,7 +123,7 @@ function AuthPageInner() {
         </div>
 
         {/* RIGHT — card */}
-        <div style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 20, padding: 26, boxShadow: "0 24px 60px rgba(0,0,0,.42)" }}>
+        <div className="rg-auth-card" style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 20, padding: 26, boxShadow: "0 24px 60px rgba(0,0,0,.42)" }}>
 
           {error && (
             <div style={{ marginBottom: 16, padding: "10px 13px", borderRadius: 10, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.25)", color: "#F87171", fontSize: ".83rem" }}>

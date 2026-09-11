@@ -83,7 +83,7 @@ export default function HeroSection() {
   return (
     <div style={{ animation: "fade .35s ease both" }}>
       {/* === HERO === */}
-      <div style={{ padding: "70px 0 54px", borderBottom: "1px solid #2D1F50" }}>
+      <div className="hero-top" style={{ padding: "70px 0 54px", borderBottom: "1px solid #2D1F50" }}>
         <div style={{ maxWidth: W, margin: "0 auto", padding: pad }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 13px", borderRadius: 100, background: "rgba(124,58,237,.12)", border: "1px solid #2D1F50", marginBottom: 26 }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34D399", animation: "livedot 1.8s infinite" }} />
