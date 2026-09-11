@@ -751,20 +751,44 @@ function WalletView({ lang, myAds, userProfile, uid }: {
           </div>
 
           {pendingAds.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "18px 20px", borderRadius: 16, background: "rgba(245,158,11,.1)", border: "1px solid #F59E0B" }}>
-              <div style={{ flex: 1, minWidth: 220 }}>
-                <div style={{ fontSize: ".93rem", fontWeight: 700, color: "#FCD34D", marginBottom: 4 }}>
-                  {lang === "uz" ? "To'lov kutilmoqda" : "Payment required"}
-                </div>
-                <div style={{ fontSize: ".83rem", color: "#A78BFA", lineHeight: 1.55 }}>
-                  {lang === "uz"
-                    ? `${pendingAds.length} ta reklamangiz AI tomonidan tasdiqlandi va to'lovni kutmoqda. To'lovdan so'ng reklama darhol reytingga kiritiladi.`
-                    : `${pendingAds.length} ad(s) approved by AI and awaiting payment. After payment the ad goes live immediately.`}
+            <div style={{ borderRadius: 16, border: "1px solid #F59E0B", overflow: "hidden" }}>
+              {/* Header */}
+              <div style={{ padding: "14px 20px", background: "rgba(245,158,11,.12)", display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: ".82rem" }}>⏳</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: ".9rem", fontWeight: 700, color: "#FCD34D" }}>
+                    {lang === "uz" ? "To'lov kutilmoqda" : "Payment required"}
+                  </span>
+                  <span style={{ marginLeft: 10, fontSize: ".76rem", color: "#A78BFA" }}>
+                    {lang === "uz"
+                      ? `${pendingAds.length} ta reklama AI tasdiqlagan — to'lovni tanlang`
+                      : `${pendingAds.length} ad(s) approved — select one to pay`}
+                  </span>
                 </div>
               </div>
-              <button onClick={() => router.push(`/ads/${pendingAds[0].id}/pay`)} style={{ padding: "12px 19px", borderRadius: 11, border: "none", background: "#F59E0B", color: "#1A1230", fontSize: ".85rem", fontWeight: 700, cursor: "pointer" }}>
-                {lang === "uz" ? "To'lash →" : "Pay now →"}
-              </button>
+              {/* Each pending ad as a row */}
+              {pendingAds.map((ad, i) => (
+                <div key={ad.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", background: i % 2 === 0 ? "rgba(245,158,11,.05)" : "rgba(245,158,11,.03)", borderTop: "1px solid rgba(245,158,11,.15)" }}>
+                  {/* Category icon */}
+                  <span style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0 }}>
+                    {CATEGORIES[ad.category]?.emoji || "📢"}
+                  </span>
+                  {/* Ad info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: ".88rem", fontWeight: 600, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
+                    <div style={{ fontSize: ".74rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>
+                      ${(ad.dailyBidCents / 100).toFixed(2)}/kun · {ad.durationDays} kun · jami ${((ad.dailyBidCents * ad.durationDays) / 100).toFixed(2)}
+                    </div>
+                  </div>
+                  {/* Pay button */}
+                  <button
+                    onClick={() => router.push(`/ads/${ad.id}/pay`)}
+                    style={{ flexShrink: 0, padding: "9px 18px", borderRadius: 10, border: "none", background: "#F59E0B", color: "#1A1230", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    {lang === "uz" ? "To'lash →" : "Pay →"}
+                  </button>
+                </div>
+              ))}
             </div>
           )}
 
