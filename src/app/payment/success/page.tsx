@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ad } from "@/types";
 import Link from "next/link";
+import { getAuth } from "firebase/auth";
 
 function PaymentSuccessInner() {
   const searchParams = useSearchParams();
@@ -22,11 +23,19 @@ function PaymentSuccessInner() {
   useEffect(() => {
     if (!adId) { setProcessing(false); return; }
 
-    fetch("/api/payment/verify-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ adId }),
-    })
+    const currentUser = getAuth().currentUser;
+    const tokenPromise = currentUser ? currentUser.getIdToken() : Promise.resolve("");
+
+    tokenPromise.then((idToken) =>
+      fetch("/api/payment/verify-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ adId }),
+      })
+    )
       .then((r) => r.json())
       .then((data) => {
         if (data.error) { setVerifyError(data.error); }

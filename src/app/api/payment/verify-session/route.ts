@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,17 @@ const DODO_BASE =
     : "https://test.dodopayments.com";
 
 export async function POST(req: NextRequest) {
+  // Verify Firebase auth token
+  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let callerUid: string;
+  try {
+    const decoded = await adminAuth.verifyIdToken(token);
+    callerUid = decoded.uid;
+  } catch {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   try {
     const { adId } = await req.json();
     if (!adId) return NextResponse.json({ error: "Missing adId" }, { status: 400 });
@@ -20,6 +31,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }
     const ad = adSnap.data()!;
+
+    // Verify caller owns this ad
+    if (ad.advertiserUID !== callerUid) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const paymentId = ad.pendingPaymentId || ad.externalTxId;
     if (!paymentId) {
