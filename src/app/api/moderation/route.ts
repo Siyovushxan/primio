@@ -54,7 +54,9 @@ async function groqChat(
   }
 
   const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || "";
+  const raw: string = data.choices?.[0]?.message?.content?.trim() || "";
+  // Strip reasoning/thinking blocks (<think>...</think>) from models like Qwen 3 / GPT-OSS
+  return raw.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
 const SYSTEM_PROMPT = `Sen professional reklama kontent moderatorisan. Reklamani quyidagi qoidalarga ko'ra tekshir.
