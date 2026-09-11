@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, CATEGORIES } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+
+const BETA_LAUNCH = "15 sentabr, 2026";
 
 const METHODS = [
   { id: "card",       icon: "💳", label: "Visa / Mastercard", hint: "Stripe orqali shifrlangan" },
@@ -26,6 +28,9 @@ export default function PaymentPage() {
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState("card");
   const [error, setError] = useState("");
+  const [waitEmail, setWaitEmail] = useState("");
+  const [waitSent, setWaitSent] = useState(false);
+  const [waitLoading, setWaitLoading] = useState(false);
 
   useEffect(() => {
     if (!adId) return;
@@ -58,6 +63,25 @@ export default function PaymentPage() {
     } catch (err: any) {
       setError(err.message);
       setPaying(false);
+    }
+  };
+
+  const handleWaitlist = async () => {
+    if (!waitEmail.includes("@") || waitLoading) return;
+    setWaitLoading(true);
+    try {
+      await setDoc(doc(db, "waitlist", waitEmail.toLowerCase().trim()), {
+        email: waitEmail.toLowerCase().trim(),
+        adId: ad?.id || null,
+        uid: firebaseUser?.uid || null,
+        createdAt: serverTimestamp(),
+      }, { merge: true });
+      setWaitSent(true);
+    } catch {
+      // silent fail — user still sees success (don't block UX on Firestore error)
+      setWaitSent(true);
+    } finally {
+      setWaitLoading(false);
     }
   };
 
@@ -178,44 +202,54 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            {/* Method */}
-            <div style={{ ...cardStyle, padding: 22 }}>
-              <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>To&apos;lov usuli</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {METHODS.map((m) => {
-                  const active = method === m.id;
-                  return (
-                    <button key={m.id} onClick={() => setMethod(m.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderRadius: 12, border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`, background: active ? "rgba(124,58,237,.12)" : "#160F2A", cursor: "pointer", textAlign: "left" }}>
-                      <span style={{ fontSize: "1.2rem" }}>{m.icon}</span>
-                      <div>
-                        <div style={{ fontSize: ".82rem", fontWeight: 600, color: active ? "#A855F7" : "#EDE9FE" }}>{m.label}</div>
-                        <div style={{ fontSize: ".72rem", color: "#6D5B8E" }}>{m.hint}</div>
-                      </div>
-                      {active && (
-                        <div style={{ marginLeft: "auto", width: 16, height: 16, borderRadius: "50%", background: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+            {/* Beta notice */}
+            <div style={{ borderRadius: 16, border: "1px solid #F59E0B", background: "linear-gradient(135deg,rgba(120,53,15,.45),rgba(146,64,14,.3))", padding: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: "1.4rem" }}>🚀</span>
+                <div>
+                  <div style={{ fontSize: ".88rem", fontWeight: 700, color: "#FCD34D" }}>To'lov tizimi {BETA_LAUNCH} kuni ochiladi</div>
+                  <div style={{ fontSize: ".77rem", color: "#D97706", marginTop: 2 }}>Reklamangiz saqlandi — to'lov ochilgach darhol faollashtirasiz</div>
+                </div>
               </div>
+              <div style={{ height: 1, background: "rgba(245,158,11,.25)", marginBottom: 16 }} />
+              {waitSent ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, background: "rgba(52,211,153,.1)", border: "1px solid rgba(52,211,153,.3)" }}>
+                  <span style={{ fontSize: "1.1rem" }}>✅</span>
+                  <div>
+                    <div style={{ fontSize: ".86rem", fontWeight: 700, color: "#34D399" }}>Qabul qilindi!</div>
+                    <div style={{ fontSize: ".76rem", color: "#6D5B8E", marginTop: 2 }}>To'lov ochilganda sizga xabar beramiz.</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: ".78rem", color: "#FDE68A", marginBottom: 10 }}>
+                    📧 Bildirishnoma olish uchun email qoldiring:
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="email"
+                      placeholder="email@example.com"
+                      value={waitEmail}
+                      onChange={(e) => setWaitEmail(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleWaitlist()}
+                      style={{ flex: 1, padding: "11px 14px", borderRadius: 10, border: "1px solid rgba(245,158,11,.4)", background: "rgba(0,0,0,.3)", color: "#FDE68A", fontSize: ".85rem", outline: "none" }}
+                    />
+                    <button
+                      onClick={handleWaitlist}
+                      disabled={waitLoading || !waitEmail.includes("@")}
+                      style={{ padding: "11px 18px", borderRadius: 10, border: "none", background: waitLoading ? "#92400E" : "#F59E0B", color: "#1A1230", fontWeight: 700, fontSize: ".84rem", cursor: waitLoading || !waitEmail.includes("@") ? "not-allowed" : "pointer", opacity: !waitEmail.includes("@") ? .6 : 1, whiteSpace: "nowrap" }}
+                    >
+                      {waitLoading ? "..." : "Xabar ber"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Security */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12, background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", fontSize: ".82rem", color: "#A78BFA" }}>
               <span>🔒</span>
-              <span>To&apos;lov ma&apos;lumotlari PRIMIO serverida saqlanmaydi. Dodo Payments orqali xavfsiz shifrlangan.</span>
+              <span>To'lov tizimi ishga tushgach Dodo Payments orqali xavfsiz shifrlangan holda to'laysiz.</span>
             </div>
-
-            {/* Pay button */}
-            <button onClick={handlePay} disabled={paying} style={{ width: "100%", padding: "17px 0", borderRadius: 14, border: "none", background: paying ? "#4C1D95" : "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#1A1230", fontSize: "1rem", fontWeight: 800, cursor: paying ? "not-allowed" : "pointer", boxShadow: paying ? "none" : "0 4px 20px rgba(245,158,11,.35)" }}>
-              {paying ? "Yo'naltirilmoqda..." : `$${totalUSD.toFixed(2)} to'lash →`}
-            </button>
-
-            <p style={{ textAlign: "center", fontSize: ".78rem", color: "#6D5B8E" }}>
-              To&apos;lovdan keyin reklama darhol jonli bo&apos;ladi
-            </p>
           </div>
 
           {/* RIGHT */}

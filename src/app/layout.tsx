@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/layout/Header";
+import BetaBanner from "@/components/layout/BetaBanner";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="uz">
       <body className="min-h-screen bg-bg text-text font-sans antialiased">
         <AuthProvider>
+          <BetaBanner />
           <Header />
           <main>{children}</main>
         </AuthProvider>
