@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the ad exists and is in pending status
-    const adSnap = await adminDb.doc(`ads/${adId}`).get();
+    const adSnap = await getAdminDb().doc(`ads/${adId}`).get();
     if (!adSnap.exists) {
       return NextResponse.json({ error: "Ad not found" }, { status: 404 });
     }

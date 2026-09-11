@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { doc, updateDoc, addDoc, collection, serverTimestamp, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
+
+export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-08-26.dahlia" as any,
@@ -30,14 +32,15 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const adRef = doc(db, "ads", adId);
-      const adSnap = await getDoc(adRef);
+      const db = getAdminDb();
+      const adRef = db.doc(`ads/${adId}`);
+      const adSnap = await adRef.get();
 
-      if (!adSnap.exists()) {
+      if (!adSnap.exists) {
         return NextResponse.json({ error: "Ad not found" }, { status: 404 });
       }
 
-      const ad = adSnap.data();
+      const ad = adSnap.data()!;
 
       // Idempotency — skip if already processed
       if (ad.externalTxId === externalTxId) {
@@ -48,14 +51,14 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date(now.getTime() + ad.durationDays * 24 * 60 * 60 * 1000);
 
       // Check if new account (24h hold)
-      const userSnap = await getDoc(doc(db, "users", advertiserUID));
-      const isNewAccount = userSnap.exists() ? userSnap.data().isNewAccount : false;
+      const userSnap = await db.doc(`users/${advertiserUID}`).get();
+      const isNewAccount = userSnap.exists ? userSnap.data()!.isNewAccount : false;
       const newStatus = isNewAccount ? "pending_verification" : "active";
 
       // Activate ad
-      await updateDoc(adRef, {
+      await adRef.update({
         status: newStatus,
-        startsAt: isNewAccount ? null : serverTimestamp(),
+        startsAt: isNewAccount ? null : FieldValue.serverTimestamp(),
         expiresAt: isNewAccount ? null : expiresAt,
         totalPaidCents: session.amount_total,
         externalTxId,
@@ -63,20 +66,20 @@ export async function POST(req: NextRequest) {
       });
 
       // Record transaction
-      await addDoc(collection(db, "transactions"), {
+      await db.collection("transactions").add({
         uid: advertiserUID,
         adId,
         type: "purchase",
         amountCents: session.amount_total,
         externalTxId,
         paymentMethod: "card",
-        createdAt: serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
       });
 
       // Update user's total spent
-      if (userSnap.exists()) {
-        await updateDoc(doc(db, "users", advertiserUID), {
-          totalSpentCents: (userSnap.data().totalSpentCents || 0) + (session.amount_total || 0),
+      if (userSnap.exists) {
+        await db.doc(`users/${advertiserUID}`).update({
+          totalSpentCents: (userSnap.data()!.totalSpentCents || 0) + (session.amount_total || 0),
           isNewAccount: false,
         });
       }
