@@ -204,7 +204,7 @@ function Sidebar({ lang, myAdsCount, onSignOut, onDashNav }: {
     color: active ? "#A855F7" : "#A78BFA",
   });
   return (
-    <aside style={{ width: 236, flexShrink: 0, borderRight: "1px solid #2D1F50", background: "#0B0916", padding: "20px 12px 30px", display: "flex", flexDirection: "column", gap: 3, minHeight: "calc(100vh - 47px)" }}>
+    <aside className="dash-sidebar">
       <div style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
       {NAV.map((n) => (
         <button key={n.k} onClick={() => onDashNav(n.k)} style={btnStyle(false)}>
@@ -399,7 +399,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
-    <div style={{ padding: "38px 32px 60px", flex: 1 }}>
+    <div style={{ padding: "38px 32px 60px", flex: 1, minWidth: 0 }}>
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontSize: ".7rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 8 }}>
@@ -412,7 +412,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: 24, alignItems: "start" }}>
+        <div className="rg-form">
 
           {/* ── LEFT: Form ──────────────────────────────────────────── */}
           <div style={{ ...card, padding: 28, display: "flex", flexDirection: "column", gap: 22 }}>
@@ -794,14 +794,14 @@ function CreatePageInner() {
         onGoWallet={() => handleDashNav("wallet")}
       />
 
-      <div style={{ display: "flex" }}>
+      <div className="dash-layout">
         <Sidebar
           lang={lang}
           myAdsCount={0}
           onSignOut={handleSignOut}
           onDashNav={handleDashNav}
         />
-        <main style={{ flex: 1, overflow: "auto" }}>
+        <main className="dash-main">
           <CreateView
             lang={lang}
             userProfile={userProfile}

@@ -55,6 +55,76 @@ input, select, textarea { font-family: inherit; }
 @keyframes slidein { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Responsive grid utilities ─────────────────────────────────────────────── */
+.rg-2        { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+.rg-3        { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.rg-4        { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 11px; }
+.rg-hero     { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); gap: 44px; align-items: center; padding: 48px 0; }
+.rg-pricing  { display: grid; grid-template-columns: minmax(0,.95fr) minmax(0,1fr); gap: 40px; align-items: center; }
+.rg-form     { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 24px; align-items: start; }
+.rg-wallet   { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 20px; align-items: start; }
+.rg-profile  { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 16px; align-items: start; }
+
+/* ── Dashboard / Create layout ─────────────────────────────────────────────── */
+.dash-layout { display: flex; align-items: stretch; }
+.dash-main   { flex: 1; min-width: 0; overflow: auto; }
+
+.dash-sidebar {
+  width: 236px; flex-shrink: 0;
+  border-right: 1px solid #2D1F50;
+  background: #0B0916;
+  padding: 20px 12px 30px;
+  display: flex; flex-direction: column; gap: 3px;
+  min-height: calc(100vh - 47px);
+}
+
+/* ── Tablet: 640–1023px ────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .rg-form, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .rg-3 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  .rg-4 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+  .rg-hero, .rg-pricing { grid-template-columns: 1fr !important; gap: 24px; }
+}
+
+/* ── Mobile: < 640px ───────────────────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .rg-2, .rg-3, .rg-hero, .rg-pricing { grid-template-columns: 1fr !important; gap: 14px; }
+  .rg-4 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 9px; }
+
+  /* Sidebar → horizontal scrollable nav strip */
+  .dash-layout { flex-direction: column; }
+  .dash-sidebar {
+    width: 100% !important;
+    min-height: auto !important;
+    flex-direction: row !important;
+    padding: 8px 12px !important;
+    gap: 4px !important;
+    border-right: none !important;
+    border-bottom: 1px solid #2D1F50 !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .dash-sidebar::-webkit-scrollbar { display: none; }
+  /* Hide: section label (first div), promo card (last div), guide + logout buttons */
+  .dash-sidebar > div:first-child  { display: none !important; }
+  .dash-sidebar > div:last-of-type { display: none !important; }
+  .dash-sidebar > button:nth-last-of-type(-n+2) { display: none !important; }
+  /* Compact nav buttons */
+  .dash-sidebar > button {
+    padding: 7px 13px !important;
+    border-radius: 100px !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: .77rem !important;
+    min-width: fit-content;
+  }
+
+  .dash-main { padding: 0 16px 60px !important; }
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 bg-violet text-white font-bold px-5 py-2.5 rounded-xl transition-all duration-150;

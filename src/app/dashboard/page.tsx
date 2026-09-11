@@ -244,7 +244,7 @@ function Sidebar({
     color: on ? "#A855F7" : "#A78BFA",
   });
   return (
-    <aside style={{ width: 236, flexShrink: 0, borderRight: "1px solid #2D1F50", background: "#0B0916", padding: "20px 12px 30px", display: "flex", flexDirection: "column", gap: 3, minHeight: "calc(100vh - 47px)" }}>
+    <aside className="dash-sidebar">
       <div style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
       {NAV.map((n) => (
         <button key={n.k} onClick={() => setScreen(n.k)} style={btnStyle(screen === n.k)}>
@@ -555,7 +555,7 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
         <button onClick={onGoCreate} style={{ padding: "12px 19px", borderRadius: 11, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".85rem", fontWeight: 700, cursor: "pointer" }}>+ {t.ctaCreate}</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 11, marginBottom: 18 }}>
+      <div className="rg-4" style={{ marginBottom: 18 }}>
         {[
           { k: t.faol,      v: String(active),               color: active > 0 ? "#34D399" : "#EDE9FE", hint: "Jonli reklamalar" },
           { k: t.sarflangan,v: `$${(spent / 100).toFixed(0)}`, color: "#FCD34D", hint: "Jami toʻlov" },
@@ -657,7 +657,7 @@ function CatsView({ allAds, lang, onSelectCat }: { allAds: Ad[]; lang: Lang; onS
       <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>{t.catLabel}</div>
       <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "2.1rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 12 }}>{t.catsTitle}</h1>
       <p style={{ fontSize: ".96rem", color: "#A78BFA", maxWidth: "60ch", lineHeight: 1.75, marginBottom: 26 }}>{t.catsSub}</p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12 }}>
+      <div className="rg-2">
         {CAT_KEYS.map((k) => {
           const catAds = allAds.filter((a) => a.status === "active" && a.category === k);
           const topBid = catAds.length ? Math.max(...catAds.map((a) => a.dailyBidCents)) : 0;
@@ -738,9 +738,9 @@ function WalletView({ lang, myAds, userProfile, uid }: {
       <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "2.1rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 10 }}>{t.walletTitle}</h1>
       <p style={{ fontSize: ".96rem", color: "#A78BFA", maxWidth: "58ch", lineHeight: 1.75, marginBottom: 26 }}>{t.walletSub}</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 330px", gap: 20, alignItems: "start" }}>
+      <div className="rg-wallet">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 11 }}>
+          <div className="rg-3">
             {KPIS.map((k) => (
               <div key={k.k} style={{ padding: "17px 18px", borderRadius: 15, background: "#1A1230", border: "1px solid #2D1F50" }}>
                 <div style={{ fontSize: ".68rem", letterSpacing: ".09em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 8 }}>{k.k}</div>
@@ -942,7 +942,7 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
     <div style={{ animation: "fade .35s ease both" }}>
       <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 9 }}>AKKAUNT</div>
       <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 20, color: "#EDE9FE" }}>{t.profileTitle}</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 280px", gap: 16, alignItems: "start" }}>
+      <div className="rg-profile">
 
         {/* LEFT */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1097,13 +1097,13 @@ export default function DashboardPage() {
           onGoProfile={() => setScreen("profile")}
           onGoWallet={() => setScreen("wallet")}
         />
-        <div style={{ display: "flex", alignItems: "stretch" }}>
+        <div className="dash-layout">
           <Sidebar
             screen={screen} setScreen={setScreen} lang={lang}
             myAdsCount={myAds.length}
             onSignOut={handleSignOut} onGoCreate={handleGoCreate}
           />
-          <main style={{ flex: 1, padding: "0 32px 60px", minWidth: 0 }}>
+          <main className="dash-main" style={{ padding: "0 32px 60px" }}>
             {screen === "all"     && <AllView allAds={allAds} myUID={firebaseUser.uid} lang={lang} onRaise={() => {}} />}
             {screen === "myads"  && <MyAdsView ads={myAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
             {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => { setScreen("all"); }} />}

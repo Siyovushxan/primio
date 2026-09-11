@@ -109,7 +109,7 @@ export default function HeroSection() {
       {/* === RULE (2-col) === */}
       <div style={{ borderBottom: "1px solid #2D1F50" }}>
         <div style={{ maxWidth: W, margin: "0 auto", padding: pad }}>
-          <div style={{ padding: "48px 0", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.05fr)", gap: 44, alignItems: "center" }}>
+          <div className="rg-hero">
             <div>
               <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 14 }}>ASOSIY QOIDA</div>
               <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.02em", lineHeight: 1.2, marginBottom: 14 }}>
@@ -160,7 +160,7 @@ export default function HeroSection() {
             <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>QANDAY ISHLAYDI</div>
             <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>6 qadamda boshlash</h2>
             <p style={{ fontSize: ".95rem", color: "#A78BFA", maxWidth: "56ch", marginBottom: 28 }}>Ro&apos;yxatdan o&apos;tishdan reklamangiz jonlashguniga qadar — 10 daqiqa.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
+            <div className="rg-3">
               {FLOW_CARDS.map((f) => (
                 <div key={f.num} style={{ textAlign: "left", background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 15, padding: 20, color: "#EDE9FE", transition: "border-color .15s" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -189,7 +189,7 @@ export default function HeroSection() {
                 Barchasini ko&apos;rish →
               </Link>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 11 }}>
+            <div className="rg-4">
               {HOME_CATS.map((c) => (
                 <Link key={c.name} href={`/browse?category=${encodeURIComponent(c.name)}`} style={{ textAlign: "left", background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 14, padding: 17, color: "#EDE9FE", textDecoration: "none", display: "block" }}>
                   <div style={{ fontSize: "1.15rem", marginBottom: 11 }}>{c.icon}</div>
@@ -213,7 +213,7 @@ export default function HeroSection() {
             <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>KIM UCHUN</div>
             <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.02em", marginBottom: 8 }}>Bu platforma siz uchun</h2>
             <p style={{ fontSize: ".95rem", color: "#A78BFA", maxWidth: "58ch", marginBottom: 26 }}>Har qanday hajmdagi biznes uchun — mahalliy restorandan global startapgacha.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
+            <div className="rg-3">
               {WHO_CARDS.map((w) => (
                 <div key={w.title} style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 16, padding: 22 }}>
                   <div style={{ fontSize: "1.3rem", marginBottom: 14 }}>{w.icon}</div>
@@ -233,7 +233,7 @@ export default function HeroSection() {
       {/* === MATH/PRICING (2-col) === */}
       <div style={{ borderTop: "1px solid #2D1F50" }}>
         <div style={{ maxWidth: W, margin: "0 auto", padding: pad }}>
-          <div style={{ padding: "48px 0", display: "grid", gridTemplateColumns: "minmax(0,.95fr) minmax(0,1fr)", gap: 40, alignItems: "center" }}>
+          <div className="rg-pricing" style={{ padding: "48px 0" }}>
             <div>
               <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>NARXLASH</div>
               <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.02em", lineHeight: 1.2, marginBottom: 14 }}>
@@ -270,7 +270,7 @@ export default function HeroSection() {
           <div style={{ padding: "48px 0" }}>
             <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>FAQ</div>
             <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.02em", marginBottom: 24 }}>Ko&apos;p so&apos;raladigan savollar</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12 }}>
+            <div className="rg-2">
               {FAQ.map((f) => (
                 <div key={f.q} style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 15, padding: 19 }}>
                   <div style={{ fontSize: ".9rem", fontWeight: 700, marginBottom: 7, lineHeight: 1.45 }}>{f.q}</div>
