@@ -4,10 +4,10 @@ export const dynamic = "force-dynamic";
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 
-// Vision model — Llama 4 Maverick (stronger than Scout, supports images)
-const MODEL_VISION = "meta-llama/llama-4-maverick-17b-128e-instruct";
-// Text-only model — 70B, strongest reasoning on Groq
-const MODEL_TEXT = "llama-3.3-70b-versatile";
+// Vision model — Qwen 3.6 27B (multimodal, free tier, replaces deprecated Maverick/Scout)
+const MODEL_VISION = "qwen/qwen3.6-27b";
+// Text-only model — GPT-OSS 120B (replaces deprecated llama-3.3-70b-versatile)
+const MODEL_TEXT = "openai/gpt-oss-120b";
 
 // Fast pre-check: blocked domain/keyword patterns (no AI needed)
 const BLOCKED_PATTERNS = [
