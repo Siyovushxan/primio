@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 45; // Vercel Pro: allow up to 45s for AI moderation
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 
 // Vision model — Llama 4 Scout (multimodal, supports image_url)
 const MODEL_VISION = "meta-llama/llama-4-scout-17b-16e-instruct";
-// Text-only model — Llama 3.3 70B
+// Text-only fallback — Llama 3.3 70B
 const MODEL_TEXT = "llama-3.3-70b-versatile";
 
 // Fast pre-check: blocked domain/keyword patterns (no AI needed)
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
     try {
       const urlCheck = await fetch(destinationURL, {
         method: "HEAD",
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(3000),
         redirect: "follow",
       });
       if (!urlCheck.ok && urlCheck.status !== 405 && urlCheck.status !== 403) {
@@ -150,42 +151,36 @@ export async function POST(req: NextRequest) {
 Tavsif: "${description || "(yo'q)"}"
 Veb-sayt: ${destinationURL}`;
 
-    // ── 4a. Image + text check via Llama 4 Maverick (vision) ─────────────────
+    // ── 4a. Image + text check (vision model, fallback to text-only) ──────────
     if (imageBase64 && mimeType) {
       const dataUrl = `data:${mimeType};base64,${imageBase64}`;
-      const reply = await groqChat(MODEL_VISION, [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: { url: dataUrl },
-            },
-            {
-              type: "text",
-              text: `Rasmni va quyidagi ma'lumotlarni tekshir:\n\n${adInfo}`,
-            },
-          ],
-        },
-      ]);
+      let reply = "";
+      try {
+        reply = await groqChat(MODEL_VISION, [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "image_url", image_url: { url: dataUrl } },
+              { type: "text", text: `Rasmni va quyidagi ma'lumotlarni tekshir:\n\n${adInfo}` },
+            ],
+          },
+        ]);
+      } catch {
+        // Vision model failed → fall through to text-only check below
+        reply = "";
+      }
 
       if (reply.toUpperCase().startsWith("REJECTED")) {
-        const reason =
-          reply.replace(/^REJECTED:?\s*/i, "").trim() ||
+        const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() ||
           "Reklama moderatsiya talablariga javob bermadi";
         return NextResponse.json({ approved: false, reason });
       }
 
-      if (!reply.toUpperCase().startsWith("APPROVED")) {
-        // Unexpected reply — fail closed
-        return NextResponse.json({
-          approved: false,
-          reason: "Moderatsiya natijasini aniqlab bo'lmadi. Qayta urinib ko'ring.",
-        });
+      if (reply.toUpperCase().startsWith("APPROVED")) {
+        return NextResponse.json({ approved: true });
       }
-
-      return NextResponse.json({ approved: true });
+      // else: vision model failed or gave unexpected reply → continue to text-only
     }
 
     // ── 4b. Text-only check via Llama 3.3 70B ────────────────────────────────
