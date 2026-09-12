@@ -440,6 +440,36 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               </div>
             </div>
 
+            {/* URL */}
+            <div>
+              <label style={label}>{t.urlLabel} <span style={{ color: "#F87171" }}>*</span></label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder={t.urlPh}
+                style={inp}
+                required
+              />
+              <div style={{ marginTop: 5, fontSize: ".73rem", color: "#6D5B8E" }}>{t.urlNote}</div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label style={label}>{t.descLabel}</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t.descPh}
+                maxLength={200}
+                rows={3}
+                style={{ ...inp, resize: "none" }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5 }}>
+                <span style={{ fontSize: ".73rem", color: description.length > 180 ? "#F59E0B" : "#6D5B8E" }}>{description.length}/200</span>
+              </div>
+            </div>
+
             {/* Image upload */}
             <div>
               <label style={label}>{t.imageLabel} <span style={{ color: "#F87171" }}>*</span> <span style={{ color: "#6D5B8E", fontWeight: 400 }}>({t.imageNote})</span></label>
@@ -469,20 +499,6 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
             </div>
 
-            {/* URL */}
-            <div>
-              <label style={label}>{t.urlLabel} <span style={{ color: "#F87171" }}>*</span></label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder={t.urlPh}
-                style={inp}
-                required
-              />
-              <div style={{ marginTop: 5, fontSize: ".73rem", color: "#6D5B8E" }}>{t.urlNote}</div>
-            </div>
-
             {/* Category */}
             <div>
               <label style={label}>{t.catLabel} <span style={{ color: "#F87171" }}>*</span></label>
@@ -508,22 +524,6 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label style={label}>{t.descLabel}</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t.descPh}
-                maxLength={200}
-                rows={3}
-                style={{ ...inp, resize: "none" }}
-              />
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 5 }}>
-                <span style={{ fontSize: ".73rem", color: description.length > 180 ? "#F59E0B" : "#6D5B8E" }}>{description.length}/200</span>
               </div>
             </div>
 

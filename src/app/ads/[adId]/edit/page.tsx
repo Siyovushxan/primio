@@ -260,6 +260,27 @@ export default function EditAdPage() {
               <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{title.length}/60</div>
             </div>
 
+            {/* URL */}
+            <div style={{ ...card, padding: 22 }}>
+              <label style={fieldLabel}>Veb-sayt URL</label>
+              <input value={url} onChange={(e) => setUrl(e.target.value)} style={{ ...inp, fontFamily: "'JetBrains Mono',monospace" }} placeholder="https://sizningsayt.uz" />
+              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>HTTPS bilan boshlanishi shart</div>
+            </div>
+
+            {/* Description */}
+            <div style={{ ...card, padding: 22 }}>
+              <label style={fieldLabel}>Qisqa tavsif (ixtiyoriy)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={200}
+                rows={3}
+                style={{ ...inp, resize: "vertical", lineHeight: 1.6 }}
+                placeholder="Kompaniya yoki mahsulot haqida..."
+              />
+              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{description.length}/200</div>
+            </div>
+
             {/* Image */}
             <div style={{ ...card, padding: 22 }}>
               <label style={fieldLabel}>Rasm</label>
@@ -295,27 +316,6 @@ export default function EditAdPage() {
                 </button>
                 <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>PNG, JPG, WebP — max 5 MB</div>
               </div>
-            </div>
-
-            {/* URL */}
-            <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Veb-sayt URL</label>
-              <input value={url} onChange={(e) => setUrl(e.target.value)} style={{ ...inp, fontFamily: "'JetBrains Mono',monospace" }} placeholder="https://sizningsayt.uz" />
-              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>HTTPS bilan boshlanishi shart</div>
-            </div>
-
-            {/* Description */}
-            <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Qisqa tavsif (ixtiyoriy)</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={200}
-                rows={3}
-                style={{ ...inp, resize: "vertical", lineHeight: 1.6 }}
-                placeholder="Kompaniya yoki mahsulot haqida..."
-              />
-              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{description.length}/200</div>
             </div>
 
             {/* Category */}
