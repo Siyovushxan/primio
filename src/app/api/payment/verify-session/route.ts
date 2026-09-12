@@ -194,15 +194,19 @@ async function notifyOutranked({
   const posMap: Record<string, number> = {};
   allInCategory.forEach((d, i) => { posMap[d.id] = i + 1; });
 
-  // Fetch owner emails
+  // Fetch owner emails + notif prefs
   const ownerUids = [...new Set(outranked.map((d) => d.data().advertiserUID).filter(Boolean))];
   const userDocs = await Promise.all(ownerUids.map((uid) => adminDb.doc(`users/${uid}`).get()));
   const emailMap: Record<string, string> = {};
   const nameMap: Record<string, string> = {};
+  const notifMap: Record<string, boolean> = {};
   userDocs.forEach((doc) => {
     if (doc.exists) {
-      emailMap[doc.id] = doc.data()?.email || "";
-      nameMap[doc.id] = doc.data()?.displayName || "Advertiser";
+      const data = doc.data()!;
+      emailMap[doc.id] = data.email || "";
+      nameMap[doc.id] = data.displayName || "Advertiser";
+      // default true if pref not saved yet
+      notifMap[doc.id] = data.notifPrefs?.outbid !== false;
     }
   });
 
@@ -213,6 +217,7 @@ async function notifyOutranked({
       const d = doc.data();
       const ownerEmail = emailMap[d.advertiserUID];
       if (!ownerEmail) return;
+      if (!notifMap[d.advertiserUID]) return; // user turned off outbid notifications
 
       const { subject, html } = outbidEmail({
         advertiserName: nameMap[d.advertiserUID] || "Advertiser",
