@@ -45,6 +45,7 @@ async function groqChat(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
+    signal: AbortSignal.timeout(7000),
   });
 
   if (!res.ok) {
