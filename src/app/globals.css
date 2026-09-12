@@ -79,9 +79,13 @@ input, select, textarea { font-family: inherit; }
   min-height: calc(100vh - 47px);
 }
 
+/* ── Create page inner 2-col grid ─────────────────────────────────────────── */
+.create-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+
 /* ── Tablet: 640–1023px ────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
   .rg-form, .rg-auth, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
+  .create-inner-grid { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 767px) {
   .rg-auth-card { order: -1; }
