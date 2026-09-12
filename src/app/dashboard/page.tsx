@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -247,7 +247,7 @@ function Sidebar({
     <aside className="dash-sidebar">
       <div style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
       {NAV.map((n) => (
-        <button key={n.k} onClick={() => setScreen(n.k)} style={btnStyle(screen === n.k)}>
+        <button key={n.k} onClick={() => startTransition(() => setScreen(n.k))} style={btnStyle(screen === n.k)}>
           <span style={{ width: 20, textAlign: "center", fontSize: ".85rem" }}>{n.icon}</span>
           <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
           {n.badge ? (
@@ -928,15 +928,17 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
   const initial   = initials(brand);
   const photoURL  = firebaseUser?.photoURL;
   const googleEmail = firebaseUser?.email || "—";
-  const spent = ads.reduce((s, a) => s + (a.totalPaidCents || 0), 0);
-  const active = ads.filter((a) => a.status === "active").length;
-  const STATS = [
-    { k: "Jami reklamalar",  v: String(ads.length),                        color: "#EDE9FE" },
-    { k: "Faol reklamalar",  v: String(active),                            color: "#34D399" },
-    { k: "Jami sarflangan",  v: `$${(spent / 100).toFixed(2)}`,            color: "#FCD34D" },
-    { k: "Koʻrilish",        v: ads.reduce((s, a) => s + (a.impressions || 0), 0).toLocaleString(), color: "#EDE9FE" },
-    { k: "Bosish",           v: ads.reduce((s, a) => s + (a.clicks || 0), 0).toLocaleString(),      color: "#EDE9FE" },
-  ];
+  const STATS = useMemo(() => {
+    const spent  = ads.reduce((s, a) => s + (a.totalPaidCents || 0), 0);
+    const active = ads.filter((a) => a.status === "active").length;
+    return [
+      { k: "Jami reklamalar",  v: String(ads.length),                        color: "#EDE9FE" },
+      { k: "Faol reklamalar",  v: String(active),                            color: "#34D399" },
+      { k: "Jami sarflangan",  v: `$${(spent / 100).toFixed(2)}`,            color: "#FCD34D" },
+      { k: "Koʻrilish",        v: ads.reduce((s, a) => s + (a.impressions || 0), 0).toLocaleString(), color: "#EDE9FE" },
+      { k: "Bosish",           v: ads.reduce((s, a) => s + (a.clicks || 0), 0).toLocaleString(),      color: "#EDE9FE" },
+    ];
+  }, [ads]);
 
   return (
     <div style={{ animation: "fade .35s ease both" }}>
@@ -1093,9 +1095,9 @@ export default function DashboardPage() {
           totalSpentCents={spent}
           brandName={brand} brandInitial={initial}
           onGoCreate={handleGoCreate}
-          onGoAll={() => setScreen("all")}
-          onGoProfile={() => setScreen("profile")}
-          onGoWallet={() => setScreen("wallet")}
+          onGoAll={() => startTransition(() => setScreen("all"))}
+          onGoProfile={() => startTransition(() => setScreen("profile"))}
+          onGoWallet={() => startTransition(() => setScreen("wallet"))}
         />
         <div className="dash-layout">
           <Sidebar
@@ -1106,7 +1108,7 @@ export default function DashboardPage() {
           <main className="dash-main" style={{ padding: "0 32px 60px" }}>
             {screen === "all"     && <AllView allAds={allAds} myUID={firebaseUser.uid} lang={lang} onRaise={() => {}} />}
             {screen === "myads"  && <MyAdsView ads={myAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
-            {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => { setScreen("all"); }} />}
+            {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => startTransition(() => setScreen("all"))} />}
             {screen === "wallet" && <WalletView lang={lang} myAds={myAds} userProfile={userProfile} uid={firebaseUser.uid} />}
             {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} />}
           </main>
