@@ -86,6 +86,14 @@ APPROVED
 yoki
 REJECTED: [o'zbek tilida aniq sabab, 1 jumla]`;
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    groq: !!process.env.GROQ_API_KEY,
+    fbProject: process.env.FIREBASE_ADMIN_PROJECT_ID || "not-set",
+  });
+}
+
 export async function POST(req: NextRequest) {
   // Verify Firebase auth token
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
