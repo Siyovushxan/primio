@@ -5,10 +5,10 @@ export const dynamic = "force-dynamic";
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 
-// Vision model — Qwen 3.6 27B (multimodal, free tier, replaces deprecated Maverick/Scout)
-const MODEL_VISION = "qwen/qwen3.6-27b";
-// Text-only model — GPT-OSS 120B (replaces deprecated llama-3.3-70b-versatile)
-const MODEL_TEXT = "openai/gpt-oss-120b";
+// Vision model — Llama 4 Scout (multimodal, supports image_url)
+const MODEL_VISION = "meta-llama/llama-4-scout-17b-16e-instruct";
+// Text-only model — Llama 3.3 70B
+const MODEL_TEXT = "llama-3.3-70b-versatile";
 
 // Fast pre-check: blocked domain/keyword patterns (no AI needed)
 const BLOCKED_PATTERNS = [
@@ -46,7 +46,7 @@ async function groqChat(
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens, reasoning_effort: "none" }),
+    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: maxTokens }),
   });
 
   if (!res.ok) {

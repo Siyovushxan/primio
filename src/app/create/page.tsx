@@ -348,7 +348,12 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
           destinationURL: url.trim(),
         }),
       });
-      const modData = await modRes.json();
+      let modData: any;
+      try {
+        modData = await modRes.json();
+      } catch {
+        throw new Error("Moderatsiya xizmati javob bermadi. Qayta urinib ko'ring.");
+      }
 
       if (!modData.approved) {
         setError("❌ " + (modData.reason || "Reklama moderatsiyadan o'tmadi"));
