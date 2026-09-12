@@ -413,7 +413,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
       <form onSubmit={handleSubmit}>
         <div className="rg-form">
 
-          {/* ── LEFT: Form as compact grid ──────────────────────────── */}
+          {/* ── LEFT: Form — single column, clean sections ──────────── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
             {error && (
@@ -422,13 +422,11 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               </div>
             )}
 
-            {/* ── Row 1: Text inputs (left) + Image upload (right) ── */}
-            <div className="create-inner-grid">
+            {/* ── 1. Sarlavha + URL yan-yon, Tavsif pastda ─────────── */}
+            <div style={{ ...card, padding: 20, display: "flex", flexDirection: "column", gap: 14 }}>
 
-              {/* Text inputs card */}
-              <div style={{ ...card, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-
-                {/* Title */}
+              {/* Title + URL side by side */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                 <div>
                   <label style={label}>{t.titleLabel} <span style={{ color: "#F87171" }}>*</span></label>
                   <input
@@ -441,11 +439,9 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     required
                   />
                   <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                    <span style={{ fontSize: ".72rem", color: title.length > 50 ? "#F59E0B" : "#6D5B8E" }}>{title.length}/60</span>
+                    <span style={{ fontSize: ".71rem", color: title.length > 50 ? "#F59E0B" : "#6D5B8E" }}>{title.length}/60</span>
                   </div>
                 </div>
-
-                {/* URL */}
                 <div>
                   <label style={label}>{t.urlLabel} <span style={{ color: "#F87171" }}>*</span></label>
                   <input
@@ -456,59 +452,77 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     style={inp}
                     required
                   />
-                  <div style={{ marginTop: 4, fontSize: ".72rem", color: "#6D5B8E" }}>{t.urlNote}</div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label style={label}>{t.descLabel}</label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t.descPh}
-                    maxLength={200}
-                    rows={3}
-                    style={{ ...inp, resize: "none" }}
-                  />
-                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                    <span style={{ fontSize: ".72rem", color: description.length > 180 ? "#F59E0B" : "#6D5B8E" }}>{description.length}/200</span>
-                  </div>
+                  <div style={{ marginTop: 4, fontSize: ".71rem", color: "#6D5B8E" }}>{t.urlNote}</div>
                 </div>
               </div>
 
-              {/* Image upload card */}
-              <div style={{ ...card, padding: 20, display: "flex", flexDirection: "column" }}>
-                <label style={label}>{t.imageLabel} <span style={{ color: "#F87171" }}>*</span> <span style={{ color: "#6D5B8E", fontWeight: 400 }}>({t.imageNote})</span></label>
-                <div style={{ flex: 1 }}>
-                  {imagePreview ? (
-                    <div style={{ position: "relative", borderRadius: 13, overflow: "hidden", background: "#160F2A", height: 200 }}>
-                      <Image src={imagePreview} alt="preview" fill style={{ objectFit: "cover" }} />
-                      <button
-                        type="button"
-                        onClick={() => { setImageFile(null); setImagePreview(null); }}
-                        style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.75)", border: "none", color: "#fff", fontSize: ".8rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                      >✕</button>
-                    </div>
-                  ) : (
-                    <div
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{ borderRadius: 13, border: "2px dashed #2D1F50", background: "#160F2A", height: 200, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, cursor: "pointer", transition: "border-color .15s" }}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = "#7C3AED")}
-                      onMouseLeave={e => (e.currentTarget.style.borderColor = "#2D1F50")}
-                    >
-                      <span style={{ fontSize: "2rem" }}>🖼</span>
-                      <span style={{ fontSize: ".83rem", color: "#A78BFA", fontWeight: 600, textAlign: "center", padding: "0 10px" }}>{t.imageClick}</span>
-                      <span style={{ fontSize: ".73rem", color: "#6D5B8E" }}>{t.imageNote}</span>
-                    </div>
-                  )}
+              {/* Description full width */}
+              <div>
+                <label style={label}>{t.descLabel}</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t.descPh}
+                  maxLength={200}
+                  rows={2}
+                  style={{ ...inp, resize: "none" }}
+                />
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+                  <span style={{ fontSize: ".71rem", color: description.length > 180 ? "#F59E0B" : "#6D5B8E" }}>{description.length}/200</span>
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
               </div>
             </div>
 
-            {/* ── Row 2: Category (full width) ──────────────────────── */}
+            {/* ── 2. Rasm yuklash — kompakt gorizontal strip ────────── */}
+            <div style={{ ...card, padding: 16 }}>
+              <label style={{ ...label, marginBottom: 10 }}>{t.imageLabel} <span style={{ color: "#F87171" }}>*</span></label>
+
+              {imagePreview ? (
+                /* After upload: thumbnail + filename + remove */
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ position: "relative", width: 96, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                    <Image src={imagePreview} alt="preview" fill style={{ objectFit: "cover" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: ".84rem", color: "#EDE9FE", fontWeight: 600, marginBottom: 3 }}>
+                      {imageFile?.name || "rasm.jpg"}
+                    </div>
+                    <div style={{ fontSize: ".73rem", color: "#6D5B8E" }}>
+                      {imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""} · {t.imageNote}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.25)", color: "#F87171", fontSize: ".77rem", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    Oʻchirish
+                  </button>
+                </div>
+              ) : (
+                /* Before upload: horizontal strip */
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 18px", borderRadius: 12, border: "1.5px dashed #2D1F50", background: "#160F2A", cursor: "pointer", transition: "border-color .15s" }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#7C3AED")}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#2D1F50")}
+                >
+                  <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>🖼</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: ".85rem", color: "#A78BFA", fontWeight: 600 }}>{t.imageClick}</div>
+                    <div style={{ fontSize: ".72rem", color: "#6D5B8E", marginTop: 2 }}>{t.imageNote}</div>
+                  </div>
+                  <span style={{ padding: "7px 14px", borderRadius: 9, background: "rgba(124,58,237,.15)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".78rem", fontWeight: 700, flexShrink: 0 }}>
+                    {lang === "uz" ? "Tanlash" : "Browse"}
+                  </span>
+                </div>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+            </div>
+
+            {/* ── 3. Toifa ──────────────────────────────────────────── */}
             <div style={{ ...card, padding: 20 }}>
               <label style={label}>{t.catLabel} <span style={{ color: "#F87171" }}>*</span></label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -536,118 +550,114 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               </div>
             </div>
 
-            {/* ── Row 3: Bid slider (left) + Duration cards (right) ─── */}
-            <div className="create-inner-grid">
-
-              {/* Bid slider card */}
-              <div style={{ ...card, padding: 20 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
-                  <label style={{ ...label, marginBottom: 0 }}>{t.bidLabel}</label>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.1rem", fontWeight: 700, color: "#A855F7" }}>${bidDollars}/kun</span>
-                </div>
-                <input
-                  type="range"
-                  min={100}
-                  max={3000}
-                  step={50}
-                  value={bidCents}
-                  onChange={(e) => setBidCents(parseInt(e.target.value))}
-                  style={{ width: "100%", accentColor: "#7C3AED", cursor: "pointer" }}
-                />
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: ".72rem", color: "#6D5B8E" }}>
-                  <span>$1.00</span>
-                  <span style={{ color: "#A78BFA" }}>{t.bidNote}</span>
-                  <span>$30.00</span>
-                </div>
+            {/* ── 4. Kunlik taklif ──────────────────────────────────── */}
+            <div style={{ ...card, padding: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+                <label style={{ ...label, marginBottom: 0 }}>{t.bidLabel}</label>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: "#A855F7" }}>${bidDollars}/kun</span>
               </div>
-
-              {/* Duration card */}
-              <div style={{ ...card, padding: 20 }}>
-                <label style={label}>{t.durLabel} <span style={{ color: "#F87171" }}>*</span></label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {([7, 14, 30] as const).map((d) => {
-                    const active = !isCustomDur && duration === d;
-                    const dayTotal = (bidCents * d / 100).toFixed(2);
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => { setDuration(d); setIsCustomDur(false); setCustomDays(""); }}
-                        style={{
-                          padding: "12px 8px", borderRadius: 12,
-                          border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`,
-                          background: active ? "rgba(124,58,237,.12)" : "#160F2A",
-                          color: active ? "#A855F7" : "#A78BFA",
-                          cursor: "pointer", textAlign: "center", transition: "all .15s", position: "relative",
-                        }}
-                      >
-                        {d === 14 && (
-                          <span style={{ position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)", padding: "2px 7px", borderRadius: 100, background: "#F59E0B", color: "#000", fontSize: ".58rem", fontWeight: 700, whiteSpace: "nowrap" }}>
-                            {t.popular}
-                          </span>
-                        )}
-                        <div style={{ fontSize: "1rem", fontWeight: 700, fontFamily: "'Unbounded',sans-serif" }}>{d}</div>
-                        <div style={{ fontSize: ".68rem", color: active ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
-                          {lang === "uz" ? "kun" : "days"}
-                        </div>
-                        <div style={{ fontSize: ".75rem", fontWeight: 600, color: active ? "#EDE9FE" : "#6D5B8E", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
-                          ${dayTotal}
-                        </div>
-                      </button>
-                    );
-                  })}
-                  {/* Custom duration */}
-                  <button
-                    type="button"
-                    onClick={() => { setIsCustomDur(true); setCustomDays(""); }}
-                    style={{
-                      padding: "12px 8px", borderRadius: 12,
-                      border: `1px solid ${isCustomDur ? "#7C3AED" : "#2D1F50"}`,
-                      background: isCustomDur ? "rgba(124,58,237,.12)" : "#160F2A",
-                      color: isCustomDur ? "#A855F7" : "#A78BFA",
-                      cursor: "pointer", textAlign: "center", transition: "all .15s",
-                    }}
-                  >
-                    <div style={{ fontSize: ".88rem", fontWeight: 700 }}>{lang === "uz" ? "O'zim" : "Custom"}</div>
-                    <div style={{ fontSize: ".68rem", color: isCustomDur ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
-                      {lang === "uz" ? "belgilayman" : "duration"}
-                    </div>
-                    <div style={{ fontSize: ".75rem", fontWeight: 600, color: isCustomDur && customDays ? "#EDE9FE" : "#6D5B8E", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
-                      {isCustomDur && customDays ? `$${(bidCents * parseInt(customDays) / 100).toFixed(2)}` : "?"}
-                    </div>
-                  </button>
-                </div>
-                {isCustomDur && (
-                  <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
-                    <input
-                      type="number"
-                      min={1}
-                      max={365}
-                      value={customDays}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCustomDays(val);
-                        const n = parseInt(val);
-                        if (!isNaN(n) && n >= 1 && n <= 365) setDuration(n);
-                      }}
-                      placeholder={lang === "uz" ? "Kunlar soni (1–365)" : "Days (1–365)"}
-                      style={{ ...inp, flex: 1 }}
-                    />
-                    <span style={{ fontSize: ".83rem", color: "#6D5B8E", whiteSpace: "nowrap" }}>
-                      {lang === "uz" ? "kun" : "days"}
-                    </span>
-                  </div>
-                )}
+              <input
+                type="range"
+                min={100}
+                max={3000}
+                step={50}
+                value={bidCents}
+                onChange={(e) => setBidCents(parseInt(e.target.value))}
+                style={{ width: "100%", accentColor: "#7C3AED", cursor: "pointer" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontSize: ".72rem", color: "#6D5B8E" }}>
+                <span>$1.00</span>
+                <span style={{ color: "#A78BFA" }}>{t.bidNote}</span>
+                <span>$30.00</span>
               </div>
             </div>
 
-            {/* ── Row 4: Total + Submit (horizontal bar) ─────────────── */}
+            {/* ── 5. Kampaniya davri ────────────────────────────────── */}
+            <div style={{ ...card, padding: 20 }}>
+              <label style={label}>{t.durLabel} <span style={{ color: "#F87171" }}>*</span></label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+                {([7, 14, 30] as const).map((d) => {
+                  const active = !isCustomDur && duration === d;
+                  const dayTotal = (bidCents * d / 100).toFixed(2);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => { setDuration(d); setIsCustomDur(false); setCustomDays(""); }}
+                      style={{
+                        padding: "14px 8px", borderRadius: 12,
+                        border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`,
+                        background: active ? "rgba(124,58,237,.12)" : "#160F2A",
+                        color: active ? "#A855F7" : "#A78BFA",
+                        cursor: "pointer", textAlign: "center", transition: "all .15s", position: "relative",
+                      }}
+                    >
+                      {d === 14 && (
+                        <span style={{ position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)", padding: "2px 7px", borderRadius: 100, background: "#F59E0B", color: "#000", fontSize: ".58rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                          {t.popular}
+                        </span>
+                      )}
+                      <div style={{ fontSize: "1.1rem", fontWeight: 700, fontFamily: "'Unbounded',sans-serif" }}>{d}</div>
+                      <div style={{ fontSize: ".68rem", color: active ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
+                        {lang === "uz" ? "kun" : "days"}
+                      </div>
+                      <div style={{ fontSize: ".76rem", fontWeight: 600, color: active ? "#EDE9FE" : "#6D5B8E", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
+                        ${dayTotal}
+                      </div>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => { setIsCustomDur(true); setCustomDays(""); }}
+                  style={{
+                    padding: "14px 8px", borderRadius: 12,
+                    border: `1px solid ${isCustomDur ? "#7C3AED" : "#2D1F50"}`,
+                    background: isCustomDur ? "rgba(124,58,237,.12)" : "#160F2A",
+                    color: isCustomDur ? "#A855F7" : "#A78BFA",
+                    cursor: "pointer", textAlign: "center", transition: "all .15s",
+                  }}
+                >
+                  <div style={{ fontSize: ".9rem", fontWeight: 700 }}>{lang === "uz" ? "O'zim" : "Custom"}</div>
+                  <div style={{ fontSize: ".68rem", color: isCustomDur ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
+                    {lang === "uz" ? "belgilayman" : "duration"}
+                  </div>
+                  <div style={{ fontSize: ".76rem", fontWeight: 600, color: isCustomDur && customDays ? "#EDE9FE" : "#6D5B8E", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
+                    {isCustomDur && customDays ? `$${(bidCents * parseInt(customDays) / 100).toFixed(2)}` : "?"}
+                  </div>
+                </button>
+              </div>
+              {isCustomDur && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={customDays}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCustomDays(val);
+                      const n = parseInt(val);
+                      if (!isNaN(n) && n >= 1 && n <= 365) setDuration(n);
+                    }}
+                    placeholder={lang === "uz" ? "Kunlar soni (1–365)" : "Days (1–365)"}
+                    style={{ ...inp, flex: 1 }}
+                  />
+                  <span style={{ fontSize: ".83rem", color: "#6D5B8E", whiteSpace: "nowrap" }}>
+                    {lang === "uz" ? "kun" : "days"}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── 6. Jami to'lov + Submit ───────────────────────────── */}
             <div style={{ ...card, padding: "16px 22px", display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
               <div style={{ flex: "0 0 auto" }}>
-                <div style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 2 }}>{t.totalLabel}</div>
-                <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.4rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalDollars}</div>
-                <div style={{ fontSize: ".72rem", color: "#6D5B8E", marginTop: 3 }}>
-                  {displayCat ? `${displayCat.emoji} ${displayCat.label} · ` : ""} ${bidDollars} × {duration} {lang === "uz" ? "kun" : "days"}
+                <div style={{ fontSize: ".67rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 2 }}>{t.totalLabel}</div>
+                <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalDollars}</div>
+                <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 3 }}>
+                  ${bidDollars} × {duration} {lang === "uz" ? "kun" : "days"}
+                  {displayCat ? ` · ${displayCat.emoji} ${displayCat.label}` : ""}
                 </div>
               </div>
               <div style={{ flex: 1, minWidth: 180 }}>
