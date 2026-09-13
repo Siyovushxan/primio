@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const apiKey = process.env.IMGBB_API_KEY;
+    const apiKey = process.env.IMGBB_API_KEY || process.env.NEXT_PUBLIC_IMGBB_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "Rasm yuklash xizmati sozlanmagan" }, { status: 500 });
     }
