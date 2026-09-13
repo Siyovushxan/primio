@@ -115,16 +115,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ approved: true });
     }
 
-    // 4. AI text check
-    const adInfo = `Sarlavha: "${title}"\nTavsif: "${description || "(yo'q)"}"\nURL: ${destinationURL}`;
-    const reply = await groqChat([
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `Tekshir:\n${adInfo}` },
-    ]);
-
-    if (reply.toUpperCase().startsWith("REJECTED")) {
-      const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Moderatsiyadan o'tmadi";
-      return NextResponse.json({ approved: false, reason });
+    // 4. AI text check — failure is non-fatal (keyword checks are the main gate)
+    try {
+      const adInfo = `Sarlavha: "${title}"\nTavsif: "${description || "(yo'q)"}"\nURL: ${destinationURL}`;
+      const reply = await groqChat([
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: `Tekshir:\n${adInfo}` },
+      ]);
+      if (reply.toUpperCase().startsWith("REJECTED")) {
+        const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Moderatsiyadan o'tmadi";
+        return NextResponse.json({ approved: false, reason });
+      }
+    } catch (aiErr: any) {
+      // Groq unavailable → approve since keyword/URL checks passed
+      console.warn("Groq AI check skipped:", aiErr?.message);
     }
 
     return NextResponse.json({ approved: true });
