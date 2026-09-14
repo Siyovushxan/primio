@@ -261,8 +261,14 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Scanning sahifasidan qaytganda formni tiklash
+  // Scanning sahifasidan ?restore=1 bilan qaytganda formni tiklash
+  // Boshqa holatlarda (yangi reklama) sessionStorage tozalanadi
   useEffect(() => {
+    const isRestore = searchParams.get("restore") === "1";
+    if (!isRestore) {
+      sessionStorage.removeItem("primio_scan");
+      return;
+    }
     try {
       const raw = sessionStorage.getItem("primio_scan");
       if (!raw) return;

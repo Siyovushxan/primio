@@ -331,7 +331,7 @@ export default function ScanningPage() {
         {/* Back button on failure */}
         {anyFailed && (
           <button
-            onClick={() => router.push("/create")}
+            onClick={() => router.push("/create?restore=1")}
             style={{
               marginTop: 20, width: "100%", padding: "13px 0", borderRadius: 12,
               border: "1px solid #2D1F50", background: "rgba(124,58,237,.12)",
