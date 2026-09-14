@@ -4,8 +4,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL_VISION = "meta-llama/llama-4-scout-17b-16e-instruct";
-const MODEL_TEXT   = "llama-3.3-70b-versatile";
+// Vision modellar: birinchi ishlamasa keyingisi sinab ko'riladi
+const VISION_MODELS = [
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "llama-3.2-11b-vision-preview",
+  "llama-3.2-90b-vision-preview",
+];
+const MODEL_TEXT = "llama-3.3-70b-versatile";
 
 // ── Blocked keyword patterns (EN + UZ + RU) ──────────────────────────────────
 const BLOCKED_PATTERNS = [
@@ -164,57 +169,55 @@ export async function POST(req: NextRequest) {
 
     const adInfo = `Sarlavha: "${title}"\nTavsif: "${description || "(yo'q)"}"\nURL: ${destinationURL}`;
 
-    // ── 4a. Rasm + matn tekshiruvi (vision model) ─────────────────────────────
+    const userPrompt =
+      `RASMNI DIQQAT BILAN KO'R:\n` +
+      `1. Rasmdagi odam yoki shaxs bor-yo'qligini aniqlang\n` +
+      `2. Agar odam bo'lsa — kiyimi to'liq, qisman yechingganmi yoki yalang'ochmi?\n` +
+      `3. Rasm jinsiy jihatdan qo'zg'atuvchi yoki provokatsionmi?\n` +
+      `4. Reklama ma'lumotlari:\n${adInfo}\n\n` +
+      `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`;
+
+    // ── 4a. Rasm tekshiruvi — bir nechta vision model bilan sinab ko'riladi ───
     if (imageBase64 && mimeType) {
-      try {
-        const dataUrl = `data:${mimeType};base64,${imageBase64}`;
-        const reply = await groqChat(MODEL_VISION, [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "image_url", image_url: { url: dataUrl } },
-              {
-                type: "text",
-                text: `RASMNI DIQQAT BILAN KO'R:\n` +
-                  `1. Rasmdagi odam yoki shaxs bor-yo'qligini aniqlang\n` +
-                  `2. Agar odam bo'lsa — kiyimi to'liq, qisman yechingganmi yoki yalang'ochmi?\n` +
-                  `3. Rasm jinsiy jihatdan qo'zg'atuvchi yoki provokatsionmi?\n` +
-                  `4. Reklama ma'lumotlari ham tekshir:\n${adInfo}\n\n` +
-                  `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`,
-              },
-            ],
-          },
-        ], 12000);
+      const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+      let visionDone = false;
 
-        if (reply.toUpperCase().startsWith("REJECTED")) {
-          const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
-          return NextResponse.json({ approved: false, reason });
+      for (const vModel of VISION_MODELS) {
+        try {
+          const reply = await groqChat(vModel, [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: [
+                { type: "image_url", image_url: { url: dataUrl } },
+                { type: "text", text: userPrompt },
+              ],
+            },
+          ], 12000);
+
+          if (reply.toUpperCase().startsWith("REJECTED")) {
+            const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
+            return NextResponse.json({ approved: false, reason });
+          }
+          if (reply.toUpperCase().startsWith("APPROVED")) {
+            return NextResponse.json({ approved: true });
+          }
+          // Noaniq javob — keyingi modelni sinab ko'r
+          console.warn(`Vision model ${vModel} gave unclear response:`, reply.slice(0, 80));
+        } catch (e: any) {
+          console.warn(`Vision model ${vModel} failed:`, e?.message?.slice(0, 120));
         }
-        if (reply.toUpperCase().startsWith("APPROVED")) {
-          return NextResponse.json({ approved: true });
-        }
-        // Vision noaniq javob berdi → matn tekshiruviga o'tish (rasm shubhali bo'lishi mumkin)
-        console.warn("Vision gave unclear response, falling back to text:", reply.slice(0, 80));
-      } catch (e: any) {
-        console.warn("Vision check failed, falling back to text:", e?.message);
       }
+
+      // Barcha vision modellari ishlamadi → matn tekshiruviga o'tish
+      console.warn("All vision models failed, falling back to text-only check");
     }
 
-    // ── 4b. Rasm bor ammo vision ishlamagan → xavfsiz tomonga o'tish ─────────
-    // Rasm tekshirilmasa tasdiqlash mumkin emas — foydalanuvchiga qayta urinish so'rash
-    if (imageBase64) {
-      return NextResponse.json({
-        approved: false,
-        reason: "Rasm tekshiruvi vaqtinchalik ishlamadi. Bir ozdan keyin qayta urinib ko'ring.",
-      });
-    }
-
-    // ── 4c. Rasm yo'q holat — matn-only tekshiruvi ───────────────────────────
+    // ── 4b. Matn tekshiruvi (vision yo'q yoki ishlamagan holat) ──────────────
     try {
       const reply = await groqChat(MODEL_TEXT, [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Tekshir:\n${adInfo}` },
+        { role: "user", content: `Reklama ma'lumotlarini tekshir (faqat matn):\n${adInfo}` },
       ], 8000);
 
       if (reply.toUpperCase().startsWith("REJECTED")) {
