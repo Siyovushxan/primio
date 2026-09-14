@@ -81,20 +81,31 @@ export default function ScanningPage() {
         try { modData = await modRes.json(); }
         catch { throw new Error("Moderatsiya xizmati javob bermadi. Qayta urinib ko'ring."); }
       } catch (err: any) {
-        setStep("keyword", "failed");
-        setStep("url", "failed");
+        setStep("keyword", "waiting");
+        setStep("url", "waiting");
         setStep("ai", "failed");
         setError(err?.message || "Moderatsiya xatosi");
-        sessionStorage.removeItem("primio_scan");
         return;
       }
 
       if (!modData.approved) {
-        setStep("keyword", "failed");
-        setStep("url", "failed");
-        setStep("ai", "failed");
-        setError("❌ " + (modData.reason || "Reklama moderatsiyadan o'tmadi"));
-        sessionStorage.removeItem("primio_scan");
+        const reason: string = modData.reason || "";
+        // Qaysi step sabab ekanini aniqlaymiz
+        const isKeyword = /taqiqlangan so'z|domen/i.test(reason);
+        const isUrl = /sayt|URL|ulanib|ishlamayapti/i.test(reason);
+        if (isKeyword) {
+          setStep("keyword", "failed");
+          setStep("url", "waiting");
+        } else if (isUrl) {
+          setStep("keyword", "done");
+          setStep("url", "failed");
+        } else {
+          setStep("keyword", "done");
+          setStep("url", "done");
+          setStep("ai", "failed");
+        }
+        setError("❌ " + (reason || "Reklama moderatsiyadan o'tmadi"));
+        // sessionStorage saqlab qolamiz — foydalanuvchi orqaga qaytganda form tiklansin
         return;
       }
 
@@ -119,7 +130,6 @@ export default function ScanningPage() {
       } catch (err: any) {
         setStep("upload", "failed");
         setError(err?.message || "Rasm yuklanmadi. Qayta urinib ko'ring.");
-        sessionStorage.removeItem("primio_scan");
         return;
       }
       await new Promise((r) => setTimeout(r, 200));
@@ -154,7 +164,6 @@ export default function ScanningPage() {
       } catch (err: any) {
         setStep("save", "failed");
         setError("Ma'lumotlar saqlanmadi: " + (err?.message || "Qayta urinib ko'ring."));
-        sessionStorage.removeItem("primio_scan");
       }
     };
 

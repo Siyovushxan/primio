@@ -257,8 +257,29 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const [category, setCategory] = useState<Category | null>(defaultCat);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [restoredBase64, setRestoredBase64] = useState<{full: string; mod: string; mime: string} | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Scanning sahifasidan qaytganda formni tiklash
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("primio_scan");
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.title) setTitle(d.title);
+      if (d.description) setDescription(d.description);
+      if (d.url) setUrl(d.url);
+      if (d.category) setCategory(d.category);
+      if (d.bidCents) setBidCents(d.bidCents);
+      if (d.duration) setDuration(d.duration);
+      if (d.imageBase64 && d.imageBase64Mod && d.imageMimeTypeMod) {
+        setImagePreview(`data:${d.imageMimeTypeMod};base64,${d.imageBase64Mod}`);
+        setRestoredBase64({ full: d.imageBase64, mod: d.imageBase64Mod, mime: d.imageMimeTypeMod });
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const CAT_KEYS = Object.keys(CATEGORIES) as Category[];
   const bidDollars = (bidCents / 100).toFixed(2);
@@ -290,7 +311,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
     new Promise((resolve, reject) => {
       const img = new window.Image();
       img.onload = () => {
-        const MAX = 400;
+        const MAX = 200;
         let { width, height } = img;
         if (width > MAX || height > MAX) {
           if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
@@ -317,21 +338,34 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
     if (!title.trim()) return setError(t.errTitle);
     if (title.length > 60) return setError(t.errTitleLong);
     if (!url.trim() || !url.startsWith("https://")) return setError(t.errUrl);
-    if (!imageFile) return setError(t.errImage);
+    if (!imageFile && !restoredBase64) return setError(t.errImage);
     if (!category) return setError(t.catLabel);
     if (bidCents < 100) return setError(t.errBid);
     if (description.length > 200) return setError(t.errDesc);
 
     setSubmitting(true);
     try {
-      // Base64 konversiyalari (tez, client-side) — scanning sahifasiga o'tishdan oldin
-      const imageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(imageFile);
-      });
-      const { base64: imageBase64Mod, mimeType: imageMimeTypeMod } = await compressForModeration(imageFile);
+      let imageBase64: string;
+      let imageBase64Mod: string;
+      let imageMimeTypeMod: string;
+
+      if (imageFile) {
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(imageFile);
+        });
+        const comp = await compressForModeration(imageFile);
+        imageBase64Mod = comp.base64;
+        imageMimeTypeMod = comp.mimeType;
+      } else {
+        // Oldingi urinishdan saqlangan base64 ishlatiladi
+        imageBase64 = restoredBase64!.full;
+        imageBase64Mod = restoredBase64!.mod;
+        imageMimeTypeMod = restoredBase64!.mime;
+      }
+
       const idToken = await firebaseUser.getIdToken();
 
       // Ma'lumotlarni sessionStorage ga saqlash
