@@ -109,7 +109,61 @@ yoki
 REJECTED: [sabab 1 jumlada o'zbekcha]`;
 
 export async function GET() {
-  return NextResponse.json({ ok: true, groq: !!process.env.GROQ_API_KEY });
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return NextResponse.json({ ok: false, error: "GROQ_API_KEY yo'q" });
+
+  // Groq dan mavjud modellarni olish
+  try {
+    const modelsRes = await fetch("https://api.groq.com/openai/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    const modelsData = await modelsRes.json();
+    const allIds: string[] = modelsData.data?.map((m: any) => m.id) ?? [];
+    const visionCandidates = allIds.filter((id) =>
+      id.includes("vision") || id.includes("llama-4") || id.includes("scout") || id.includes("maverick")
+    );
+
+    // Bitta vision modelini tez sinab ko'ramiz (1x1 px JPEG)
+    const tinyJpeg = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARC AABAAEDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAABgUE/8QAIhAAAQMEAgMAAAAAAAAAAAAAAQIDBAAFERIhMkH/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8Aqt3uF1dkBmNbGFoQhCEqKlK55444+c4x7wBSlKUpSlMf/9k=";
+    const testErrors: string[] = [];
+    let testModel = "";
+    let testOk = false;
+
+    for (const m of VISION_MODELS) {
+      try {
+        const r = await fetch(GROQ_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model: m,
+            messages: [{ role: "user", content: [
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${tinyJpeg}` } },
+              { type: "text", text: "Say OK" },
+            ]}],
+            max_tokens: 10,
+          }),
+          signal: AbortSignal.timeout(10000),
+        });
+        const d = await r.json();
+        if (r.ok) { testOk = true; testModel = m; break; }
+        testErrors.push(`${m}: HTTP ${r.status} — ${JSON.stringify(d).slice(0, 200)}`);
+      } catch (e: any) {
+        testErrors.push(`${m}: ${e.message?.slice(0, 150)}`);
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      configured_vision_models: VISION_MODELS,
+      available_vision_candidates: visionCandidates,
+      all_model_ids: allIds,
+      vision_test: testOk ? `OK (${testModel})` : "ALL FAILED",
+      vision_test_errors: testErrors,
+    });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, groq_key: true, error: e.message });
+  }
 }
 
 export async function POST(req: NextRequest) {
