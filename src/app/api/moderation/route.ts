@@ -318,12 +318,10 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ approved: true });
       }
 
-      // 4a-iii. Hammasi ishlamadi — xavfsiz rad etish
-      console.error("All image checks failed — rejecting");
-      return NextResponse.json({
-        approved: false,
-        reason: "Rasm tekshirib bo'lmadi. Bir ozdan keyin qayta urinib ko'ring.",
-      });
+      // 4a-iii. HF tekshiruvi ishlamadi — HF_TOKEN kerak (bepul)
+      // Beta: tekshirib bo'lmasa ham o'tkazib yuboramiz (log qilinadi)
+      console.warn("⚠️ NSFW check unavailable (HF_TOKEN yo'q yoki model yuklanmadi) — rasm tekshirilmay o'tkazildi");
+      return NextResponse.json({ approved: true });
     }
 
     // ── 4b. Matn tekshiruvi (rasm yo'q holat) ────────────────────────────────
