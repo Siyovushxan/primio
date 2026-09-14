@@ -4,7 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
 import { outbidEmail } from "@/lib/emailTemplates";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export const dynamic = "force-dynamic";
 
@@ -229,7 +229,7 @@ async function notifyOutranked({
         currentPosition: posMap[doc.id] ?? 99,
       });
 
-      await resend.emails.send({
+      await getResend().emails.send({
         from: "PRIMIO <noreply@primio.com.uz>",
         to: ownerEmail,
         subject,

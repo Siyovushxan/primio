@@ -4,7 +4,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 // Simple admin secret check — set ADMIN_SECRET in Vercel env vars
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       const batch = emails.slice(i, i + BATCH);
       await Promise.all(
         batch.map((email) =>
-          resend.emails.send({
+          getResend().emails.send({
             from: "PRIMIO <noreply@primio.com.uz>",
             to: email,
             subject: "🚀 PRIMIO — To'lov tizimi ishga tushdi!",

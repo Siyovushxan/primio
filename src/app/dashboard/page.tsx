@@ -692,26 +692,17 @@ function CatsView({ allAds, lang, onSelectCat }: { allAds: Ad[]; lang: Lang; onS
 }
 
 // ─── Wallet view ──────────────────────────────────────────────────────────────
-function WalletView({ lang, myAds, userProfile, uid }: {
+function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCents }: {
   lang: Lang; myAds: Ad[]; userProfile: any; uid: string;
+  txs: any[]; totalSpentCents: number;
 }) {
   const t = T[lang];
   const router = useRouter();
-  const [txs, setTxs] = useState<any[]>([]);
-  const [txLoading, setTxLoading] = useState(true);
 
-  useEffect(() => {
-    if (!uid) return;
-    const q = query(collection(db, "transactions"), where("uid", "==", uid));
-    return onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      list.sort((a: any, b: any) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
-      setTxs(list);
-      setTxLoading(false);
-    });
-  }, [uid]);
+  const txs = [...txsProp].sort((a: any, b: any) =>
+    (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  const txLoading = false;
 
-  const totalSpentCents = userProfile?.totalSpentCents || 0;
   const activeAds = myAds.filter((a) => a.status === "active").length;
   const totalImpr = myAds.reduce((s, a) => s + (a.impressions || 0), 0);
   const pendingAds = myAds.filter((a) => a.status === "pending");
@@ -1049,6 +1040,7 @@ export default function DashboardPage() {
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [myAds, setMyAds]   = useState<Ad[]>([]);
   const [adsLoading, setAdsLoading] = useState(true);
+  const [txs, setTxs] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && !firebaseUser) router.replace("/auth");
@@ -1074,6 +1066,15 @@ export default function DashboardPage() {
     });
   }, [firebaseUser]);
 
+  // Transactions (for totalSpentCents)
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const q = query(collection(db, "transactions"), where("uid", "==", firebaseUser.uid));
+    return onSnapshot(q, (snap) => {
+      setTxs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+  }, [firebaseUser]);
+
   const handleSignOut = useCallback(() => { signOut(); router.push("/"); }, [signOut, router]);
   const handleGoCreate = useCallback(() => router.push("/create"), [router]);
 
@@ -1081,7 +1082,9 @@ export default function DashboardPage() {
 
   const brand   = userProfile?.displayName || firebaseUser.displayName || "?";
   const initial = initials(brand);
-  const spent   = userProfile?.totalSpentCents || 0;
+  // Haqiqiy to'lovlar transactions koleksiyasidan: refundlar ayiriladi, boshqalari qo'shiladi
+  const spent = txs.reduce((s, tx) =>
+    tx.type === "refund" ? s - (tx.amountCents || 0) : s + (tx.amountCents || 0), 0);
 
   return (
     <>
@@ -1109,7 +1112,7 @@ export default function DashboardPage() {
             {screen === "all"     && <AllView allAds={allAds} myUID={firebaseUser.uid} lang={lang} onRaise={() => {}} />}
             {screen === "myads"  && <MyAdsView ads={myAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
             {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => startTransition(() => setScreen("all"))} />}
-            {screen === "wallet" && <WalletView lang={lang} myAds={myAds} userProfile={userProfile} uid={firebaseUser.uid} />}
+            {screen === "wallet" && <WalletView lang={lang} myAds={myAds} userProfile={userProfile} uid={firebaseUser.uid} txs={txs} totalSpentCents={spent} />}
             {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} />}
           </main>
         </div>

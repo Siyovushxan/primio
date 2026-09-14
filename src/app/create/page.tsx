@@ -2,8 +2,6 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { CATEGORIES, Category } from "@/types";
 import Image from "next/image";
@@ -326,7 +324,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
 
     setSubmitting(true);
     try {
-      // 1. Original base64 (ImgBB uchun) + kichraytirilgan (Groq uchun)
+      // Base64 konversiyalari (tez, client-side) — scanning sahifasiga o'tishdan oldin
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve((reader.result as string).split(",")[1]);
@@ -334,67 +332,27 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
         reader.readAsDataURL(imageFile);
       });
       const { base64: imageBase64Mod, mimeType: imageMimeTypeMod } = await compressForModeration(imageFile);
-
-      // 2. AI moderatsiya — kichraytirilgan rasm bilan (512px, JPEG 0.75)
       const idToken = await firebaseUser.getIdToken();
-      const modRes = await fetch("/api/moderation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({
-          imageBase64: imageBase64Mod,
-          mimeType: imageMimeTypeMod,
-          title: title.trim(),
-          description: description.trim(),
-          destinationURL: url.trim(),
-        }),
-      });
-      let modData: any;
-      try {
-        modData = await modRes.json();
-      } catch {
-        throw new Error("Moderatsiya xizmati javob bermadi. Qayta urinib ko'ring.");
-      }
 
-      if (!modData.approved) {
-        setError("❌ " + (modData.reason || "Reklama moderatsiyadan o'tmadi"));
-        return;
-      }
-
-      // 3. Tasdiqlangan rasm server API orqali ImgBB ga yuklanadi
-      const imgRes = await fetch("/api/upload/image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ imageBase64 }),
-      });
-      const imgData = await imgRes.json();
-      if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || "Rasm yuklanmadi. Qayta urinib ko'ring.");
-      const imageURL: string = imgData.url;
-
-      const adRef = await addDoc(collection(db, "ads"), {
-        advertiserUID: firebaseUser.uid,
+      // Ma'lumotlarni sessionStorage ga saqlash
+      sessionStorage.setItem("primio_scan", JSON.stringify({
         title: title.trim(),
         description: description.trim(),
-        imageURL,
-        destinationURL: url.trim(),
+        url: url.trim(),
         category,
-        dailyBidCents: bidCents,
-        durationDays: duration,
-        totalPaidCents: 0,
-        status: "pending",
-        moderationPassed: true,
-        startsAt: null,
-        expiresAt: null,
-        impressions: 0,
-        clicks: 0,
-        externalTxId: "",
-        paymentMethod: "",
-        createdAt: serverTimestamp(),
-      });
+        bidCents,
+        duration,
+        imageBase64,
+        imageBase64Mod,
+        imageMimeTypeMod,
+        idToken,
+        uid: firebaseUser.uid,
+      }));
 
-      router.push(`/ads/${adRef.id}/pending`);
+      // Darhol scanning sahifasiga o'tish
+      router.push("/create/scanning");
     } catch (err: any) {
       setError(t.errSubmit + ": " + (err?.message || "Qayta urinib koʻring"));
-    } finally {
       setSubmitting(false);
     }
   };

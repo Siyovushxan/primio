@@ -5,7 +5,7 @@ import { weeklyReportEmail, WeeklyAdStat } from "@/lib/emailTemplates";
 
 export const dynamic = "force-dynamic";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(req: NextRequest) {
   // Auth: Vercel cron sends Bearer {CRON_SECRET}, manual trigger uses x-admin-secret
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
           });
 
           try {
-            await resend.emails.send({
+            await getResend().emails.send({
               from: "PRIMIO <noreply@primio.com.uz>",
               to: user.email,
               subject,
