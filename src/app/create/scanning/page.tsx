@@ -125,7 +125,12 @@ export default function ScanningPage() {
         const aiRes = await fetch("/api/moderation", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ title, description, destinationURL: url, imageURL }),
+          body: JSON.stringify({
+            title, description, destinationURL: url,
+            imageURL,
+            imageBase64: imageBase64Mod,
+            mimeType: imageMimeTypeMod,
+          }),
         });
         try { aiData = await aiRes.json(); }
         catch { throw new Error("AI tekshiruvi javob bermadi."); }

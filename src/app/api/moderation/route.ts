@@ -177,43 +177,44 @@ export async function POST(req: NextRequest) {
       `4. Reklama ma'lumotlari:\n${adInfo}\n\n` +
       `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`;
 
-    // ── 4a. Rasm tekshiruvi — URL yoki base64 orqali ─────────────────────────
-    const hasImage = !!(imageURL || (imageBase64 && mimeType));
-    if (hasImage) {
-      // URL ustuvorlik qiladi (ishonchli), base64 fallback
-      const imgRef = imageURL
-        ? { type: "image_url" as const, image_url: { url: imageURL } }
-        : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
+    // ── 4a. Rasm tekshiruvi — URL + base64 orqali (6 urinish) ───────────────
+    const imgSources: { type: "image_url"; image_url: { url: string } }[] = [];
+    if (imageURL) {
+      imgSources.push({ type: "image_url", image_url: { url: imageURL } });
+    }
+    if (imageBase64 && mimeType) {
+      imgSources.push({ type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } });
+    }
 
-      for (const vModel of VISION_MODELS) {
-        try {
-          const reply = await groqChat(vModel, [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "user",
-              content: [
-                imgRef,
-                { type: "text", text: userPrompt },
-              ],
-            },
-          ], 12000);
+    if (imgSources.length > 0) {
+      const errors: string[] = [];
 
-          if (reply.toUpperCase().startsWith("REJECTED")) {
-            const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
-            return NextResponse.json({ approved: false, reason });
+      for (const imgRef of imgSources) {
+        for (const vModel of VISION_MODELS) {
+          try {
+            const reply = await groqChat(vModel, [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: [imgRef, { type: "text", text: userPrompt }] },
+            ], 15000);
+
+            if (reply.toUpperCase().startsWith("REJECTED")) {
+              const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
+              return NextResponse.json({ approved: false, reason });
+            }
+            if (reply.toUpperCase().startsWith("APPROVED")) {
+              return NextResponse.json({ approved: true });
+            }
+            console.warn(`Vision ${vModel} unclear:`, reply.slice(0, 80));
+          } catch (e: any) {
+            const msg = e?.message?.slice(0, 180) || "unknown";
+            errors.push(`${vModel}: ${msg}`);
+            console.warn(`Vision ${vModel} failed:`, msg);
           }
-          if (reply.toUpperCase().startsWith("APPROVED")) {
-            return NextResponse.json({ approved: true });
-          }
-          // Noaniq javob — keyingi modelni sinab ko'r
-          console.warn(`Vision model ${vModel} gave unclear response:`, reply.slice(0, 80));
-        } catch (e: any) {
-          console.warn(`Vision model ${vModel} failed:`, e?.message?.slice(0, 200));
         }
       }
 
-      // Barcha vision modellari ishlamadi
-      console.warn("All vision models failed — rejecting image submission");
+      // Barcha urinishlar muvaffaqiyatsiz tugadi
+      console.error("All vision attempts failed:", errors.join(" || "));
       return NextResponse.json({
         approved: false,
         reason: "Rasm tekshirib bo'lmadi. Bir ozdan keyin qayta urinib ko'ring.",
