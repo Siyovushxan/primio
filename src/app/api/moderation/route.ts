@@ -20,21 +20,23 @@ async function checkNsfwHuggingFace(
     const headers: Record<string, string> = { "Content-Type": mimeType };
     if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
 
+    // First attempt — short timeout (fast if model is warm)
     const res = await fetch(HF_NSFW_MODEL, {
       method: "POST",
       headers,
       body: binaryData,
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(5000),
     });
 
     if (res.status === 503) {
-      // Model loading — bir marta qayta urinib ko'ramiz
-      await new Promise((r) => setTimeout(r, 5000));
+      // Model yuklanmoqda — 16 soniya kutib, qayta urinib ko'ramiz (total < 30s)
+      console.log("HF NSFW: model yuklanmoqda (503), 16s kutilmoqda...");
+      await new Promise((r) => setTimeout(r, 16000));
       const res2 = await fetch(HF_NSFW_MODEL, {
         method: "POST",
         headers,
         body: binaryData,
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(7000),
       });
       if (!res2.ok) { console.warn("HF NSFW 503 retry failed:", res2.status); return null; }
       const data2 = await res2.json();
