@@ -881,7 +881,7 @@ const FORM_RULES = [
   "Davr tugagach reklama avtomatik toʻxtatiladi va reytingdan chiqariladi.",
 ];
 
-function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOut: () => void }) {
+function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lang: Lang; onSignOut: () => void; totalSpentCents: number }) {
   const { firebaseUser, userProfile } = useAuth();
   const [brandName, setBrandName] = useState(userProfile?.displayName || "");
   const [email, setEmail]         = useState(userProfile?.email || firebaseUser?.email || "");
@@ -920,16 +920,15 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
   const photoURL  = firebaseUser?.photoURL;
   const googleEmail = firebaseUser?.email || "—";
   const STATS = useMemo(() => {
-    const spent  = ads.reduce((s, a) => s + (a.totalPaidCents || 0), 0);
     const active = ads.filter((a) => a.status === "active").length;
     return [
       { k: "Jami reklamalar",  v: String(ads.length),                        color: "#EDE9FE" },
       { k: "Faol reklamalar",  v: String(active),                            color: "#34D399" },
-      { k: "Jami sarflangan",  v: `$${(spent / 100).toFixed(2)}`,            color: "#FCD34D" },
+      { k: "Jami sarflangan",  v: `$${(totalSpentCents / 100).toFixed(2)}`,  color: "#FCD34D" },
       { k: "Koʻrilish",        v: ads.reduce((s, a) => s + (a.impressions || 0), 0).toLocaleString(), color: "#EDE9FE" },
       { k: "Bosish",           v: ads.reduce((s, a) => s + (a.clicks || 0), 0).toLocaleString(),      color: "#EDE9FE" },
     ];
-  }, [ads]);
+  }, [ads, totalSpentCents]);
 
   return (
     <div style={{ animation: "fade .35s ease both" }}>
@@ -937,7 +936,7 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
       <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 20, color: "#EDE9FE" }}>{t.profileTitle}</h1>
       <div className="rg-profile">
 
-        {/* LEFT */}
+        {/* COL 1 — Profil + Akkaunt ma'lumotlari */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ ...card, padding: 22, display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
             {photoURL ? (
@@ -977,7 +976,10 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
               </button>
             </div>
           </div>
+        </div>
 
+        {/* COL 2 — Bildirishnomalar */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ ...card, padding: 22 }}>
             <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 6, color: "#EDE9FE" }}>{t.notifTitle}</div>
             <div style={{ fontSize: ".82rem", color: "#6D5B8E", lineHeight: 1.6, marginBottom: 14 }}>{t.notifSub}</div>
@@ -995,7 +997,7 @@ function ProfileView({ ads, lang, onSignOut }: { ads: Ad[]; lang: Lang; onSignOu
           </div>
         </div>
 
-        {/* RIGHT */}
+        {/* COL 3 — Hisob statistikasi + Muhim + Akkauntdan chiqish */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ ...card, borderRadius: 16, padding: 18 }}>
             <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{t.statsTitle}</div>
@@ -1113,7 +1115,7 @@ export default function DashboardPage() {
             {screen === "myads"  && <MyAdsView ads={myAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
             {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => startTransition(() => setScreen("all"))} />}
             {screen === "wallet" && <WalletView lang={lang} myAds={myAds} userProfile={userProfile} uid={firebaseUser.uid} txs={txs} totalSpentCents={spent} />}
-            {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} />}
+            {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} totalSpentCents={spent} />}
           </main>
         </div>
       </div>

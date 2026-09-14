@@ -64,7 +64,7 @@ input, select, textarea { font-family: inherit; }
 .rg-form     { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 24px; align-items: start; }
 .rg-auth     { display: grid; grid-template-columns: minmax(0,1fr) 430px; gap: 40px; align-items: start; }
 .rg-wallet   { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 20px; align-items: start; }
-.rg-profile  { display: grid; grid-template-columns: minmax(0,1fr) 280px; gap: 16px; align-items: start; }
+.rg-profile  { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 260px; gap: 16px; align-items: start; }
 
 /* ── Dashboard / Create layout ─────────────────────────────────────────────── */
 .dash-layout { display: flex; align-items: stretch; }
@@ -84,12 +84,14 @@ input, select, textarea { font-family: inherit; }
 
 /* ── Tablet: 640–1023px ────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
-  .rg-form, .rg-auth, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
+  .rg-form, .rg-auth, .rg-wallet { grid-template-columns: 1fr !important; }
+  .rg-profile { grid-template-columns: 1fr 1fr !important; }
   .create-inner-grid { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 767px) {
   .rg-auth-card { order: -1; }
   .hero-top { padding: 40px 0 32px !important; }
+  .rg-profile { grid-template-columns: 1fr !important; }
 }
 @media (min-width: 640px) and (max-width: 1023px) {
   .rg-3 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
