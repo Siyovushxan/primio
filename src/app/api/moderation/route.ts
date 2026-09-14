@@ -71,30 +71,37 @@ async function groqChat(model: string, messages: any[], timeoutMs = 8000): Promi
     .replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
-const SYSTEM_PROMPT = `Sen reklama kontent moderatorisan. Qat'iy qoidalar:
+const SYSTEM_PROMPT = `Sen qat'iy reklama kontent moderatorisan. Har qanday shubha bo'lsa REJECTED de.
 
-RAD ETISH (REJECTED):
-- Jinsiy/18+ kontent: yalang'och tana, seks, porno, escort, fahisha, intim xizmat
-- Zo'ravonlik, qurol, terror, tahdid
+RASM BO'YICHA RAD ETISH — quyidagilardan BIRI bo'lsa ham REJECTED:
+- Yalang'och yoki qisman yalang'och tana (bikini, ichki kiyim, korsaj, shunga o'xshash)
+- Ko'krak, son, dumba yoki jinsiy a'zolar ochiq ko'rinsa
+- Jinsiy jihatdan qo'zg'atuvchi, provokatsion yoki erotik kiyim va poza
+- 18+ yoki kattalar uchun mo'ljallangan kontent
+- Zo'ravonlik, qon, qurol ko'rsatilsa
+
+MATN BO'YICHA RAD ETISH:
+- Seks, porno, escort, fahisha, intim xizmatlar
 - Narkotik, nasha, giyohvand moddalar
-- Kumor, stavka, ruxsatsiz loteriya
+- Kumor, stavka, loteriya
 - Firibgarlik: "kafolatlangan foyda", "100% daromad", "tez boyish"
 - Haqorat, irqchilik, nafrat nutqi
 - Fishing/aldash saytlari
 - Sohta dori va'dalari
 
-TASDIQLASH (APPROVED):
-- Do'kon, xizmat, mahsulot
+TASDIQLASH (faqat rasmda odatiy biznes tasviri bo'lsa):
+- Mahsulot, do'kon, xizmat, logotip, interfeys
+- Oziq-ovqat, restoran, ovqat tasviri
+- Sayohat joylari, arxitektura
 - Ta'lim, kurs, kitob
-- Texnologiya, ilova, dastur
-- Ovqat, restoran
-- Sayohat, turizm
-- Ko'chmas mulk
+- Texnologiya, ilova
 
-JAVOB — faqat shu ikki variantdan biri:
+QOIDA: Rasmdagi odam qisman yoki to'liq yechingan bo'lsa — sarlavha yoki matn nima bo'lishidan qat'iy nazar REJECTED de.
+
+JAVOB — faqat shu ikki formatdan biri:
 APPROVED
 yoki
-REJECTED: [o'zbek tilida aniq sabab 1 jumlada]`;
+REJECTED: [sabab 1 jumlada o'zbekcha]`;
 
 export async function GET() {
   return NextResponse.json({ ok: true, groq: !!process.env.GROQ_API_KEY });
@@ -167,25 +174,43 @@ export async function POST(req: NextRequest) {
             role: "user",
             content: [
               { type: "image_url", image_url: { url: dataUrl } },
-              { type: "text", text: `Rasmni va quyidagi ma'lumotlarni tekshir:\n${adInfo}` },
+              {
+                type: "text",
+                text: `RASMNI DIQQAT BILAN KO'R:\n` +
+                  `1. Rasmdagi odam yoki shaxs bor-yo'qligini aniqlang\n` +
+                  `2. Agar odam bo'lsa — kiyimi to'liq, qisman yechingganmi yoki yalang'ochmi?\n` +
+                  `3. Rasm jinsiy jihatdan qo'zg'atuvchi yoki provokatsionmi?\n` +
+                  `4. Reklama ma'lumotlari ham tekshir:\n${adInfo}\n\n` +
+                  `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`,
+              },
             ],
           },
-        ], 10000);
+        ], 12000);
 
         if (reply.toUpperCase().startsWith("REJECTED")) {
-          const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm yoki matn moderatsiya talablariga javob bermadi";
+          const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
           return NextResponse.json({ approved: false, reason });
         }
         if (reply.toUpperCase().startsWith("APPROVED")) {
           return NextResponse.json({ approved: true });
         }
-        // Vision javob bermadi → matn tekshiruviga o'tish
+        // Vision noaniq javob berdi → matn tekshiruviga o'tish (rasm shubhali bo'lishi mumkin)
+        console.warn("Vision gave unclear response, falling back to text:", reply.slice(0, 80));
       } catch (e: any) {
         console.warn("Vision check failed, falling back to text:", e?.message);
       }
     }
 
-    // ── 4b. Matn-only tekshiruvi (fallback) ──────────────────────────────────
+    // ── 4b. Rasm bor ammo vision ishlamagan → xavfsiz tomonga o'tish ─────────
+    // Rasm tekshirilmasa tasdiqlash mumkin emas — foydalanuvchiga qayta urinish so'rash
+    if (imageBase64) {
+      return NextResponse.json({
+        approved: false,
+        reason: "Rasm tekshiruvi vaqtinchalik ishlamadi. Bir ozdan keyin qayta urinib ko'ring.",
+      });
+    }
+
+    // ── 4c. Rasm yo'q holat — matn-only tekshiruvi ───────────────────────────
     try {
       const reply = await groqChat(MODEL_TEXT, [
         { role: "system", content: SYSTEM_PROMPT },
@@ -198,7 +223,6 @@ export async function POST(req: NextRequest) {
       }
     } catch (e: any) {
       console.warn("Text check failed:", e?.message);
-      // Groq ishlamasa → keyword tekshiruvi o'tgan, tasdiqlash
     }
 
     return NextResponse.json({ approved: true });
