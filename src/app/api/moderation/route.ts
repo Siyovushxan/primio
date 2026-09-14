@@ -209,11 +209,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Barcha vision modellari ishlamadi → matn tekshiruviga o'tish
-      console.warn("All vision models failed, falling back to text-only check");
+      // Barcha vision modellari ishlamadi → rasm bo'lsa xavfsiz rad etish
+      console.warn("All vision models failed — rejecting image submission");
+      return NextResponse.json({
+        approved: false,
+        reason: "Rasm tekshirib bo'lmadi. Bir ozdan keyin qayta urinib ko'ring.",
+      });
     }
 
-    // ── 4b. Matn tekshiruvi (vision yo'q yoki ishlamagan holat) ──────────────
+    // ── 4b. Matn tekshiruvi (rasm yo'q holat) ────────────────────────────────
     try {
       const reply = await groqChat(MODEL_TEXT, [
         { role: "system", content: SYSTEM_PROMPT },
