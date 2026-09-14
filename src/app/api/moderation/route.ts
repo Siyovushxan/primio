@@ -6,9 +6,10 @@ export const maxDuration = 30;
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 // Vision modellar: birinchi ishlamasa keyingisi sinab ko'riladi
 const VISION_MODELS = [
-  "meta-llama/llama-4-scout-17b-16e-instruct",
-  "meta-llama/llama-4-maverick-17b-128e-instruct",
-  "llama-3.2-11b-vision-preview",
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "openai/gpt-oss-safeguard-20b",
+  "groq/compound",
 ];
 const MODEL_TEXT = "llama-3.3-70b-versatile";
 
