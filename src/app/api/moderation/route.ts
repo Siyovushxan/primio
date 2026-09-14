@@ -5,12 +5,53 @@ export const maxDuration = 30;
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
 // Vision modellar: birinchi ishlamasa keyingisi sinab ko'riladi
-const VISION_MODELS = [
-  "openai/gpt-oss-120b",
-  "openai/gpt-oss-20b",
-  "openai/gpt-oss-safeguard-20b",
-  "groq/compound",
-];
+// Groq vision modellari (agar API keyda mavjud bo'lsa)
+const VISION_MODELS: string[] = [];
+
+// HuggingFace NSFW detection (bepul, API key shart emas)
+const HF_NSFW_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
+
+async function checkNsfwHuggingFace(
+  imageBase64: string,
+  mimeType: string
+): Promise<{ isNsfw: boolean; score: number } | null> {
+  try {
+    const binaryData = Buffer.from(imageBase64, "base64");
+    const headers: Record<string, string> = { "Content-Type": mimeType };
+    if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
+
+    const res = await fetch(HF_NSFW_MODEL, {
+      method: "POST",
+      headers,
+      body: binaryData,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (res.status === 503) {
+      // Model loading — bir marta qayta urinib ko'ramiz
+      await new Promise((r) => setTimeout(r, 5000));
+      const res2 = await fetch(HF_NSFW_MODEL, {
+        method: "POST",
+        headers,
+        body: binaryData,
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!res2.ok) { console.warn("HF NSFW 503 retry failed:", res2.status); return null; }
+      const data2 = await res2.json();
+      const score = data2.find?.((d: any) => d.label === "nsfw")?.score ?? 0;
+      return { isNsfw: score > 0.65, score };
+    }
+
+    if (!res.ok) { console.warn("HF NSFW failed:", res.status, await res.text()); return null; }
+    const data = await res.json();
+    if (!Array.isArray(data)) { console.warn("HF NSFW unexpected response:", data); return null; }
+    const score = data.find((d: any) => d.label === "nsfw")?.score ?? 0;
+    return { isNsfw: score > 0.65, score };
+  } catch (e: any) {
+    console.warn("HF NSFW check error:", e?.message?.slice(0, 100));
+    return null;
+  }
+}
 const MODEL_TEXT = "llama-3.3-70b-versatile";
 
 // ── Blocked keyword patterns (EN + UZ + RU) ──────────────────────────────────
@@ -156,11 +197,12 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      configured_vision_models: VISION_MODELS,
-      available_vision_candidates: visionCandidates,
-      all_model_ids: allIds,
-      vision_test: testOk ? `OK (${testModel})` : "ALL FAILED",
-      vision_test_errors: testErrors,
+      strategy: "HuggingFace NSFW detection (primary) + Groq vision (if available)",
+      groq_vision_models: VISION_MODELS.length > 0 ? VISION_MODELS : "none configured",
+      hf_token: !!process.env.HF_TOKEN,
+      all_groq_model_ids: allIds,
+      groq_vision_test: testOk ? `OK (${testModel})` : testErrors.length > 0 ? "FAILED" : "skipped",
+      groq_test_errors: testErrors,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, groq_key: true, error: e.message });
@@ -232,26 +274,22 @@ export async function POST(req: NextRequest) {
       `4. Reklama ma'lumotlari:\n${adInfo}\n\n` +
       `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`;
 
-    // ── 4a. Rasm tekshiruvi — URL + base64 orqali (6 urinish) ───────────────
-    const imgSources: { type: "image_url"; image_url: { url: string } }[] = [];
-    if (imageURL) {
-      imgSources.push({ type: "image_url", image_url: { url: imageURL } });
-    }
-    if (imageBase64 && mimeType) {
-      imgSources.push({ type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } });
-    }
+    // ── 4a. Rasm tekshiruvi ───────────────────────────────────────────────────
+    const hasImage = !!(imageBase64 && mimeType);
 
-    if (imgSources.length > 0) {
-      const errors: string[] = [];
+    if (hasImage) {
+      // 4a-i. Groq vision (agar modellar mavjud bo'lsa)
+      if (VISION_MODELS.length > 0) {
+        const imgSrc = imageURL
+          ? { type: "image_url" as const, image_url: { url: imageURL } }
+          : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
 
-      for (const imgRef of imgSources) {
         for (const vModel of VISION_MODELS) {
           try {
             const reply = await groqChat(vModel, [
               { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: [imgRef, { type: "text", text: userPrompt }] },
+              { role: "user", content: [imgSrc, { type: "text", text: userPrompt }] },
             ], 15000);
-
             if (reply.toUpperCase().startsWith("REJECTED")) {
               const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
               return NextResponse.json({ approved: false, reason });
@@ -259,17 +297,27 @@ export async function POST(req: NextRequest) {
             if (reply.toUpperCase().startsWith("APPROVED")) {
               return NextResponse.json({ approved: true });
             }
-            console.warn(`Vision ${vModel} unclear:`, reply.slice(0, 80));
           } catch (e: any) {
-            const msg = e?.message?.slice(0, 180) || "unknown";
-            errors.push(`${vModel}: ${msg}`);
-            console.warn(`Vision ${vModel} failed:`, msg);
+            console.warn(`Groq vision ${vModel} failed:`, e?.message?.slice(0, 150));
           }
         }
       }
 
-      // Barcha urinishlar muvaffaqiyatsiz tugadi
-      console.error("All vision attempts failed:", errors.join(" || "));
+      // 4a-ii. HuggingFace NSFW detection (bepul, ishonchli)
+      const hfResult = await checkNsfwHuggingFace(imageBase64, mimeType);
+      if (hfResult !== null) {
+        console.log(`HF NSFW score: ${hfResult.score.toFixed(3)}, isNsfw: ${hfResult.isNsfw}`);
+        if (hfResult.isNsfw) {
+          return NextResponse.json({
+            approved: false,
+            reason: "Rasm 18+ yoki nomaqbul kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
+          });
+        }
+        return NextResponse.json({ approved: true });
+      }
+
+      // 4a-iii. Hammasi ishlamadi — xavfsiz rad etish
+      console.error("All image checks failed — rejecting");
       return NextResponse.json({
         approved: false,
         reason: "Rasm tekshirib bo'lmadi. Bir ozdan keyin qayta urinib ko'ring.",
