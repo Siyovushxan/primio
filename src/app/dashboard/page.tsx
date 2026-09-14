@@ -937,7 +937,7 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
       <div className="rg-profile">
 
         {/* COL 1 — Profil + Akkaunt ma'lumotlari */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
           <div style={{ ...card, padding: 22, display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
             {photoURL ? (
               <Image src={photoURL} alt={brand} width={58} height={58} style={{ borderRadius: 17, objectFit: "cover", flexShrink: 0 }} />
@@ -951,7 +951,7 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
             <span style={{ padding: "3px 11px", borderRadius: 100, background: "rgba(16,185,129,.12)", border: "1px solid #10B981", color: "#34D399", fontSize: ".68rem", fontWeight: 700 }}>✅ {t.verified}</span>
           </div>
 
-          <div style={{ ...card, padding: 22 }}>
+          <div style={{ ...card, padding: 22, flex: 1 }}>
             <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 16, color: "#EDE9FE" }}>Akkaunt ma&apos;lumotlari</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
@@ -979,8 +979,8 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
         </div>
 
         {/* COL 2 — Bildirishnomalar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ ...card, padding: 22 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
+          <div style={{ ...card, padding: 22, flex: 1 }}>
             <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 6, color: "#EDE9FE" }}>{t.notifTitle}</div>
             <div style={{ fontSize: ".82rem", color: "#6D5B8E", lineHeight: 1.6, marginBottom: 14 }}>{t.notifSub}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -998,7 +998,7 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
         </div>
 
         {/* COL 3 — Hisob statistikasi + Muhim + Akkauntdan chiqish */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
           <div style={{ ...card, borderRadius: 16, padding: 18 }}>
             <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{t.statsTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 11, fontSize: ".84rem" }}>
@@ -1011,7 +1011,7 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
             </div>
           </div>
 
-          <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
+          <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18, flex: 1 }}>
             <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{t.rulesTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
               {FORM_RULES.map((r) => (
