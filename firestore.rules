@@ -8,12 +8,16 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Ads — anyone can read active ads, owner can update/delete own ads
+    // Ads — anyone can read active ads, owner can create/update/delete own ads
     match /ads/{adId} {
       allow read: if true;
-      // Create only through server-side Admin SDK (client create blocked)
-      allow create: if false;
-      // Update/delete: only ad owner (advertiserUID field)
+      // Create: authenticated user, must set own UID, start as pending, zero paid
+      allow create: if request.auth != null
+        && request.resource.data.advertiserUID == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.totalPaidCents == 0
+        && request.resource.data.moderationPassed == true;
+      // Update/delete: only ad owner
       allow update, delete: if request.auth != null
         && request.auth.uid == resource.data.advertiserUID;
     }
