@@ -119,9 +119,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, description, destinationURL, imageBase64, mimeType } = body as {
+    const { title, description, destinationURL, imageBase64, mimeType, imageURL } = body as {
       title?: string; description?: string; destinationURL?: string;
-      imageBase64?: string; mimeType?: string;
+      imageBase64?: string; mimeType?: string; imageURL?: string;
     };
 
     if (!title || !destinationURL) {
@@ -177,10 +177,13 @@ export async function POST(req: NextRequest) {
       `4. Reklama ma'lumotlari:\n${adInfo}\n\n` +
       `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`;
 
-    // ── 4a. Rasm tekshiruvi — bir nechta vision model bilan sinab ko'riladi ───
-    if (imageBase64 && mimeType) {
-      const dataUrl = `data:${mimeType};base64,${imageBase64}`;
-      let visionDone = false;
+    // ── 4a. Rasm tekshiruvi — URL yoki base64 orqali ─────────────────────────
+    const hasImage = !!(imageURL || (imageBase64 && mimeType));
+    if (hasImage) {
+      // URL ustuvorlik qiladi (ishonchli), base64 fallback
+      const imgRef = imageURL
+        ? { type: "image_url" as const, image_url: { url: imageURL } }
+        : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
 
       for (const vModel of VISION_MODELS) {
         try {
@@ -189,7 +192,7 @@ export async function POST(req: NextRequest) {
             {
               role: "user",
               content: [
-                { type: "image_url", image_url: { url: dataUrl } },
+                imgRef,
                 { type: "text", text: userPrompt },
               ],
             },
@@ -205,11 +208,11 @@ export async function POST(req: NextRequest) {
           // Noaniq javob — keyingi modelni sinab ko'r
           console.warn(`Vision model ${vModel} gave unclear response:`, reply.slice(0, 80));
         } catch (e: any) {
-          console.warn(`Vision model ${vModel} failed:`, e?.message?.slice(0, 120));
+          console.warn(`Vision model ${vModel} failed:`, e?.message?.slice(0, 200));
         }
       }
 
-      // Barcha vision modellari ishlamadi → rasm bo'lsa xavfsiz rad etish
+      // Barcha vision modellari ishlamadi
       console.warn("All vision models failed — rejecting image submission");
       return NextResponse.json({
         approved: false,

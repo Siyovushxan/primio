@@ -16,8 +16,8 @@ interface Step {
 const STEPS_UZ: Step[] = [
   { id: "keyword", label: "Kalit so'zlar tekshiruvi", sublabel: "Taqiqlangan so'zlar va domenlar skanlanmoqda" },
   { id: "url",     label: "URL manzil tekshiruvi",    sublabel: "Sayt mavjudligi va xavfsizligi aniqlanmoqda" },
-  { id: "ai",      label: "AI tahlili",               sublabel: "Rasm va matn sun'iy intellekt tomonidan ko'rilmoqda" },
-  { id: "upload",  label: "Rasm yuklanmoqda",          sublabel: "Tasdiqlangan rasm serverga saqlanmoqda" },
+  { id: "upload",  label: "Rasm yuklanmoqda",          sublabel: "Rasm serverga yuklanmoqda" },
+  { id: "ai",      label: "AI tahlili",               sublabel: "Rasm sun'iy intellekt tomonidan ko'rilmoqda" },
   { id: "save",    label: "Reklama yaratilmoqda",      sublabel: "Ma'lumotlar bazaga saqlanmoqda" },
 ];
 
@@ -58,63 +58,46 @@ export default function ScanningPage() {
       const { title, description, url, category, bidCents, duration,
               imageBase64, imageBase64Mod, imageMimeTypeMod, idToken, uid } = data;
 
-      // ── Step 1+2+3: Moderation API (handles keyword, URL, AI internally) ──
+      // ── Step 1+2: Matn tekshiruvi (keyword + URL, rasmsiz) ───────────────
       setStep("keyword", "running");
-      await new Promise((r) => setTimeout(r, 600)); // short visual delay
-      setStep("url", "running");
       await new Promise((r) => setTimeout(r, 400));
-      setStep("ai", "running");
+      setStep("url", "running");
 
-      let modData: any;
+      let textData: any;
       try {
-        const modRes = await fetch("/api/moderation", {
+        const textRes = await fetch("/api/moderation", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({
-            imageBase64: imageBase64Mod,
-            mimeType: imageMimeTypeMod,
-            title,
-            description,
-            destinationURL: url,
-          }),
+          body: JSON.stringify({ title, description, destinationURL: url }),
         });
-        try { modData = await modRes.json(); }
-        catch { throw new Error("Moderatsiya xizmati javob bermadi. Qayta urinib ko'ring."); }
+        try { textData = await textRes.json(); }
+        catch { throw new Error("Moderatsiya xizmati javob bermadi."); }
       } catch (err: any) {
-        setStep("keyword", "waiting");
+        setStep("keyword", "failed");
         setStep("url", "waiting");
-        setStep("ai", "failed");
-        setError(err?.message || "Moderatsiya xatosi");
+        setError(err?.message || "Matn tekshiruvi xatosi");
         return;
       }
 
-      if (!modData.approved) {
-        const reason: string = modData.reason || "";
-        // Qaysi step sabab ekanini aniqlaymiz
-        const isKeyword = /taqiqlangan so'z|domen/i.test(reason);
+      if (!textData.approved) {
+        const reason: string = textData.reason || "";
         const isUrl = /sayt|URL|ulanib|ishlamayapti/i.test(reason);
-        if (isKeyword) {
-          setStep("keyword", "failed");
-          setStep("url", "waiting");
-        } else if (isUrl) {
+        if (isUrl) {
           setStep("keyword", "done");
           setStep("url", "failed");
         } else {
-          setStep("keyword", "done");
-          setStep("url", "done");
-          setStep("ai", "failed");
+          setStep("keyword", "failed");
+          setStep("url", "waiting");
         }
-        setError("❌ " + (reason || "Reklama moderatsiyadan o'tmadi"));
-        // sessionStorage saqlab qolamiz — foydalanuvchi orqaga qaytganda form tiklansin
+        setError("❌ " + (reason || "Matn tekshiruvidan o'tmadi"));
         return;
       }
 
       setStep("keyword", "done");
       setStep("url", "done");
-      setStep("ai", "done");
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 200));
 
-      // ── Step 4: Image upload ──────────────────────────────────────────────
+      // ── Step 3: Image upload ──────────────────────────────────────────────
       setStep("upload", "running");
       let imageURL: string;
       try {
@@ -132,6 +115,33 @@ export default function ScanningPage() {
         setError(err?.message || "Rasm yuklanmadi. Qayta urinib ko'ring.");
         return;
       }
+      await new Promise((r) => setTimeout(r, 200));
+
+      // ── Step 4: AI vision tekshiruvi (URL orqali — ishonchli) ────────────
+      setStep("ai", "running");
+
+      let aiData: any;
+      try {
+        const aiRes = await fetch("/api/moderation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ title, description, destinationURL: url, imageURL }),
+        });
+        try { aiData = await aiRes.json(); }
+        catch { throw new Error("AI tekshiruvi javob bermadi."); }
+      } catch (err: any) {
+        setStep("ai", "failed");
+        setError(err?.message || "AI tekshiruvi xatosi");
+        return;
+      }
+
+      if (!aiData.approved) {
+        setStep("ai", "failed");
+        setError("❌ " + (aiData.reason || "Rasm AI tekshiruvidan o'tmadi"));
+        return;
+      }
+
+      setStep("ai", "done");
       await new Promise((r) => setTimeout(r, 200));
 
       // ── Step 5: Firestore save ────────────────────────────────────────────
