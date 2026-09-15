@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const XAI_API = "https://api.x.ai/v1/chat/completions";
 const VISION_MODELS = ["grok-2-vision-1212"];
@@ -329,10 +329,11 @@ async function hfPost(
     const body = Buffer.from(imageBase64, "base64");
     const headers: Record<string, string> = { "Content-Type": mimeType };
     if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
-    let res = await fetch(modelUrl, { method: "POST", headers, body, signal: AbortSignal.timeout(5000) });
+    let res = await fetch(modelUrl, { method: "POST", headers, body, signal: AbortSignal.timeout(8000) });
     if (res.status === 503) {
-      await new Promise((r) => setTimeout(r, 12000));
-      res = await fetch(modelUrl, { method: "POST", headers, body, signal: AbortSignal.timeout(7000) });
+      // Model cold start — wait then retry once
+      await new Promise((r) => setTimeout(r, 8000));
+      res = await fetch(modelUrl, { method: "POST", headers, body, signal: AbortSignal.timeout(10000) });
     }
     if (!res.ok) { console.warn(`HF ${modelUrl} failed: ${res.status}`); return null; }
     const data = await res.json();
@@ -356,10 +357,10 @@ async function checkHfSexy(imageBase64: string, mimeType: string) {
   const headers: Record<string, string> = { "Content-Type": mimeType };
   if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
   try {
-    let res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(5000) });
+    let res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(8000) });
     if (res.status === 503) {
-      await new Promise((r) => setTimeout(r, 12000));
-      res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(7000) });
+      await new Promise((r) => setTimeout(r, 8000));
+      res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(10000) });
     }
     if (!res.ok) { console.warn(`HF sexy failed: ${res.status}`); return null; }
     const data = await res.json();
@@ -491,13 +492,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ approved: false, reason: visionResult.reason });
       }
 
-      // All 3 failed → reject for safety
+      // All 3 API checks failed (network/timeout) — keyword + URL already passed,
+      // so approve rather than blocking the user with a technical error.
+      // Worst case: a bad image slips through on API downtime, but legitimate ads are not blocked.
       if (visionResult === null && hfExplicit === null && hfSexy === null) {
-        console.warn("⚠️ All 3 image checks unresponsive — rejecting for safety");
-        return NextResponse.json({
-          approved: false,
-          reason: "Rasm tekshiruvida xatolik. Qayta urinib ko'ring.",
-        });
+        console.warn("⚠️ All 3 image checks unresponsive — approving (keyword/URL passed)");
       }
     }
 
