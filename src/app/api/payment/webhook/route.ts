@@ -78,17 +78,37 @@ export async function POST(req: NextRequest) {
       const adRef = adminDb.doc(`ads/${adId}`);
       const adSnap = await adRef.get();
 
+      // Idempotency: check transactions collection first (works even if ad deleted)
+      const existingTx = await adminDb
+        .collection("transactions")
+        .where("externalTxId", "==", paymentId)
+        .limit(1)
+        .get();
+      if (!existingTx.empty) {
+        console.log("Webhook already processed (idempotency):", paymentId);
+        return NextResponse.json({ received: true });
+      }
+
       if (!adSnap.exists) {
-        console.error("Ad not found:", adId);
+        // Ad was deleted after payment — still record the transaction for audit/refund purposes
+        console.warn(`Ad not found (deleted?): ${adId} — recording orphan transaction`);
+        await adminDb.collection("transactions").add({
+          uid: advertiserUID,
+          adId,
+          type: "orphan_" + type, // e.g. "orphan_purchase"
+          amountCents: amountTotal,
+          externalTxId: paymentId,
+          paymentMethod: "card",
+          note: "Ad was deleted before webhook processed",
+          createdAt: FieldValue.serverTimestamp(),
+        });
+        await adminDb.doc(`users/${advertiserUID}`).update({
+          totalSpentCents: FieldValue.increment(amountTotal),
+        });
         return NextResponse.json({ received: true });
       }
 
       const ad = adSnap.data()!;
-
-      // Idempotency: already processed
-      if (ad.externalTxId === paymentId) {
-        return NextResponse.json({ received: true });
-      }
 
       if (type === "bid_upgrade") {
         await adRef.update({
