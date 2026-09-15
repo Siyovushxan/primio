@@ -12,7 +12,7 @@ const FLOW_CARDS = [
   { num: "03", icon: "🏆", title: "Reytingni kuzating va taklif bering", body: "Raqobatchilardan oshib o'ting. Taklif istalgan vaqt o'zgartirish mumkin." },
   { num: "04", icon: "📈", title: "Ko'proq ko'rish, ko'proq savdo", body: "Yuqori o'rinlar ko'proq klik va mijozlarni kafolatlaydi." },
   { num: "05", icon: "⚡", title: "Real vaqtda yangilanish", body: "Tizim har kechasi avtomatik reytingni yangilaydi." },
-  { num: "06", icon: "🛡️", title: "Xavfsiz to'lov tizimi", body: "Stripe orqali xavfsiz to'lov. Pulni faqat faol kunlar uchun to'laysiz." },
+  { num: "06", icon: "🛡️", title: "Xavfsiz to'lov tizimi", body: "Dodo Payments orqali xavfsiz to'lov. Pulni faqat faol kunlar uchun to'laysiz." },
 ];
 
 const HOME_CATS = [
@@ -61,7 +61,7 @@ const MATH_CARDS: { label: string; value: string; hint: string; labelColor: stri
 ];
 
 const FAQ = [
-  { q: "To'lov qanday amalga oshiriladi?", a: "Stripe orqali xavfsiz to'lov. Kunlik taklif miqdori avtomatik hisobdan chiqariladi. Muddati tugasa yoki to'xtatilsa — to'lov olinmaydi." },
+  { q: "To'lov qanday amalga oshiriladi?", a: "Dodo Payments orqali xavfsiz to'lov. Kunlik taklif miqdori avtomatik hisobdan chiqariladi. Muddati tugasa yoki to'xtatilsa — to'lov olinmaydi." },
   { q: "Reklamam qachon ko'rinadi?", a: "Moderatsiyadan o'tganidan so'ng (odatda 1–4 soat ichida) reklamangiz darhol jonlashadi." },
   { q: "Raqobatchilarni ko'ra olamanmi?", a: "Ha, har bir kategoriyada joriy liderlarni ko'rasiz. Bu sizga raqobat tahlili qilishga yordam beradi." },
   { q: "Taklifni o'zgartirsa bo'ladimi?", a: "Albatta! Istalgan vaqt dashboard orqali kunlik taklifingizni o'zgartirishingiz mumkin." },

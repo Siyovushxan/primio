@@ -2,21 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, CATEGORIES } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-
-const BETA_LAUNCH = "15 sentabr, 2026";
-
-const METHODS = [
-  { id: "card",       icon: "💳", label: "Visa / Mastercard", hint: "Stripe orqali shifrlangan" },
-  { id: "google_pay", icon: "🔵", label: "Google Pay",        hint: "Tez va xavfsiz" },
-  { id: "apple_pay",  icon: "🍎", label: "Apple Pay",         hint: "Face ID / Touch ID" },
-  { id: "paypal",     icon: "🔶", label: "PayPal",            hint: "200M+ foydalanuvchi" },
-  { id: "crypto",     icon: "₿",  label: "USDT / USDC",       hint: "Bank kerak emas" },
-];
 
 export default function PaymentPage() {
   const { adId } = useParams<{ adId: string }>();
@@ -26,11 +16,7 @@ export default function PaymentPage() {
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [method, setMethod] = useState("card");
   const [error, setError] = useState("");
-  const [waitEmail, setWaitEmail] = useState("");
-  const [waitSent, setWaitSent] = useState(false);
-  const [waitLoading, setWaitLoading] = useState(false);
 
   useEffect(() => {
     if (!adId) return;
@@ -53,7 +39,7 @@ export default function PaymentPage() {
       const res = await fetch("/api/payment/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ adId: ad.id, amount: ad.dailyBidCents * ad.durationDays, method }),
+        body: JSON.stringify({ adId: ad.id, amount: ad.dailyBidCents * ad.durationDays }),
       });
       const data = await res.json();
       if (data.url) {
@@ -64,25 +50,6 @@ export default function PaymentPage() {
     } catch (err: any) {
       setError(err.message);
       setPaying(false);
-    }
-  };
-
-  const handleWaitlist = async () => {
-    if (!waitEmail.includes("@") || waitLoading) return;
-    setWaitLoading(true);
-    try {
-      await setDoc(doc(db, "waitlist", waitEmail.toLowerCase().trim()), {
-        email: waitEmail.toLowerCase().trim(),
-        adId: ad?.id || null,
-        uid: firebaseUser?.uid || null,
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-      setWaitSent(true);
-    } catch {
-      // silent fail — user still sees success (don't block UX on Firestore error)
-      setWaitSent(true);
-    } finally {
-      setWaitLoading(false);
     }
   };
 
@@ -203,53 +170,17 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            {/* Beta notice */}
-            <div style={{ borderRadius: 16, border: "1px solid #F59E0B", background: "linear-gradient(135deg,rgba(120,53,15,.45),rgba(146,64,14,.3))", padding: 22 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                <span style={{ fontSize: "1.4rem" }}>🚀</span>
-                <div>
-                  <div style={{ fontSize: ".88rem", fontWeight: 700, color: "#FCD34D" }}>To'lov tizimi {BETA_LAUNCH} kuni ochiladi</div>
-                  <div style={{ fontSize: ".77rem", color: "#D97706", marginTop: 2 }}>Reklamangiz saqlandi — to'lov ochilgach darhol faollashtirasiz</div>
-                </div>
-              </div>
-              <div style={{ height: 1, background: "rgba(245,158,11,.25)", marginBottom: 16 }} />
-              {waitSent ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px", borderRadius: 12, background: "rgba(52,211,153,.1)", border: "1px solid rgba(52,211,153,.3)" }}>
-                  <span style={{ fontSize: "1.1rem" }}>✅</span>
-                  <div>
-                    <div style={{ fontSize: ".86rem", fontWeight: 700, color: "#34D399" }}>Qabul qilindi!</div>
-                    <div style={{ fontSize: ".76rem", color: "#6D5B8E", marginTop: 2 }}>To'lov ochilganda sizga xabar beramiz.</div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div style={{ fontSize: ".78rem", color: "#FDE68A", marginBottom: 10 }}>
-                    📧 Bildirishnoma olish uchun email qoldiring:
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      type="email"
-                      placeholder="email@example.com"
-                      value={waitEmail}
-                      onChange={(e) => setWaitEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleWaitlist()}
-                      style={{ flex: 1, padding: "11px 14px", borderRadius: 10, border: "1px solid rgba(245,158,11,.4)", background: "rgba(0,0,0,.3)", color: "#FDE68A", fontSize: ".85rem", outline: "none" }}
-                    />
-                    <button
-                      onClick={handleWaitlist}
-                      disabled={waitLoading || !waitEmail.includes("@")}
-                      style={{ padding: "11px 18px", borderRadius: 10, border: "none", background: waitLoading ? "#92400E" : "#F59E0B", color: "#1A1230", fontWeight: 700, fontSize: ".84rem", cursor: waitLoading || !waitEmail.includes("@") ? "not-allowed" : "pointer", opacity: !waitEmail.includes("@") ? .6 : 1, whiteSpace: "nowrap" }}
-                    >
-                      {waitLoading ? "..." : "Xabar ber"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={handlePay}
+              disabled={paying}
+              style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: paying ? "#4C1D95" : "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontWeight: 800, fontSize: "1.05rem", cursor: paying ? "not-allowed" : "pointer", boxShadow: paying ? "none" : "0 8px 28px rgba(124,58,237,.4)", letterSpacing: -.2 }}
+            >
+              {paying ? "Yo'naltirilmoqda..." : `💳 $${totalUSD.toFixed(2)} to'lash`}
+            </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12, background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", fontSize: ".82rem", color: "#A78BFA" }}>
               <span>🔒</span>
-              <span>To'lov tizimi ishga tushgach Dodo Payments orqali xavfsiz shifrlangan holda to'laysiz.</span>
+              <span>Dodo Payments orqali xavfsiz shifrlangan holda to'laysiz.</span>
             </div>
           </div>
 

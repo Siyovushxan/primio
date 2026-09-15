@@ -14,8 +14,8 @@ const FAQS = [
   { q: "Rad etilgan reklama uchun pul qaytariladi?", a: "Ha — lekin to'lov hech qachon olinmagan! Moderatsiya to'lovdan OLDIN bo'ladi. Bu eng katta afzalligimiz." },
   { q: "Davr tugagandan keyin nima bo'ladi?", a: "Reklama avtomatik to'xtatiladi va reytingdan chiqariladi. Siz email va push bildirishnoma olasiz (3 kun va 1 kun oldin). Dashboard'dan bitta klik bilan yangilash mumkin." },
   { q: "Raqibim yuqori bid qo'ysa nima qilaman?", a: "Push bildirish keladi: 'Raqibingiz $15/kun to'layapti'. Dashboard'dan [Bidni oshir] tugmasi bilan faqat qolgan kunlar uchun farq to'lab 1-o'ringa qaytasiz." },
-  { q: "Qaysi mamlakatlardan reklama berish mumkin?", a: "135+ mamlakat. Stripe, PayPal, USDT/USDC qabul qilinadi. Har tomonlama global." },
-  { q: "Reklama bekor qilsam puling qaytadimi?", a: "Ha. Qolgan kunlar × kunlik narx Stripe/PayPal orqali 3–5 ish kunida qaytariladi." },
+  { q: "Qaysi mamlakatlardan reklama berish mumkin?", a: "135+ mamlakat. Dodo Payments orqali xavfsiz to'lov qabul qilinadi. Har tomonlama global." },
+  { q: "Reklama bekor qilsam puling qaytadimi?", a: "Ha. Qolgan kunlar × kunlik narx Dodo Payments orqali 3–5 ish kunida qaytariladi." },
 ];
 
 const W = 1180;
