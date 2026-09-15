@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       }
     } catch {}
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://primio.com.uz";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.primio.com.uz";
 
     const res = await fetch(`${DODO_BASE}/payments`, {
       method: "POST",
