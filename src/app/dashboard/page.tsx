@@ -9,12 +9,14 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
+import { LANGS } from "@/lib/i18n";
 import { Ad, CATEGORIES, Category } from "@/types";
 import Link from "next/link";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type Screen = "all" | "myads" | "cats" | "wallet" | "profile";
-type Lang = "uz" | "en";
+type Lang = "uz" | "en" | "ru";
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
@@ -156,6 +158,75 @@ const T = {
       { k: "Technical error", v: "Case-by-case", color: "#F59E0B" },
     ],
   },
+  ru: {
+    dashLabel: "Панель управления", totalSpent: "Итого потрачено",
+    navAll: "Все объявления", navMyAds: "Мои объявления",
+    navCats: "Категории", navWallet: "Платежи", navProfile: "Профиль",
+    navGuide: "Как это работает", logout: "Выйти", sideMain: "Меню",
+    ctaCreate: "Разместить рекламу",
+    liveAuction: "Живой аукцион",
+    allLabel: "Живой рейтинг",
+    allTitle: "Рейтинг — все объявления",
+    allSub: "Кто платит больше — тот выше. Порядок определяется только дневной ставкой.",
+    reklama: "Объявлений", firstPos: "1-Е", minBid: "Мин. ставка",
+    tierTop3: "ТОП 3", tierTop3Note: "топ 3 по ставке",
+    tierTop10: "ТОП 10", tierTop20: "ТОП 20", tierTop50: "ТОП 50",
+    tierRest: "Остальные",
+    yourAd: "Ваше", raise: "Повысить ставку", outbid: "Перебить",
+    catAll: "Все", perDay: "в день",
+    myAdsTitle: "Мои объявления", myAdsSub: "Объявлений пока нет", myAdsActive: "Активное объявление",
+    faol: "Активно", sarflangan: "Потрачено", korilish: "Просмотры", bosish: "Клики",
+    newAccountBadge: "Новый аккаунт",
+    emptyAdsTitle: "Создайте первое объявление",
+    emptyAdsBody: "Создание бесплатно. Оплата только после одобрения AI.",
+    emptyAdsCta1: "Создать объявление →",
+    catLabel: "Категории", catsTitle: "8 мега-категорий",
+    catsSub: "В каждой категории — свой рейтинг. Займите 1-е место с минимальной ставкой.",
+    firstPlace: "1-е место", minEntry: "Минимум", adsWord: "объявлений",
+    walletLabel: "Кошелёк", walletTitle: "Кошелёк и платежи",
+    walletSub: "История платежей и методы оплаты. Безопасные платежи через Dodo Payments.",
+    profileTitle: "Профиль и настройки", verified: "Подтверждён",
+    statsTitle: "Статистика аккаунта", save: "Сохранить", saving: "Сохраняется...", saved: "✅ Сохранено",
+    notifTitle: "Уведомления",
+    notifSub: "Выберите, о каких событиях вас уведомлять.",
+    dangerTitle: "Выйти из аккаунта",
+    dangerBody: "После выхода объявления продолжат работать — вы просто покидаете сессию.",
+    rulesTitle: "Важно",
+    sideNoAdsTitle: "Разместите рекламу",
+    sideNoAdsBody: "Кошелёк готов. Создайте объявление в одной форме.",
+    sideOkTitle: "Статус кошелька",
+    sideOkBody: "Ваши активные объявления видны в рейтинге. Если перебили ставку — обновите в любое время.",
+    sideCta: "Разместить рекламу",
+    catNames: {
+      technology: "Технологии", food: "Еда", fashion: "Мода",
+      education: "Образование", health: "Здоровье", real_estate: "Недвижимость",
+      entertainment: "Развлечения", other: "Другое",
+    } as Record<Category, string>,
+    txTitle: "История платежей", txEmpty: "Платежей пока нет. После размещения объявления транзакции появятся здесь.",
+    payMethod: "Методы оплаты", topUpNote: "Платёжные данные не хранятся на серверах PRIMIO. Шифруется Dodo Payments.",
+    warnTitle: "Важно", refundTitle: "Политика возврата",
+    dueTitle: "Ожидается оплата", payNow: "Оплатить →",
+    kpiSpent: "Итого потрачено", kpiActive: "Активных объявлений", kpiImpr: "Всего показов",
+    kpiSpentHint: "Всё через Dodo Payments", kpiActiveHint: "Сейчас в эфире", kpiImprHint: "За всё время",
+    payOpts: [
+      { icon: "💳", label: "Visa / Mastercard", hint: "Безопасно через Dodo Payments" },
+      { icon: "🔵", label: "Google Pay", hint: "Быстро и безопасно" },
+      { icon: "🍎", label: "Apple Pay", hint: "Face ID / Touch ID" },
+      { icon: "🟡", label: "PayPal", hint: "200M+ пользователей" },
+      { icon: "🪙", label: "USDT / USDC", hint: "Банк не нужен" },
+    ],
+    warnRows: [
+      { color: "#F59E0B", title: "Предоплата", body: "Объявления начинаются только после подтверждения оплаты." },
+      { color: "#34D399", title: "Нет возвратов", body: "Одобренная и запущенная реклама не подлежит возврату." },
+      { color: "#A855F7", title: "Новые аккаунты", body: "Первый платёж может пройти 24-часовую проверку." },
+    ],
+    refundRows: [
+      { k: "Не прошло модерацию", v: "Полный возврат", color: "#34D399" },
+      { k: "Отменено в течение 24ч", v: "Полный возврат", color: "#34D399" },
+      { k: "Одобрено и запущено", v: "Без возврата", color: "#F87171" },
+      { k: "Техническая ошибка", v: "Рассматривается", color: "#F59E0B" },
+    ],
+  },
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -183,7 +254,7 @@ const inp: React.CSSProperties = {
 function AppHeader({
   lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet, onGoAll,
 }: {
-  lang: Lang; setLang: (l: Lang) => void;
+  lang: Lang; setLang: (l: string) => void;
   totalSpentCents: number; brandName: string; brandInitial: string;
   onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void; onGoAll: () => void;
 }) {
@@ -203,8 +274,9 @@ function AppHeader({
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
-            <button onClick={() => setLang("uz")} style={{ ...btnBase, background: lang === "uz" ? "#2D1F50" : "transparent", color: lang === "uz" ? "#EDE9FE" : "#6D5B8E" }}>UZ</button>
-            <button onClick={() => setLang("en")} style={{ ...btnBase, background: lang === "en" ? "#2D1F50" : "transparent", color: lang === "en" ? "#EDE9FE" : "#6D5B8E" }}>EN</button>
+            {LANGS.map((l) => (
+              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
+            ))}
           </div>
           <button onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
             <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
@@ -278,14 +350,20 @@ function Sidebar({
   );
 }
 
-function timeAgo(ts: any): string {
+const TIME_AGO = {
+  uz: { now: "Hozirgina", min: "daqiqa oldin", h: "soat oldin", d: "kun oldin" },
+  en: { now: "Just now", min: "min ago", h: "h ago", d: "d ago" },
+  ru: { now: "Только что", min: "мин. назад", h: "ч. назад", d: "дн. назад" },
+};
+function timeAgo(ts: any, lang: Lang = "en"): string {
   if (!ts) return "";
   const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const lbl = TIME_AGO[lang] || TIME_AGO.en;
   const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diff < 60) return "Hozirgina";
-  if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
-  return `${Math.floor(diff / 86400)} kun oldin`;
+  if (diff < 60) return lbl.now;
+  if (diff < 3600) return `${Math.floor(diff / 60)} ${lbl.min}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ${lbl.h}`;
+  return `${Math.floor(diff / 86400)} ${lbl.d}`;
 }
 function fmtN(n: number) {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -1037,8 +1115,10 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
 export default function DashboardPage() {
   const router = useRouter();
   const { firebaseUser, userProfile, loading, signOut } = useAuth();
+  const { lang: globalLang, setLang: setGlobalLang } = useLang();
+  const lang = (["uz","en","ru"].includes(globalLang) ? globalLang : "en") as Lang;
+  const setLang = (l: string) => setGlobalLang(l as Lang);
   const [screen, setScreen] = useState<Screen>("all");
-  const [lang, setLang]     = useState<Lang>("uz");
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [myAds, setMyAds]   = useState<Ad[]>([]);
   const [adsLoading, setAdsLoading] = useState(true);

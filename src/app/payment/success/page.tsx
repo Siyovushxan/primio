@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import { Ad } from "@/types";
 import Link from "next/link";
 
@@ -12,6 +13,7 @@ function PaymentSuccessInner() {
   const searchParams = useSearchParams();
   const adId = searchParams.get("adId");
   const { userProfile, firebaseUser, loading: authLoading } = useAuth();
+  const { t } = useLang();
 
   const [ad, setAd] = useState<Ad | null>(null);
   const [verifyError, setVerifyError] = useState("");
@@ -98,18 +100,18 @@ function PaymentSuccessInner() {
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
             <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
-            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>To'lov natijasi</span>
+            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.paymentLabel}</span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>Jami sarflangan</span>
+              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.paymentTotalSpent}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
             </div>
             <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
               <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
               <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
             </Link>
-            <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ Reklama berish</Link>
+            <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ {t.navPlaceAd}</Link>
           </div>
         </div>
       </header>
@@ -121,49 +123,49 @@ function PaymentSuccessInner() {
             {verifyError ? (
               <>
                 <div style={{ fontSize: 52, marginBottom: 20 }}>❌</div>
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Xato</h1>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.paymentError}</h1>
                 <p style={{ color: "#F87171", fontSize: 14, marginBottom: 24 }}>{verifyError}</p>
                 <Link href="/dashboard" style={btnPrimary}>Dashboard</Link>
               </>
             ) : processing ? (
               <>
                 <div style={{ width: 64, height: 64, borderRadius: "50%", border: "4px solid rgba(124,58,237,0.2)", borderTop: "4px solid #7C3AED", margin: "0 auto 24px", animation: "spin 1s linear infinite" }} />
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 8 }}>To'lov qayta ishlanmoqda...</h1>
-                <p style={{ color: "#9CA3AF", fontSize: 14 }}>Bir necha soniya kuting.</p>
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.paymentProcessing}</h1>
+                <p style={{ color: "#9CA3AF", fontSize: 14 }}>{t.paymentProcessingSub}</p>
               </>
             ) : isBidUpgrade ? (
               <>
                 <div style={{ fontSize: 56, marginBottom: 20 }}>🏆</div>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Bid muvaffaqiyatli oshirildi!</h1>
-                <p style={{ color: "#9CA3AF", fontSize: 14, marginBottom: 6 }}>Reklamangiz yangi bid bilan reytingda yuqoriga ko'tarildi.</p>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.paymentBidUpgrade}</h1>
+                <p style={{ color: "#9CA3AF", fontSize: 14, marginBottom: 6 }}>{t.paymentBidSub}</p>
                 {ad && <p style={{ color: "#C4B5FD", fontWeight: 600, fontSize: 14, marginBottom: 24 }}>{ad.title}</p>}
                 <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 28 }}>
-                  <p style={{ fontSize: 13, color: "#34D399" }}>✓ Yangi bid faollashtirildi</p>
+                  <p style={{ fontSize: 13, color: "#34D399" }}>{t.paymentBidNote}</p>
                 </div>
-                <Link href="/dashboard" style={btnPrimary}>Dashboard →</Link>
-                <Link href="/" style={btnSecondary}>Bosh sahifa</Link>
+                <Link href="/dashboard" style={btnPrimary}>{t.paymentDashboard}</Link>
+                <Link href="/" style={btnSecondary}>{t.paymentHome}</Link>
               </>
             ) : isActive ? (
               <>
                 <div style={{ fontSize: 56, marginBottom: 20 }}>🎉</div>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>To'lov muvaffaqiyatli!</h1>
-                <p style={{ color: "#9CA3AF", fontSize: 14, marginBottom: 6 }}>Reklamangiz hozir jonli.</p>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.paymentSuccess}</h1>
+                <p style={{ color: "#9CA3AF", fontSize: 14, marginBottom: 6 }}>{t.paymentSuccessLive}</p>
                 {ad && <p style={{ color: "#C4B5FD", fontWeight: 600, fontSize: 14, marginBottom: 24 }}>{ad.title}</p>}
                 <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 28 }}>
-                  <p style={{ fontSize: 13, color: "#34D399" }}>✓ Reklama reytingda ko'rinmoqda</p>
+                  <p style={{ fontSize: 13, color: "#34D399" }}>{t.paymentSuccessRanking}</p>
                 </div>
-                <Link href="/dashboard" style={btnPrimary}>Dashboard →</Link>
-                <Link href="/" style={btnSecondary}>Bosh sahifa</Link>
+                <Link href="/dashboard" style={btnPrimary}>{t.paymentDashboard}</Link>
+                <Link href="/" style={btnSecondary}>{t.paymentHome}</Link>
               </>
             ) : (
               <>
                 <div style={{ fontSize: 52, marginBottom: 20 }}>⏳</div>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>To'lov qabul qilindi</h1>
-                <p style={{ color: "#9CA3AF", fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>Reklamangiz 24 soat ichida tekshiriladi.</p>
+                <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.paymentPending}</h1>
+                <p style={{ color: "#9CA3AF", fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>{t.paymentPendingSub}</p>
                 <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, padding: "12px 16px", marginBottom: 28 }}>
-                  <p style={{ fontSize: 13, color: "#FCD34D" }}>⏳ Tasdiqlangandan keyin reklama jonli bo'ladi.</p>
+                  <p style={{ fontSize: 13, color: "#FCD34D" }}>{t.paymentPendingNote}</p>
                 </div>
-                <Link href="/dashboard" style={btnPrimary}>Dashboard →</Link>
+                <Link href="/dashboard" style={btnPrimary}>{t.paymentDashboard}</Link>
               </>
             )}
           </div>

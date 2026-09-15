@@ -9,14 +9,8 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import Link from "next/link";
-
-const PERKS = [
-  { icon: "📱", title: "Google akkaunt bilan", body: "Bir klik — akkaunt tayyor. Parol yodlash shart emas, SMS kutish ham." },
-  { icon: "💳", title: "Karta ham, hamyon ham kerak emas", body: "Google Pay, Apple Pay, PayPal yoki USDT. To'lov faqat reklama tasdiqlangandan keyin so'raladi." },
-  { icon: "🚀", title: "1 daqiqada birinchi reklama", body: "Ro'yxatdan o'tgach forma bir ekranda. AI tekshiruvi 30–90 soniya." },
-  { icon: "🚪", title: "Shartnoma yo'q", body: "Davrni o'zingiz tanlaysiz: 7, 14 yoki 30 kun. Avtomatik uzaytirish yo'q." },
-];
 
 const inp = {
   width: "100%", padding: "13px 15px", borderRadius: 12,
@@ -28,6 +22,7 @@ const inp = {
 function AuthPageInner() {
   const router = useRouter();
   const { firebaseUser } = useAuth();
+  const { t } = useLang();
   const [step, setStep] = useState<1 | 2>(1);
   const [brand, setBrand] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,7 +50,7 @@ function AuthPageInner() {
       }
     } catch (err: any) {
       if (err?.code !== "auth/popup-closed-by-user") {
-        setError("Google bilan kirishda xato. Qayta urinib ko'ring.");
+        setError(t.authError);
       }
       setLoading(false);
     }
@@ -64,7 +59,7 @@ function AuthPageInner() {
   const handleFinish = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!brand.trim()) return setError("Brend nomini kiriting");
+    if (!brand.trim()) return setError(t.authBrandError);
     setLoading(true);
     try {
       const user = auth.currentUser!;
@@ -77,7 +72,7 @@ function AuthPageInner() {
       });
       router.push("/dashboard");
     } catch (err: any) {
-      setError("Xato yuz berdi: " + (err?.message || "Qayta urinib ko'ring"));
+      setError(t.authGenError + ": " + (err?.message || t.tryAgain));
       setLoading(false);
     }
   };
@@ -89,17 +84,17 @@ function AuthPageInner() {
         {/* LEFT */}
         <div>
           <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>
-            Akkaunt
+            {t.authLabel}
           </div>
           <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "2.1rem", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.12, marginBottom: 14, color: "#EDE9FE" }}>
-            Ro&apos;yxatdan o&apos;tish —<br />1 klik, 1 daqiqa
+            {t.authTitle}
           </h1>
           <p style={{ fontSize: ".96rem", color: "#A78BFA", lineHeight: 1.75, maxWidth: "50ch", marginBottom: 26 }}>
-            Google akkauntingiz bilan kiring. Bank kartasi, hujjat yoki shartnoma so&apos;ralmaydi — to&apos;lov esa faqat reklama tasdiqlangandan keyin so&apos;raladi.
+            {t.authSub}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: "52ch" }}>
-            {PERKS.map((p) => (
+            {t.authPerks.map((p) => (
               <div key={p.icon} style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
                 <span style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(124,58,237,.14)", border: "1px solid #2D1F50", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".82rem", flexShrink: 0 }}>
                   {p.icon}
@@ -114,10 +109,10 @@ function AuthPageInner() {
 
           <div style={{ marginTop: 26, padding: "16px 18px", borderRadius: 14, background: "#160F2A", border: "1px solid #2D1F50", maxWidth: "52ch" }}>
             <div style={{ fontSize: ".8rem", color: "#A78BFA", lineHeight: 1.65 }}>
-              Reytinglarni ko&apos;rish uchun akkaunt shart emas. Ro&apos;yxatdan o&apos;tish faqat o&apos;z reklamangizni joylashtirish uchun kerak.
+              {t.authNoAccountNote}
             </div>
             <Link href="/browse" style={{ display: "inline-block", marginTop: 11, padding: "9px 15px", borderRadius: 10, background: "transparent", border: "1px solid #2D1F50", color: "#EDE9FE", fontSize: ".8rem", fontWeight: 600, textDecoration: "none" }}>
-              Jonli reyting →
+              {t.authViewRanking}
             </Link>
           </div>
         </div>
@@ -135,11 +130,12 @@ function AuthPageInner() {
           {step === 1 && (
             <>
               <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 6 }}>
-                Xush kelibsiz
+                {t.authWelcome}
               </div>
               <div style={{ fontSize: ".83rem", color: "#A78BFA", lineHeight: 1.6, marginBottom: 22 }}>
-                Ro&apos;yxatdan o&apos;tish yoki kirish — ikkalasi ham bitta tugma orqali.<br />
-                Birinchi marta kirsangiz — akkaunt avtomatik yaratiladi.
+                {t.authWelcomeSub.split("\n").map((line, i) => (
+                  <span key={i}>{line}{i < t.authWelcomeSub.split("\n").length - 1 && <br />}</span>
+                ))}
               </div>
 
               <button
@@ -156,7 +152,7 @@ function AuthPageInner() {
                 }}
               >
                 {loading ? (
-                  <span style={{ color: "#A78BFA" }}>Yuklanmoqda...</span>
+                  <span style={{ color: "#A78BFA" }}>{t.authLoading}</span>
                 ) : (
                   <>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -165,23 +161,23 @@ function AuthPageInner() {
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    Google bilan kirish
+                    {t.authGoogle}
                   </>
                 )}
               </button>
 
               <div style={{ marginTop: 14, padding: "11px 14px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
                 <div style={{ fontSize: ".77rem", color: "#6D5B8E", lineHeight: 1.6 }}>
-                  🔒 Parolingiz bizga ko&apos;rinmaydi. Google o&apos;zi tasdiqlaydi.
+                  {t.authPrivacy}
                 </div>
               </div>
 
               <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid #2D1F50" }}>
                 <div style={{ fontSize: ".78rem", color: "#6D5B8E", lineHeight: 1.6, marginBottom: 11 }}>
-                  Sinab ko&apos;rish uchun: to&apos;ldirilgan hamyon, 4 ta reklama va statistika bilan tayyor akkaunt.
+                  {t.authDemoNote}
                 </div>
                 <Link href="/browse" style={{ display: "block", width: "100%", padding: "12px 0", borderRadius: 11, background: "transparent", border: "1px dashed #2D1F50", color: "#A78BFA", fontSize: ".82rem", fontWeight: 600, textDecoration: "none", textAlign: "center", boxSizing: "border-box" }}>
-                  Reklamalarni ko&apos;rish →
+                  {t.authBrowse}
                 </Link>
               </div>
             </>
@@ -195,21 +191,21 @@ function AuthPageInner() {
                 <div style={{ flex: 1, height: 4, borderRadius: 100, background: "#7C3AED" }} />
               </div>
               <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>
-                Oxirgi qadam
+                {t.authLastStep}
               </div>
               <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#EDE9FE" }}>
-                Brend nomi
+                {t.authBrandTitle}
               </div>
               <div style={{ fontSize: ".83rem", color: "#A78BFA", lineHeight: 1.6, marginTop: -8 }}>
-                Reklamada ko&apos;rinadigan nom. Keyinchalik o&apos;zgartirish mumkin.
+                {t.authBrandSub}
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8 }}>Brend nomi</label>
+                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8 }}>{t.authBrandLabel}</label>
                 <input
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
-                  placeholder="Masalan: Akmal Studio"
+                  placeholder={t.authBrandPlaceholder}
                   style={inp}
                   required autoFocus
                 />
@@ -219,11 +215,11 @@ function AuthPageInner() {
                 type="submit" disabled={loading}
                 style={{ padding: "14px 0", borderRadius: 12, background: loading ? "#4C1D95" : "#7C3AED", border: "none", color: "#fff", fontSize: ".9rem", fontWeight: 700, cursor: loading ? "not-allowed" : "pointer" }}
               >
-                {loading ? "Yaratilmoqda..." : "Akkauntni yaratish →"}
+                {loading ? t.authCreating : t.authCreate}
               </button>
 
               <div style={{ fontSize: ".75rem", color: "#6D5B8E", textAlign: "center", lineHeight: 1.55 }}>
-                Davom etish bilan foydalanish shartlari va reklama siyosatiga rozilik bildirasiz.
+                {t.authTerms}
               </div>
             </form>
           )}

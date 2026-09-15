@@ -2,18 +2,16 @@
 
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
+import { LANGS } from "@/lib/i18n";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-const NAV_ITEMS = [
-  { href: "/browse", label: "Reklamalar" },
-  { href: "/how-it-works", label: "Qanday ishlaydi" },
-];
-
 export default function Header() {
   const pathname = usePathname();
   const { firebaseUser, userProfile, signOut, loading } = useAuth();
+  const { lang, setLang, t } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (pathname === "/dashboard" || pathname === "/create" || pathname.startsWith("/ads/") || pathname.startsWith("/payment/")) return null;
@@ -21,6 +19,11 @@ export default function Header() {
   const initials = userProfile?.displayName
     ? userProfile.displayName.charAt(0).toUpperCase()
     : "?";
+
+  const NAV_ITEMS = [
+    { href: "/browse", label: t.navAds },
+    { href: "/how-it-works", label: t.navHowItWorks },
+  ];
 
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.92)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
@@ -53,13 +56,33 @@ export default function Header() {
 
         {/* Right side */}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
+
+          {/* Language switcher */}
+          <div className="hidden md:flex" style={{ alignItems: "center", gap: 2, padding: "4px 6px", borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => setLang(l.code)}
+                style={{
+                  padding: "4px 9px", borderRadius: 6, border: "none", cursor: "pointer",
+                  fontSize: ".73rem", fontWeight: 700, letterSpacing: ".04em",
+                  background: lang === l.code ? "#7C3AED" : "transparent",
+                  color: lang === l.code ? "#fff" : "#6D5B8E",
+                  transition: "all .15s",
+                }}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
+
           {!loading && (
             <>
               {firebaseUser ? (
                 <>
                   {/* Total spent (hidden on mobile) */}
                   <div className="hidden md:flex" style={{ alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE" }}>
-                    <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>Sarflangan</span>
+                    <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.navSpent}</span>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>
                       ${((userProfile?.totalSpentCents || 0) / 100).toFixed(0)}
                     </span>
@@ -75,7 +98,7 @@ export default function Header() {
                         {initials}
                       </span>
                       <span style={{ fontSize: ".78rem", fontWeight: 600, display: "none" }} className="hidden md:block">
-                        {userProfile?.displayName || "Profil"}
+                        {userProfile?.displayName || t.navDashboard}
                       </span>
                     </button>
 
@@ -85,21 +108,21 @@ export default function Header() {
                           <div style={{ fontSize: ".82rem", fontWeight: 700, color: "#EDE9FE" }}>{userProfile?.displayName}</div>
                           <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 2 }}>{firebaseUser.email}</div>
                         </div>
-                        <Link href="/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#A78BFA", textDecoration: "none" }}>📊 Dashboard</Link>
-                        <Link href="/create" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#A78BFA", textDecoration: "none" }}>+ Reklama berish</Link>
-                        <button onClick={() => { signOut(); setMenuOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#F87171", background: "none", border: "none", textAlign: "left" }}>↩ Chiqish</button>
+                        <Link href="/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#A78BFA", textDecoration: "none" }}>📊 {t.navDashboard}</Link>
+                        <Link href="/create" onClick={() => setMenuOpen(false)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#A78BFA", textDecoration: "none" }}>+ {t.navPlaceAd}</Link>
+                        <button onClick={() => { signOut(); setMenuOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "11px 16px", fontSize: ".82rem", color: "#F87171", background: "none", border: "none", textAlign: "left" }}>↩ {t.navSignOut}</button>
                       </div>
                     )}
                   </div>
 
                   <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>
-                    + Reklama berish
+                    + {t.navPlaceAd}
                   </Link>
                 </>
               ) : (
                 <Link href="/auth" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
-                  <span className="hidden md:inline">Kirish / Ro&apos;yxatdan o&apos;tish</span>
-                  <span className="md:hidden">Kirish</span>
+                  <span className="hidden md:inline">{t.navSignIn}</span>
+                  <span className="md:hidden">{t.navSignInShort}</span>
                 </Link>
               )}
             </>
@@ -118,13 +141,30 @@ export default function Header() {
           {NAV_ITEMS.map((n) => (
             <Link key={n.href} href={n.href} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", fontSize: ".88rem", color: "#A78BFA", textDecoration: "none" }}>{n.label}</Link>
           ))}
+          {/* Mobile language switcher */}
+          <div style={{ display: "flex", gap: 6, padding: "10px 0", borderTop: "1px solid #2D1F50", marginTop: 4 }}>
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => { setLang(l.code); setMenuOpen(false); }}
+                style={{
+                  padding: "5px 12px", borderRadius: 7, border: "none", cursor: "pointer",
+                  fontSize: ".78rem", fontWeight: 700,
+                  background: lang === l.code ? "#7C3AED" : "rgba(124,58,237,0.1)",
+                  color: lang === l.code ? "#fff" : "#6D5B8E",
+                }}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
           {firebaseUser ? (
             <>
-              <Link href="/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", fontSize: ".88rem", color: "#A78BFA", textDecoration: "none" }}>Dashboard</Link>
-              <button onClick={() => { signOut(); setMenuOpen(false); }} style={{ padding: "10px 0", fontSize: ".88rem", color: "#F87171", background: "none", border: "none", display: "block" }}>Chiqish</button>
+              <Link href="/dashboard" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", fontSize: ".88rem", color: "#A78BFA", textDecoration: "none" }}>{t.navDashboard}</Link>
+              <button onClick={() => { signOut(); setMenuOpen(false); }} style={{ padding: "10px 0", fontSize: ".88rem", color: "#F87171", background: "none", border: "none", display: "block" }}>{t.navSignOut}</button>
             </>
           ) : (
-            <Link href="/auth" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", fontSize: ".88rem", color: "#7C3AED", textDecoration: "none", fontWeight: 700 }}>Kirish →</Link>
+            <Link href="/auth" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", fontSize: ".88rem", color: "#7C3AED", textDecoration: "none", fontWeight: 700 }}>{t.navSignInShort} →</Link>
           )}
         </div>
       )}

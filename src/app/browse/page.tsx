@@ -5,6 +5,8 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, Category, CATEGORIES } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
+import { Translations } from "@/lib/i18n";
 import Link from "next/link";
 import { Eye, MousePointerClick, ExternalLink, Clock, Trophy } from "lucide-react";
 
@@ -12,15 +14,15 @@ const CATEGORY_KEYS = Object.keys(CATEGORIES) as Category[];
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
-function timeAgo(ts: any): string {
+function timeAgo(ts: any, t: Translations): string {
   if (!ts) return "";
   const date = ts.toDate ? ts.toDate() : new Date(ts);
   const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diff < 60) return "Hozirgina";
-  if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
-  if (diff < 2592000) return `${Math.floor(diff / 86400)} kun oldin`;
-  return date.toLocaleDateString("uz-UZ");
+  if (diff < 60) return t.browseJustNow;
+  if (diff < 3600) return `${Math.floor(diff / 60)} ${t.browseMinAgo}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ${t.browseHoursAgo}`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)} ${t.browseDaysAgo}`;
+  return date.toLocaleDateString();
 }
 
 function fmt(n: number) {
@@ -33,7 +35,7 @@ function trackClick(adId: string) {
   fetch(`/api/ads/${adId}/click`, { method: "POST" }).catch(() => {});
 }
 
-function AdCard({ ad, position }: { ad: Ad; position: number }) {
+function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations }) {
   const cat = CATEGORIES[ad.category];
   const medal = MEDAL[position - 1];
   const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : "0.0";
@@ -72,7 +74,7 @@ function AdCard({ ad, position }: { ad: Ad; position: number }) {
           <div style={{ background: isTop3 ? "linear-gradient(135deg,#7C3AED,#F59E0B)" : "rgba(0,0,0,.7)", backdropFilter: "blur(8px)", borderRadius: 100, padding: "4px 10px", display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ fontSize: medal ? "1rem" : ".75rem" }}>{medal || `#${position}`}</span>
             {!medal && null}
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".72rem", fontWeight: 700, color: "#fff" }}>{`$${(ad.dailyBidCents / 100).toFixed(0)}/kun`}</span>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".72rem", fontWeight: 700, color: "#fff" }}>{`$${(ad.dailyBidCents / 100).toFixed(0)}/${t.day}`}</span>
           </div>
         </div>
 
@@ -124,7 +126,7 @@ function AdCard({ ad, position }: { ad: Ad; position: number }) {
         {/* Date */}
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 12 }}>
           <Clock size={11} color="#4B3B6E" />
-          <span style={{ fontSize: ".72rem", color: "#4B3B6E" }}>{timeAgo(ad.startsAt || ad.createdAt)}</span>
+          <span style={{ fontSize: ".72rem", color: "#4B3B6E" }}>{timeAgo(ad.startsAt || ad.createdAt, t)}</span>
         </div>
 
         {/* CTA */}
@@ -138,7 +140,7 @@ function AdCard({ ad, position }: { ad: Ad; position: number }) {
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = "1"}
         >
           <ExternalLink size={14} />
-          Saytga o&apos;tish
+          {t.browseVisitSite}
         </a>
       </div>
     </div>
@@ -150,6 +152,7 @@ export default function BrowsePage() {
   const [loading, setLoading] = useState(true);
   const [activeCat, setActiveCat] = useState<Category | null>(null);
   const { loading: authLoading } = useAuth();
+  const { t } = useLang();
 
   useEffect(() => {
     if (authLoading) return; // wait for auth to resolve
@@ -178,17 +181,15 @@ export default function BrowsePage() {
         <div style={{ marginBottom: 32, animation: "fade .3s ease both" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
             <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "2rem", fontWeight: 700, letterSpacing: "-.03em" }}>
-              {activeCat ? `${CATEGORIES[activeCat].emoji} ${CATEGORIES[activeCat].label}` : "Barcha reklamalar"}
+              {activeCat ? `${CATEGORIES[activeCat].emoji} ${CATEGORIES[activeCat].label}` : t.browseAllAds}
             </h1>
             {!loading && (
               <span style={{ fontSize: ".85rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace" }}>
-                {ads.length} ta jonli
+                {ads.length} {t.browseLive}
               </span>
             )}
           </div>
-          <p style={{ fontSize: ".9rem", color: "#6D5B8E" }}>
-            Eng ko&apos;p to&apos;lagan yuqorida. Tartib faqat kunlik taklif bilan aniqlanadi.
-          </p>
+          <p style={{ fontSize: ".9rem", color: "#6D5B8E" }}>{t.browseSub}</p>
         </div>
 
         {/* Category filters */}
@@ -197,7 +198,7 @@ export default function BrowsePage() {
             onClick={() => setActiveCat(null)}
             style={{ padding: "8px 18px", borderRadius: 100, border: `1px solid ${!activeCat ? "#7C3AED" : "#2D1F50"}`, background: !activeCat ? "#7C3AED" : "#160F2A", color: !activeCat ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
           >
-            Barchasi
+            {t.browseAll}
           </button>
           {CATEGORY_KEYS.map((cat) => {
             const active = activeCat === cat;
@@ -218,10 +219,10 @@ export default function BrowsePage() {
         {!loading && ads.length > 0 && (
           <div style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
             {[
-              { label: "Jonli reklamalar", value: ads.length, color: "#34D399" },
-              { label: "Jami ko'rishlar", value: ads.reduce((s, a) => s + (a.impressions || 0), 0), color: "#A78BFA" },
-              { label: "Jami bosilishlar", value: ads.reduce((s, a) => s + (a.clicks || 0), 0), color: "#FCD34D" },
-              { label: "O'rtacha CTR", value: (() => {
+              { label: t.browseStats[0], value: ads.length, color: "#34D399" },
+              { label: t.browseStats[1], value: ads.reduce((s, a) => s + (a.impressions || 0), 0), color: "#A78BFA" },
+              { label: t.browseStats[2], value: ads.reduce((s, a) => s + (a.clicks || 0), 0), color: "#FCD34D" },
+              { label: t.browseStats[3], value: (() => {
                 const totalImp = ads.reduce((s, a) => s + (a.impressions || 0), 0);
                 const totalClk = ads.reduce((s, a) => s + (a.clicks || 0), 0);
                 return totalImp > 0 ? `${((totalClk / totalImp) * 100).toFixed(1)}%` : "0.0%";
@@ -249,20 +250,20 @@ export default function BrowsePage() {
             <div style={{ fontSize: "3.5rem", marginBottom: 16 }}>
               {activeCat ? CATEGORIES[activeCat].emoji : "📢"}
             </div>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8 }}>Hali reklama yo&apos;q</h2>
-            <p style={{ color: "#6D5B8E", marginBottom: 24, fontSize: ".9rem" }}>Bu toifada birinchi bo&apos;ling!</p>
+            <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8 }}>{t.browseEmpty}</h2>
+            <p style={{ color: "#6D5B8E", marginBottom: 24, fontSize: ".9rem" }}>{t.browseEmptySub}</p>
             <Link
               href={activeCat ? `/create?category=${activeCat}` : "/create"}
               style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 12, background: "#7C3AED", color: "#fff", fontWeight: 700, fontSize: ".9rem", textDecoration: "none" }}
             >
-              Reklama berish →
+              {t.browsePlaceAd}
             </Link>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))", gap: 20 }}>
             {ads.map((ad, i) => (
               <div key={ad.id} style={{ animation: `fade .35s ease ${i * .05}s both` }}>
-                <AdCard ad={ad} position={i + 1} />
+                <AdCard ad={ad} position={i + 1} t={t} />
               </div>
             ))}
           </div>
