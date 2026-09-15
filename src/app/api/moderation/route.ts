@@ -3,16 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
+const XAI_API = "https://api.x.ai/v1/chat/completions";
 
 const VISION_MODELS = [
-  "meta-llama/llama-4-scout-17b-16e-instruct",
-  "meta-llama/llama-4-maverick-17b-128e-instruct",
-  "llama-3.2-11b-vision-preview",
-  "llama-3.2-90b-vision-preview",
+  "grok-2-vision-1212",
 ];
 
-const MODEL_TEXT = "llama-3.3-70b-versatile";
+const MODEL_TEXT = "grok-3-mini";
 
 const HF_NSFW_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
 
@@ -115,9 +112,9 @@ function hasValidToken(req: NextRequest): boolean {
 }
 
 async function groqChat(model: string, messages: any[], timeoutMs = 12000): Promise<string> {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) return "";
-  const res = await fetch(GROQ_API, {
+  const res = await fetch(XAI_API, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model, messages, temperature: 0, max_tokens: 200 }),
@@ -139,7 +136,7 @@ async function checkImageWithGroqVision(
   imageURL: string | undefined,
   adInfo: string
 ): Promise<{ approved: boolean; reason?: string } | null> {
-  if (!process.env.GROQ_API_KEY) return null;
+  if (!process.env.XAI_API_KEY) return null;
 
   const imgContent = imageURL
     ? { type: "image_url" as const, image_url: { url: imageURL } }
@@ -222,8 +219,8 @@ async function checkNsfwHuggingFace(
 }
 
 export async function GET() {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return NextResponse.json({ ok: false, error: "GROQ_API_KEY yo'q" });
+  const apiKey = process.env.XAI_API_KEY;
+  if (!apiKey) return NextResponse.json({ ok: false, error: "XAI_API_KEY yo'q" });
   try {
     const modelsRes = await fetch("https://api.groq.com/openai/v1/models", {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -299,7 +296,7 @@ export async function POST(req: NextRequest) {
     const adInfo = `Title: "${title}"\nDescription: "${description || "(none)"}"\nURL: ${destinationURL}`;
 
     // ── 3. Image moderation — Groq vision AND HF NSFW run in parallel ─────────
-    if (hasImage && process.env.GROQ_API_KEY) {
+    if (hasImage && process.env.XAI_API_KEY) {
       const [visionResult, hfResult] = await Promise.all([
         checkImageWithGroqVision(imageBase64, mimeType, imageURL, adInfo),
         checkNsfwHuggingFace(imageBase64, mimeType),
@@ -330,7 +327,7 @@ export async function POST(req: NextRequest) {
 
       // If only HF ran (vision null) and HF approved (score low) — still proceed
       // If only vision ran (HF null) and vision approved — still proceed
-    } else if (hasImage && !process.env.GROQ_API_KEY) {
+    } else if (hasImage && !process.env.XAI_API_KEY) {
       // No Groq — use HF only
       const hfResult = await checkNsfwHuggingFace(imageBase64, mimeType);
       if (hfResult === null) {
@@ -348,7 +345,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 4. Text moderation via Groq ───────────────────────────────────────────
-    if (process.env.GROQ_API_KEY) {
+    if (process.env.XAI_API_KEY) {
       try {
         const reply = await groqChat(MODEL_TEXT, [
           { role: "system", content: SYSTEM_PROMPT },
