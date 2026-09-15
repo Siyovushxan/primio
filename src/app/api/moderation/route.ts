@@ -439,18 +439,7 @@ export async function POST(req: NextRequest) {
       `hfSexy: ${JSON.stringify(hfSexyData)}`
     );
 
-    // 5a. Grok vision — REQUIRED. If null after retry → reject for safety.
-    if (visionResult === null) {
-      return NextResponse.json({
-        approved: false,
-        reason: "Rasm AI tekshiruvi vaqtincha ishlamayapti. Bir necha daqiqadan keyin qayta urinib ko'ring.",
-      });
-    }
-    if (!visionResult.approved) {
-      return NextResponse.json({ approved: false, reason: visionResult.reason });
-    }
-
-    // 5b. HF sexy detector — bonus layer (bikini / revealing clothing)
+    // 5b. HF sexy detector — always check (bikini / revealing clothing)
     if (hfSexyData?.flagged) {
       return NextResponse.json({
         approved: false,
@@ -458,12 +447,31 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 5c. HF explicit NSFW — bonus layer
+    // 5c. HF explicit NSFW — always check
     if (hfExplicitScore !== null && hfExplicitScore > 0.35) {
       return NextResponse.json({
         approved: false,
         reason: "Rasm 18+ yoki pornografik kontent sifatida aniqlandi. Mos rasm tanlang.",
       });
+    }
+
+    // 5a. Grok vision result
+    if (visionResult === null) {
+      // Grok Vision API unavailable.
+      // If at least one HF model ran successfully → trust HF result (they didn't flag it above).
+      const hfRan = hfSexyData !== null || hfExplicitScore !== null;
+      if (hfRan) {
+        // HF ran, didn't flag anything → approve (HF is the safety net)
+        console.warn("Grok vision unavailable — approved via HF fallback");
+      } else {
+        // All checks failed → reject for safety
+        return NextResponse.json({
+          approved: false,
+          reason: "Rasm tekshiruvi vaqtincha ishlamayapti. Bir necha daqiqadan keyin qayta urinib ko'ring.",
+        });
+      }
+    } else if (!visionResult.approved) {
+      return NextResponse.json({ approved: false, reason: visionResult.reason });
     }
   }
 
