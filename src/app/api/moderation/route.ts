@@ -4,75 +4,48 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 const GROQ_API = "https://api.groq.com/openai/v1/chat/completions";
-// Vision modellar: birinchi ishlamasa keyingisi sinab ko'riladi
-// Groq vision modellari (agar API keyda mavjud bo'lsa)
-const VISION_MODELS: string[] = [];
 
-// HuggingFace NSFW detection (bepul, API key shart emas)
-const HF_NSFW_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
+// Groq vision models — first available one is used
+const VISION_MODELS = [
+  "meta-llama/llama-4-scout-17b-16e-instruct",
+  "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "llama-3.2-11b-vision-preview",
+  "llama-3.2-90b-vision-preview",
+];
 
-async function checkNsfwHuggingFace(
-  imageBase64: string,
-  mimeType: string
-): Promise<{ isNsfw: boolean; score: number } | null> {
-  try {
-    const binaryData = Buffer.from(imageBase64, "base64");
-    const headers: Record<string, string> = { "Content-Type": mimeType };
-    if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
-
-    // First attempt — short timeout (fast if model is warm)
-    const res = await fetch(HF_NSFW_MODEL, {
-      method: "POST",
-      headers,
-      body: binaryData,
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (res.status === 503) {
-      // Model yuklanmoqda — 16 soniya kutib, qayta urinib ko'ramiz (total < 30s)
-      console.log("HF NSFW: model yuklanmoqda (503), 16s kutilmoqda...");
-      await new Promise((r) => setTimeout(r, 16000));
-      const res2 = await fetch(HF_NSFW_MODEL, {
-        method: "POST",
-        headers,
-        body: binaryData,
-        signal: AbortSignal.timeout(7000),
-      });
-      if (!res2.ok) { console.warn("HF NSFW 503 retry failed:", res2.status); return null; }
-      const data2 = await res2.json();
-      const score = data2.find?.((d: any) => d.label === "nsfw")?.score ?? 0;
-      return { isNsfw: score > 0.65, score };
-    }
-
-    if (!res.ok) { console.warn("HF NSFW failed:", res.status, await res.text()); return null; }
-    const data = await res.json();
-    if (!Array.isArray(data)) { console.warn("HF NSFW unexpected response:", data); return null; }
-    const score = data.find((d: any) => d.label === "nsfw")?.score ?? 0;
-    return { isNsfw: score > 0.65, score };
-  } catch (e: any) {
-    console.warn("HF NSFW check error:", e?.message?.slice(0, 100));
-    return null;
-  }
-}
 const MODEL_TEXT = "llama-3.3-70b-versatile";
+
+// HuggingFace NSFW detection (sexual content)
+const HF_NSFW_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
 
 // ── Blocked keyword patterns (EN + UZ + RU) ──────────────────────────────────
 const BLOCKED_PATTERNS = [
-  // Jinsiy kontent
+  // Sexual content
   /\bsex\b/i, /\bseks\b/i, /\bporn\b/i, /\bporno\b/i, /\bparno\b/i,
-  /\bxxx\b/i, /\bnude\b/i, /\berotic\b/i, /\berotik\b/i,
+  /\bxxx\b/i, /\bnude\b/i, /\bnudity\b/i, /\berotic\b/i, /\berotik\b/i,
   /\bescort\b/i, /\bprostit/i, /\bfahisha\b/i, /\bintim\b/i,
-  // Zo'ravonlik / terror
-  /\bterror/i, /\bjihod\b/i, /\bbomb\b/i, /\bqurol\b/i, /\boruzhie\b/i,
-  // Narkotik
+  /\bonlyfans\b/i, /\badult.content\b/i,
+  // Violence / terror / weapons
+  /\bterror/i, /\bjihod\b/i, /\bjihad\b/i, /\bbomb\b/i, /\bexplosive\b/i,
+  /\bqurol\b/i, /\boruzhie\b/i, /\bweapon\b/i,
+  /\bgun(s)?\b/i, /\brifle\b/i, /\bpistol\b/i, /\bfirearm\b/i,
+  /\bknife\b/i, /\bblade\b/i, /\bsword\b/i,
+  /\bkill\b/i, /\bmurder\b/i, /\bviolence\b/i, /\bzoravonlik\b/i,
+  /\bassassinat/i, /\bexecution\b/i,
+  // Drugs / narcotics
   /\bdrug\b/i, /\bnasha\b/i, /\bweed\b/i, /\bheroin\b/i, /\bkokain\b/i,
-  /\bnarko/i, /\bgashish\b/i,
-  // Kumor
+  /\bcocaine\b/i, /\bnarko/i, /\bgashish\b/i, /\bcannabis\b/i,
+  /\bmarijuana\b/i, /\bmeth\b/i, /\bfentanyl\b/i, /\bopium\b/i,
+  // Gambling
   /\bcasino\b/i, /\bgambl/i, /\bbet(ting)?\b/i, /\bstavka\b/i,
-  // Firibgarlik
-  /\bcrack\b/i, /\bhack\b/i, /\bpirat/i, /\bfishing\b/i, /\bphish/i,
-  // Sohta dori
-  /\bpharma\b/i, /\bviagra\b/i,
+  /\bpoker\b/i, /\bslot.machine\b/i,
+  // Fraud / hacking
+  /\bhack\b/i, /\bpirat/i, /\bphish/i, /\bscam\b/i,
+  /\bfake.id\b/i, /\bcounterfeit\b/i,
+  // Fake medicine
+  /\bviagra\b/i, /\bcialis\b/i, /\bsteroid\b/i,
+  // Hate speech
+  /\bnazi\b/i, /\bfascis/i, /\bwhite.suprem/i, /\bhatred\b/i,
 ];
 
 function domainBlocked(url: string): string | null {
@@ -100,14 +73,14 @@ function hasValidToken(req: NextRequest): boolean {
   }
 }
 
-async function groqChat(model: string, messages: any[], timeoutMs = 8000): Promise<string> {
+async function groqChat(model: string, messages: any[], timeoutMs = 10000): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return "";
 
   const res = await fetch(GROQ_API, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: 128 }),
+    body: JSON.stringify({ model, messages, temperature: 0.1, max_tokens: 200 }),
     signal: AbortSignal.timeout(timeoutMs),
   });
 
@@ -120,43 +93,145 @@ async function groqChat(model: string, messages: any[], timeoutMs = 8000): Promi
     .replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
-const SYSTEM_PROMPT = `Sen qat'iy reklama kontent moderatorisan. Har qanday shubha bo'lsa REJECTED de.
+// System prompt in English for best model accuracy; reason returned in Uzbek
+const SYSTEM_PROMPT = `You are a strict advertising content moderator. When in doubt, ALWAYS reject.
 
-RASM BO'YICHA RAD ETISH — quyidagilardan BIRI bo'lsa ham REJECTED:
-- Yalang'och yoki qisman yalang'och tana (bikini, ichki kiyim, korsaj, shunga o'xshash)
-- Ko'krak, son, dumba yoki jinsiy a'zolar ochiq ko'rinsa
-- Jinsiy jihatdan qo'zg'atuvchi, provokatsion yoki erotik kiyim va poza
-- 18+ yoki kattalar uchun mo'ljallangan kontent
-- Zo'ravonlik, qon, qurol ko'rsatilsa
+REJECT the ad if ANY of the following is present in the image OR text:
 
-MATN BO'YICHA RAD ETISH:
-- Seks, porno, escort, fahisha, intim xizmatlar
-- Narkotik, nasha, giyohvand moddalar
-- Kumor, stavka, loteriya
-- Firibgarlik: "kafolatlangan foyda", "100% daromad", "tez boyish"
-- Haqorat, irqchilik, nafrat nutqi
-- Fishing/aldash saytlari
-- Sohta dori va'dalari
+SEXUAL / ADULT CONTENT:
+- Nudity or partial nudity (bikini, underwear, lingerie, corset, topless)
+- Visible breasts, buttocks, genitals or intimate body parts
+- Sexually suggestive, provocative or erotic poses, outfits, or expressions
+- 18+ / adult services, escort, prostitution
 
-TASDIQLASH (faqat rasmda odatiy biznes tasviri bo'lsa):
-- Mahsulot, do'kon, xizmat, logotip, interfeys
-- Oziq-ovqat, restoran, ovqat tasviri
-- Sayohat joylari, arxitektura
-- Ta'lim, kurs, kitob
-- Texnologiya, ilova
+VIOLENCE / WEAPONS / GORE:
+- Blood, gore, wounds, injuries shown graphically
+- Weapons: guns, pistols, rifles, knives, swords, explosives, grenades
+- Acts of violence: fighting, beating, killing, execution
+- Threatening imagery or gestures
 
-QOIDA: Rasmdagi odam qisman yoki to'liq yechingan bo'lsa — sarlavha yoki matn nima bo'lishidan qat'iy nazar REJECTED de.
+DANGEROUS / ILLEGAL SUBSTANCES:
+- Drugs, narcotics, cannabis, cocaine, heroin, pills, syringes
+- Drug paraphernalia
 
-JAVOB — faqat shu ikki formatdan biri:
+HATE / EXTREMISM:
+- Nazi symbols, swastikas, white supremacy
+- Hate speech, racial slurs, symbols of terrorism
+- Terrorist organizations or propaganda
+
+GAMBLING:
+- Casino, poker, slot machines, betting platforms
+
+FRAUD / DECEPTION:
+- Phishing, fake IDs, counterfeit products
+- "Guaranteed profit", "100% income", "get rich fast" promises
+
+FAKE / DANGEROUS MEDICINE:
+- Unregulated pharmaceuticals, fake drugs, steroids
+
+APPROVE only when the image/text shows:
+- Normal business content: products, logos, storefronts, services
+- Food, restaurants, travel destinations, architecture
+- Education, courses, books, technology, apps
+- Professional people fully clothed in business context
+
+STRICT RULE: If a person in the image is partially or fully undressed — REJECT regardless of the title or description.
+
+RESPONSE FORMAT — return ONLY one of these two formats:
 APPROVED
-yoki
-REJECTED: [sabab 1 jumlada o'zbekcha]`;
+or
+REJECTED: [reason in Uzbek, 1 sentence]`;
+
+async function checkNsfwHuggingFace(
+  imageBase64: string,
+  mimeType: string
+): Promise<{ isNsfw: boolean; score: number } | null> {
+  try {
+    const binaryData = Buffer.from(imageBase64, "base64");
+    const headers: Record<string, string> = { "Content-Type": mimeType };
+    if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
+
+    const res = await fetch(HF_NSFW_MODEL, {
+      method: "POST",
+      headers,
+      body: binaryData,
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (res.status === 503) {
+      console.log("HF NSFW: model loading (503), waiting 16s...");
+      await new Promise((r) => setTimeout(r, 16000));
+      const res2 = await fetch(HF_NSFW_MODEL, {
+        method: "POST",
+        headers,
+        body: binaryData,
+        signal: AbortSignal.timeout(7000),
+      });
+      if (!res2.ok) { console.warn("HF NSFW 503 retry failed:", res2.status); return null; }
+      const data2 = await res2.json();
+      const score = data2.find?.((d: any) => d.label === "nsfw")?.score ?? 0;
+      return { isNsfw: score > 0.55, score };
+    }
+
+    if (!res.ok) { console.warn("HF NSFW failed:", res.status, await res.text()); return null; }
+    const data = await res.json();
+    if (!Array.isArray(data)) { console.warn("HF NSFW unexpected response:", data); return null; }
+    const score = data.find((d: any) => d.label === "nsfw")?.score ?? 0;
+    return { isNsfw: score > 0.55, score };
+  } catch (e: any) {
+    console.warn("HF NSFW check error:", e?.message?.slice(0, 100));
+    return null;
+  }
+}
+
+// Try each vision model in order, return first successful result
+async function checkImageWithGroqVision(
+  imageBase64: string,
+  mimeType: string,
+  imageURL: string | undefined,
+  adInfo: string
+): Promise<{ approved: boolean; reason?: string } | null> {
+  if (!process.env.GROQ_API_KEY) return null;
+
+  const imgContent = imageURL
+    ? { type: "image_url" as const, image_url: { url: imageURL } }
+    : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
+
+  const userPrompt =
+    `Carefully examine this image and ad details:\n${adInfo}\n\n` +
+    `Check for: nudity, sexual content, weapons, violence, blood, drugs, hate symbols, extremism.\n` +
+    `Apply the system rules strictly and respond APPROVED or REJECTED: [reason in Uzbek].`;
+
+  for (const model of VISION_MODELS) {
+    try {
+      const reply = await groqChat(model, [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: [imgContent, { type: "text", text: userPrompt }] },
+      ], 15000);
+
+      if (!reply) continue;
+
+      if (reply.toUpperCase().startsWith("REJECTED")) {
+        const reason = reply.replace(/^REJECTED:?\s*/i, "").trim()
+          || "Rasm moderatsiya talablariga javob bermadi";
+        return { approved: false, reason };
+      }
+      if (reply.toUpperCase().startsWith("APPROVED")) {
+        return { approved: true };
+      }
+      // Unclear response — try next model
+      console.warn(`Vision model ${model} gave unclear response: ${reply.slice(0, 100)}`);
+    } catch (e: any) {
+      console.warn(`Groq vision ${model} failed: ${e?.message?.slice(0, 150)}`);
+    }
+  }
+  return null; // all models failed
+}
 
 export async function GET() {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return NextResponse.json({ ok: false, error: "GROQ_API_KEY yo'q" });
 
-  // Groq dan mavjud modellarni olish
   try {
     const modelsRes = await fetch("https://api.groq.com/openai/v1/models", {
       headers: { Authorization: `Bearer ${apiKey}` },
@@ -164,47 +239,13 @@ export async function GET() {
     });
     const modelsData = await modelsRes.json();
     const allIds: string[] = modelsData.data?.map((m: any) => m.id) ?? [];
-    const visionCandidates = allIds.filter((id) =>
-      id.includes("vision") || id.includes("llama-4") || id.includes("scout") || id.includes("maverick")
-    );
-
-    // Bitta vision modelini tez sinab ko'ramiz (1x1 px JPEG)
-    const tinyJpeg = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARC AABAAEDASIAAhEBAxEB/8QAFgABAQEAAAAAAAAAAAAAAAAABgUE/8QAIhAAAQMEAgMAAAAAAAAAAAAAAQIDBAAFERIhMkH/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8Aqt3uF1dkBmNbGFoQhCEqKlK55444+c4x7wBSlKUpSlMf/9k=";
-    const testErrors: string[] = [];
-    let testModel = "";
-    let testOk = false;
-
-    for (const m of VISION_MODELS) {
-      try {
-        const r = await fetch(GROQ_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: m,
-            messages: [{ role: "user", content: [
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${tinyJpeg}` } },
-              { type: "text", text: "Say OK" },
-            ]}],
-            max_tokens: 10,
-          }),
-          signal: AbortSignal.timeout(10000),
-        });
-        const d = await r.json();
-        if (r.ok) { testOk = true; testModel = m; break; }
-        testErrors.push(`${m}: HTTP ${r.status} — ${JSON.stringify(d).slice(0, 200)}`);
-      } catch (e: any) {
-        testErrors.push(`${m}: ${e.message?.slice(0, 150)}`);
-      }
-    }
 
     return NextResponse.json({
       ok: true,
-      strategy: "HuggingFace NSFW detection (primary) + Groq vision (if available)",
-      groq_vision_models: VISION_MODELS.length > 0 ? VISION_MODELS : "none configured",
+      strategy: "Groq vision (primary) + HuggingFace NSFW (fallback) + keyword filter",
+      vision_models_configured: VISION_MODELS,
       hf_token: !!process.env.HF_TOKEN,
       all_groq_model_ids: allIds,
-      groq_vision_test: testOk ? `OK (${testModel})` : testErrors.length > 0 ? "FAILED" : "skipped",
-      groq_test_errors: testErrors,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, groq_key: true, error: e.message });
@@ -227,7 +268,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // ── 1. Tez keyword/domain tekshiruvi ─────────────────────────────────────
+    // ── 1. Fast keyword / domain check ───────────────────────────────────────
     const domainErr = domainBlocked(destinationURL);
     if (domainErr) return NextResponse.json({ approved: false, reason: domainErr });
 
@@ -241,7 +282,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── 2. URL mavjudligi tekshiruvi ──────────────────────────────────────────
+    // ── 2. URL availability check ─────────────────────────────────────────────
     try {
       const urlCheck = await fetch(destinationURL, {
         method: "HEAD",
@@ -261,74 +302,54 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── 3. Groq API yo'q → keyword tekshiruvi yetarli ────────────────────────
+    // ── 3. No Groq API key → keyword check only ───────────────────────────────
     if (!process.env.GROQ_API_KEY) {
       return NextResponse.json({ approved: true });
     }
 
-    const adInfo = `Sarlavha: "${title}"\nTavsif: "${description || "(yo'q)"}"\nURL: ${destinationURL}`;
-
-    const userPrompt =
-      `RASMNI DIQQAT BILAN KO'R:\n` +
-      `1. Rasmdagi odam yoki shaxs bor-yo'qligini aniqlang\n` +
-      `2. Agar odam bo'lsa — kiyimi to'liq, qisman yechingganmi yoki yalang'ochmi?\n` +
-      `3. Rasm jinsiy jihatdan qo'zg'atuvchi yoki provokatsionmi?\n` +
-      `4. Reklama ma'lumotlari:\n${adInfo}\n\n` +
-      `Yuqoridagi qoidalarga asosan APPROVED yoki REJECTED de.`;
-
-    // ── 4a. Rasm tekshiruvi ───────────────────────────────────────────────────
+    const adInfo = `Title: "${title}"\nDescription: "${description || "(none)"}"\nURL: ${destinationURL}`;
     const hasImage = !!(imageBase64 && mimeType);
 
+    // ── 4. Image moderation ───────────────────────────────────────────────────
     if (hasImage) {
-      // 4a-i. Groq vision (agar modellar mavjud bo'lsa)
-      if (VISION_MODELS.length > 0) {
-        const imgSrc = imageURL
-          ? { type: "image_url" as const, image_url: { url: imageURL } }
-          : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
-
-        for (const vModel of VISION_MODELS) {
-          try {
-            const reply = await groqChat(vModel, [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: [imgSrc, { type: "text", text: userPrompt }] },
-            ], 15000);
-            if (reply.toUpperCase().startsWith("REJECTED")) {
-              const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Rasm moderatsiya talablariga javob bermadi";
-              return NextResponse.json({ approved: false, reason });
-            }
-            if (reply.toUpperCase().startsWith("APPROVED")) {
-              return NextResponse.json({ approved: true });
-            }
-          } catch (e: any) {
-            console.warn(`Groq vision ${vModel} failed:`, e?.message?.slice(0, 150));
-          }
+      // 4a. Groq vision (comprehensive: sexual, violence, weapons, drugs, hate)
+      const visionResult = await checkImageWithGroqVision(imageBase64, mimeType, imageURL, adInfo);
+      if (visionResult !== null) {
+        if (!visionResult.approved) {
+          return NextResponse.json({ approved: false, reason: visionResult.reason });
         }
-      }
-
-      // 4a-ii. HuggingFace NSFW detection (bepul, ishonchli)
-      const hfResult = await checkNsfwHuggingFace(imageBase64, mimeType);
-      if (hfResult !== null) {
-        console.log(`HF NSFW score: ${hfResult.score.toFixed(3)}, isNsfw: ${hfResult.isNsfw}`);
-        if (hfResult.isNsfw) {
+        // Vision approved — also run text check below
+      } else {
+        // 4b. Groq vision unavailable → fallback to HuggingFace NSFW (sexual content only)
+        console.warn("All Groq vision models failed — falling back to HuggingFace NSFW");
+        const hfResult = await checkNsfwHuggingFace(imageBase64, mimeType);
+        if (hfResult !== null) {
+          console.log(`HF NSFW score: ${hfResult.score.toFixed(3)}, isNsfw: ${hfResult.isNsfw}`);
+          if (hfResult.isNsfw) {
+            return NextResponse.json({
+              approved: false,
+              reason: "Rasm 18+ yoki nomaqbul kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
+            });
+          }
+        } else {
+          // Both vision and HF failed — reject for safety
+          console.warn("⚠️ All image checks failed — rejecting for safety");
           return NextResponse.json({
             approved: false,
-            reason: "Rasm 18+ yoki nomaqbul kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
+            reason: "Rasm tekshiruvida xatolik yuz berdi. Iltimos qayta urinib ko'ring.",
           });
         }
-        return NextResponse.json({ approved: true });
       }
-
-      // 4a-iii. HF tekshiruvi ishlamadi — HF_TOKEN kerak (bepul)
-      // Beta: tekshirib bo'lmasa ham o'tkazib yuboramiz (log qilinadi)
-      console.warn("⚠️ NSFW check unavailable (HF_TOKEN yo'q yoki model yuklanmadi) — rasm tekshirilmay o'tkazildi");
-      return NextResponse.json({ approved: true });
     }
 
-    // ── 4b. Matn tekshiruvi (rasm yo'q holat) ────────────────────────────────
+    // ── 5. Text moderation via Groq ───────────────────────────────────────────
     try {
       const reply = await groqChat(MODEL_TEXT, [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Reklama ma'lumotlarini tekshir (faqat matn):\n${adInfo}` },
+        {
+          role: "user",
+          content: `Check this ad text only (no image):\n${adInfo}\n\nRespond APPROVED or REJECTED: [reason in Uzbek].`,
+        },
       ], 8000);
 
       if (reply.toUpperCase().startsWith("REJECTED")) {
