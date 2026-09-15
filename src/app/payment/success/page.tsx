@@ -7,12 +7,11 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ad } from "@/types";
 import Link from "next/link";
-import { getAuth } from "firebase/auth";
 
 function PaymentSuccessInner() {
   const searchParams = useSearchParams();
   const adId = searchParams.get("adId");
-  const { userProfile } = useAuth();
+  const { userProfile, firebaseUser, loading: authLoading } = useAuth();
 
   const [ad, setAd] = useState<Ad | null>(null);
   const [verifyError, setVerifyError] = useState("");
@@ -22,9 +21,9 @@ function PaymentSuccessInner() {
   // Step 1: Verify Dodo payment server-side (all Firestore writes happen on server)
   useEffect(() => {
     if (!adId) { setProcessing(false); return; }
+    if (authLoading) return; // Wait for auth to initialize
 
-    const currentUser = getAuth().currentUser;
-    const tokenPromise = currentUser ? currentUser.getIdToken() : Promise.resolve("");
+    const tokenPromise = firebaseUser ? firebaseUser.getIdToken() : Promise.resolve("");
 
     tokenPromise.then((idToken) =>
       fetch("/api/payment/verify-session", {
@@ -43,7 +42,7 @@ function PaymentSuccessInner() {
         setProcessing(false);
       })
       .catch(() => { setVerifyError("Server bilan ulanishda xato"); setProcessing(false); });
-  }, [adId]);
+  }, [adId, authLoading, firebaseUser]);
 
   // Step 2: Listen for Firestore status
   useEffect(() => {
