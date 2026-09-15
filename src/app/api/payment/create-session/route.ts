@@ -8,7 +8,7 @@ const DODO_BASE =
     ? "https://live.dodopayments.com"
     : "https://test.dodopayments.com";
 
-const DODO_PRODUCT_ID = "pdt_0NnMK7juPTBBNjaJIZmgz";
+const DODO_PRODUCT_ID = process.env.DODO_PRODUCT_ID || "pdt_0NnMK7juPTBBNjaJIZmgz";
 
 export async function POST(req: NextRequest) {
   // Verify caller is authenticated
