@@ -6,12 +6,66 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, CATEGORIES } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import Link from "next/link";
+
+const T = {
+  en: {
+    pageLabel: "Payment", totalSpent: "Total spent", placeAd: "Post Ad",
+    loading: "Loading...", notFound: "Ad not found", back: "← My Ads",
+    aiApproved: "AI approved", payTitle: "Payment",
+    paySub: "Your ad has been approved by AI. It goes live immediately after payment.",
+    orderDetails: "Order details", category: "Category", title: "Title",
+    dailyPrice: "Daily bid", duration: "Duration", totalPayment: "Total payment",
+    dayLabel: "days", redirecting: "Redirecting...", paying: "💳 Pay $",
+    safePayment: "Secure payment via Dodo Payments.",
+    yourAd: "Your ad", total: "Total",
+    nextSteps: "Next steps", guarantee: "Guarantee",
+    step1: "AI approved", step2: "Payment", step3: "Ad live", step4: "View stats",
+    g1: "Full refund if moderation fails", g2: "Technical issues reviewed",
+    g3: "Dodo Payments secure system",
+  },
+  uz: {
+    pageLabel: "To'lov", totalSpent: "Jami sarflangan", placeAd: "Reklama berish",
+    loading: "Yuklanmoqda...", notFound: "Reklama topilmadi", back: "← Reklamalarim",
+    aiApproved: "AI tasdiqladi", payTitle: "To'lov",
+    paySub: "Reklamangiz AI tomonidan tasdiqlandi. To'lovdan so'ng darhol jonli bo'ladi.",
+    orderDetails: "Buyurtma tafsilotlari", category: "Toifa", title: "Sarlavha",
+    dailyPrice: "Kunlik narx", duration: "Davr", totalPayment: "Jami to'lov",
+    dayLabel: "kun", redirecting: "Yo'naltirilmoqda...", paying: "💳 $",
+    safePayment: "Dodo Payments orqali xavfsiz shifrlangan holda to'laysiz.",
+    yourAd: "Reklamangiz", total: "Jami",
+    nextSteps: "Keyingi qadamlar", guarantee: "Kafolat",
+    step1: "AI tasdiqladi", step2: "To'lov", step3: "Reklama jonli", step4: "Statistikani ko'ring",
+    g1: "Moderatsiyadan o'tmasa — to'liq qaytarish",
+    g2: "Texnik xatolik bo'lsa — ko'rib chiqiladi",
+    g3: "Dodo Payments xavfsiz to'lov tizimi",
+  },
+  ru: {
+    pageLabel: "Оплата", totalSpent: "Всего потрачено", placeAd: "Разместить рекламу",
+    loading: "Загрузка...", notFound: "Объявление не найдено", back: "← Мои объявления",
+    aiApproved: "ИИ одобрил", payTitle: "Оплата",
+    paySub: "Ваша реклама одобрена ИИ. После оплаты она сразу станет активной.",
+    orderDetails: "Детали заказа", category: "Категория", title: "Заголовок",
+    dailyPrice: "Ежедневная ставка", duration: "Длительность", totalPayment: "Итого к оплате",
+    dayLabel: "дн.", redirecting: "Перенаправление...", paying: "💳 Оплатить $",
+    safePayment: "Безопасная оплата через Dodo Payments.",
+    yourAd: "Ваша реклама", total: "Итого",
+    nextSteps: "Следующие шаги", guarantee: "Гарантия",
+    step1: "ИИ одобрил", step2: "Оплата", step3: "Реклама активна", step4: "Смотреть статистику",
+    g1: "Полный возврат при отказе модерации",
+    g2: "Технические ошибки рассматриваются",
+    g3: "Безопасная система Dodo Payments",
+  },
+};
 
 export default function PaymentPage() {
   const { adId } = useParams<{ adId: string }>();
   const router = useRouter();
   const { firebaseUser, userProfile } = useAuth();
+  const { lang: globalLang } = useLang();
+  const lang = (["en","uz","ru"].includes(globalLang) ? globalLang : "en") as keyof typeof T;
+  const t = T[lang];
 
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +108,7 @@ export default function PaymentPage() {
   };
 
   const initials = userProfile?.displayName?.charAt(0).toUpperCase() || "?";
-  const brandName = userProfile?.displayName || "Profil";
+  const brandName = userProfile?.displayName || "Profile";
   const spent = userProfile?.totalSpentCents || 0;
   const totalUSD = ad ? (ad.dailyBidCents * ad.durationDays) / 100 : 0;
   const catMeta = ad ? CATEGORIES[ad.category] : null;
@@ -74,19 +128,19 @@ export default function PaymentPage() {
             <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
           </Link>
           <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "#6D5B8E" }}>
-            To&apos;lov
+            {t.pageLabel}
           </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>Jami sarflangan</span>
+            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
           </div>
           <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
             <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
             <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </Link>
-          <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ Reklama berish</Link>
+          <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ {t.placeAd}</Link>
         </div>
       </div>
     </header>
@@ -97,7 +151,7 @@ export default function PaymentPage() {
       <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE" }}>
         <DashHeader />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-          <span style={{ color: "#6D5B8E" }}>Yuklanmoqda...</span>
+          <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
         </div>
       </div>
     );
@@ -108,17 +162,17 @@ export default function PaymentPage() {
       <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE" }}>
         <DashHeader />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-          <span style={{ color: "#F87171" }}>Reklama topilmadi</span>
+          <span style={{ color: "#F87171" }}>{t.notFound}</span>
         </div>
       </div>
     );
   }
 
   const payRows = [
-    { k: "Toifa",       v: `${catMeta.emoji} ${catMeta.label}`, color: "#EDE9FE" },
-    { k: "Sarlavha",    v: ad.title,                             color: "#EDE9FE" },
-    { k: "Kunlik narx", v: `$${(ad.dailyBidCents / 100).toFixed(2)}/kun`, color: "#FCD34D" },
-    { k: "Davr",        v: `${ad.durationDays} kun`,             color: "#EDE9FE" },
+    { k: t.category,   v: `${catMeta.emoji} ${catMeta.label}`, color: "#EDE9FE" },
+    { k: t.title,      v: ad.title,                             color: "#EDE9FE" },
+    { k: t.dailyPrice, v: `$${(ad.dailyBidCents / 100).toFixed(2)}/${t.dayLabel}`, color: "#FCD34D" },
+    { k: t.duration,   v: `${ad.durationDays} ${t.dayLabel}`,  color: "#EDE9FE" },
   ];
 
   return (
@@ -128,19 +182,19 @@ export default function PaymentPage() {
 
       <div style={{ maxWidth: 940, margin: "0 auto", padding: "38px 26px 60px", animation: "fade .35s ease both" }}>
         <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 16 }}>
-          ← Reklamalarim
+          {t.back}
         </Link>
 
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "4px 12px", borderRadius: 100, background: "rgba(52,211,153,.12)", border: "1px solid #10B981", marginBottom: 14, marginLeft: 12 }}>
           <span style={{ fontSize: ".8rem" }}>✅</span>
-          <span style={{ fontSize: ".76rem", fontWeight: 700, color: "#34D399" }}>AI tasdiqladi</span>
+          <span style={{ fontSize: ".76rem", fontWeight: 700, color: "#34D399" }}>{t.aiApproved}</span>
         </div>
 
         <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 8 }}>
-          To&apos;lov
+          {t.payTitle}
         </h1>
         <p style={{ fontSize: ".92rem", color: "#A78BFA", maxWidth: "56ch", lineHeight: 1.7, marginBottom: 26 }}>
-          Reklamangiz AI tomonidan tasdiqlandi. To&apos;lovdan so&apos;ng darhol jonli bo&apos;ladi.
+          {t.paySub}
         </p>
 
         {error && (
@@ -154,7 +208,7 @@ export default function PaymentPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Order */}
             <div style={{ ...cardStyle, padding: 22 }}>
-              <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>Buyurtma tafsilotlari</div>
+              <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.orderDetails}</div>
               {payRows.map((r) => (
                 <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "11px 0", borderBottom: "1px solid #2D1F50", fontSize: ".85rem" }}>
                   <span style={{ color: "#A78BFA" }}>{r.k}</span>
@@ -162,11 +216,11 @@ export default function PaymentPage() {
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 14, paddingTop: 16 }}>
-                <span style={{ fontSize: ".9rem", fontWeight: 700, color: "#EDE9FE" }}>Jami to&apos;lov</span>
+                <span style={{ fontSize: ".9rem", fontWeight: 700, color: "#EDE9FE" }}>{t.totalPayment}</span>
                 <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.9rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalUSD.toFixed(2)}</span>
               </div>
               <div style={{ fontSize: ".78rem", color: "#6D5B8E", marginTop: 6, textAlign: "right" }}>
-                ${(ad.dailyBidCents / 100).toFixed(2)}/kun x {ad.durationDays} kun
+                ${(ad.dailyBidCents / 100).toFixed(2)}/{t.dayLabel} x {ad.durationDays} {t.dayLabel}
               </div>
             </div>
 
@@ -175,45 +229,45 @@ export default function PaymentPage() {
               disabled={paying}
               style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: paying ? "#4C1D95" : "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontWeight: 800, fontSize: "1.05rem", cursor: paying ? "not-allowed" : "pointer", boxShadow: paying ? "none" : "0 8px 28px rgba(124,58,237,.4)", letterSpacing: -.2 }}
             >
-              {paying ? "Yo'naltirilmoqda..." : `💳 $${totalUSD.toFixed(2)} to'lash`}
+              {paying ? t.redirecting : `${t.paying}${totalUSD.toFixed(2)}`}
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12, background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", fontSize: ".82rem", color: "#A78BFA" }}>
               <span>🔒</span>
-              <span>Dodo Payments orqali xavfsiz shifrlangan holda to'laysiz.</span>
+              <span>{t.safePayment}</span>
             </div>
           </div>
 
           {/* RIGHT */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ ...cardStyle, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>Reklamangiz</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{t.yourAd}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".9rem", color: "#fff", flexShrink: 0 }}>
                   {catMeta.emoji}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: ".87rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
-                  <div style={{ fontSize: ".74rem", color: "#6D5B8E" }}>{catMeta.label} · {ad.durationDays} kun</div>
+                  <div style={{ fontSize: ".74rem", color: "#6D5B8E" }}>{catMeta.label} · {ad.durationDays} {t.dayLabel}</div>
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid #2D1F50", borderBottom: "1px solid #2D1F50", fontSize: ".82rem" }}>
-                <span style={{ color: "#6D5B8E" }}>Kunlik narx</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${(ad.dailyBidCents / 100).toFixed(2)}/kun</span>
+                <span style={{ color: "#6D5B8E" }}>{t.dailyPrice}</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${(ad.dailyBidCents / 100).toFixed(2)}/{t.dayLabel}</span>
               </div>
               <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 11, background: "rgba(52,211,153,.08)", border: "1px solid rgba(52,211,153,.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: ".82rem", color: "#34D399", fontWeight: 700 }}>Jami</span>
+                <span style={{ fontSize: ".82rem", color: "#34D399", fontWeight: 700 }}>{t.total}</span>
                 <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "#34D399" }}>${totalUSD.toFixed(2)}</span>
               </div>
             </div>
 
             <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>Keyingi qadamlar</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{t.nextSteps}</div>
               {[
-                { icon: "✅", text: "AI tasdiqladi", done: true, active: false },
-                { icon: "💳", text: "To'lov", done: false, active: true },
-                { icon: "🚀", text: "Reklama jonli", done: false, active: false },
-                { icon: "📊", text: "Statistikani ko'ring", done: false, active: false },
+                { icon: "✅", text: t.step1, done: true, active: false },
+                { icon: "💳", text: t.step2, done: false, active: true },
+                { icon: "🚀", text: t.step3, done: false, active: false },
+                { icon: "📊", text: t.step4, done: false, active: false },
               ].map((step, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: i < 3 ? 12 : 0, marginBottom: i < 3 ? 12 : 0, borderBottom: i < 3 ? "1px dashed #2D1F50" : "none" }}>
                   <span style={{ width: 24, height: 24, borderRadius: "50%", background: step.done ? "rgba(52,211,153,.15)" : step.active ? "rgba(124,58,237,.2)" : "#1A1230", border: `1px solid ${step.done ? "#10B981" : step.active ? "#7C3AED" : "#2D1F50"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", flexShrink: 0 }}>{step.icon}</span>
@@ -223,11 +277,11 @@ export default function PaymentPage() {
             </div>
 
             <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 10 }}>Kafolat</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 10 }}>{t.guarantee}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: ".79rem", color: "#A78BFA", lineHeight: 1.5 }}>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Moderatsiyadan o&apos;tmasa — to&apos;liq qaytarish</div>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Texnik xatolik bo&apos;lsa — ko&apos;rib chiqiladi</div>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> Dodo Payments xavfsiz to'lov tizimi</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> {t.g1}</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> {t.g2}</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> {t.g3}</div>
               </div>
             </div>
           </div>

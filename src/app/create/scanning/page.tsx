@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useLang } from "@/contexts/LangContext";
 
 type StepStatus = "waiting" | "running" | "done" | "failed";
 
@@ -13,17 +14,94 @@ interface Step {
   sublabel: string;
 }
 
-const STEPS_UZ: Step[] = [
-  { id: "keyword", label: "Kalit so'zlar tekshiruvi", sublabel: "Taqiqlangan so'zlar va domenlar skanlanmoqda" },
-  { id: "url",     label: "URL manzil tekshiruvi",    sublabel: "Sayt mavjudligi va xavfsizligi aniqlanmoqda" },
-  { id: "upload",  label: "Rasm yuklanmoqda",          sublabel: "Rasm serverga yuklanmoqda" },
-  { id: "ai",      label: "AI tahlili",               sublabel: "Rasm sun'iy intellekt tomonidan ko'rilmoqda" },
-  { id: "save",    label: "Reklama yaratilmoqda",      sublabel: "Ma'lumotlar bazaga saqlanmoqda" },
-];
+const STEPS: Record<string, Step[]> = {
+  en: [
+    { id: "keyword", label: "Keyword check",      sublabel: "Scanning for banned words and domains" },
+    { id: "url",     label: "URL check",           sublabel: "Verifying site availability and safety" },
+    { id: "upload",  label: "Uploading image",     sublabel: "Image is being uploaded to the server" },
+    { id: "ai",      label: "AI analysis",         sublabel: "Image is being reviewed by AI" },
+    { id: "save",    label: "Creating ad",         sublabel: "Saving data to the database" },
+  ],
+  uz: [
+    { id: "keyword", label: "Kalit so'zlar tekshiruvi", sublabel: "Taqiqlangan so'zlar va domenlar skanlanmoqda" },
+    { id: "url",     label: "URL manzil tekshiruvi",    sublabel: "Sayt mavjudligi va xavfsizligi aniqlanmoqda" },
+    { id: "upload",  label: "Rasm yuklanmoqda",          sublabel: "Rasm serverga yuklanmoqda" },
+    { id: "ai",      label: "AI tahlili",               sublabel: "Rasm sun'iy intellekt tomonidan ko'rilmoqda" },
+    { id: "save",    label: "Reklama yaratilmoqda",      sublabel: "Ma'lumotlar bazaga saqlanmoqda" },
+  ],
+  ru: [
+    { id: "keyword", label: "Проверка ключевых слов", sublabel: "Сканирование запрещённых слов и доменов" },
+    { id: "url",     label: "Проверка URL",            sublabel: "Проверка доступности и безопасности сайта" },
+    { id: "upload",  label: "Загрузка изображения",    sublabel: "Изображение загружается на сервер" },
+    { id: "ai",      label: "AI анализ",               sublabel: "Изображение проверяется искусственным интеллектом" },
+    { id: "save",    label: "Создание рекламы",         sublabel: "Данные сохраняются в базу данных" },
+  ],
+};
+
+const T = {
+  en: {
+    checking: "in progress",
+    headingRunning: "AI review in progress",
+    headingDone: "Ad approved!",
+    headingFailed: "Review failed",
+    subRunning: "Getting ready...",
+    subDone: "Success! Redirecting to payment...",
+    subFailed: "The following issue was detected",
+    backBtn: "← Go back",
+    dontClose: "Don't close this page — review in progress",
+    errModerationNoResponse: "Moderation service did not respond.",
+    errTextReview: "Text review error",
+    errTextFailed: "Did not pass text review",
+    errImageUpload: "Image upload failed. Please try again.",
+    errAiNoResponse: "AI review did not respond.",
+    errAiFailed: "Image did not pass AI review",
+    errSaveFailed: "Data could not be saved",
+  },
+  uz: {
+    checking: "Tekshirmoqda",
+    headingRunning: "AI tekshiruvi davom etmoqda",
+    headingDone: "Reklama tasdiqlandi!",
+    headingFailed: "Tekshiruvdan o'tmadi",
+    subRunning: "Tayyorlanmoqda...",
+    subDone: "Muvaffaqiyatli! To'lov sahifasiga yo'naltirilmoqda...",
+    subFailed: "Quyidagi muammo aniqlandi",
+    backBtn: "← Orqaga qaytish",
+    dontClose: "Bu sahifani yopmang — tekshiruv davom etmoqda",
+    errModerationNoResponse: "Moderatsiya xizmati javob bermadi.",
+    errTextReview: "Matn tekshiruvi xatosi",
+    errTextFailed: "Matn tekshiruvidan o'tmadi",
+    errImageUpload: "Rasm yuklanmadi. Qayta urinib ko'ring.",
+    errAiNoResponse: "AI tekshiruvi javob bermadi.",
+    errAiFailed: "Rasm AI tekshiruvidan o'tmadi",
+    errSaveFailed: "Ma'lumotlar saqlanmadi",
+  },
+  ru: {
+    checking: "Проверяется",
+    headingRunning: "AI проверка выполняется",
+    headingDone: "Реклама одобрена!",
+    headingFailed: "Проверка не пройдена",
+    subRunning: "Подготовка...",
+    subDone: "Успешно! Перенаправление на оплату...",
+    subFailed: "Обнаружена следующая проблема",
+    backBtn: "← Назад",
+    dontClose: "Не закрывайте страницу — проверка продолжается",
+    errModerationNoResponse: "Сервис модерации не ответил.",
+    errTextReview: "Ошибка проверки текста",
+    errTextFailed: "Не прошло проверку текста",
+    errImageUpload: "Не удалось загрузить изображение. Попробуйте ещё раз.",
+    errAiNoResponse: "AI проверка не ответила.",
+    errAiFailed: "Изображение не прошло AI проверку",
+    errSaveFailed: "Не удалось сохранить данные",
+  },
+};
 
 export default function ScanningPage() {
   const router = useRouter();
   const hasRun = useRef(false);
+  const { lang: globalLang } = useLang();
+  const lang = (["en","uz","ru"].includes(globalLang) ? globalLang : "en") as keyof typeof T;
+  const t = T[lang];
+  const steps = STEPS[lang];
 
   const [stepStatuses, setStepStatuses] = useState<Record<string, StepStatus>>({
     keyword: "waiting", url: "waiting", ai: "waiting", upload: "waiting", save: "waiting",
@@ -31,7 +109,6 @@ export default function ScanningPage() {
   const [error, setError] = useState<string | null>(null);
   const [dots, setDots] = useState(".");
 
-  // Animated dots
   useEffect(() => {
     const iv = setInterval(() => setDots((d) => (d.length >= 3 ? "." : d + ".")), 500);
     return () => clearInterval(iv);
@@ -58,7 +135,6 @@ export default function ScanningPage() {
       const { title, description, url, category, bidCents, duration,
               imageBase64, imageBase64Mod, imageMimeTypeMod, idToken, uid } = data;
 
-      // ── Step 1+2: Matn tekshiruvi (keyword + URL, rasmsiz) ───────────────
       setStep("keyword", "running");
       await new Promise((r) => setTimeout(r, 400));
       setStep("url", "running");
@@ -71,11 +147,11 @@ export default function ScanningPage() {
           body: JSON.stringify({ title, description, destinationURL: url }),
         });
         try { textData = await textRes.json(); }
-        catch { throw new Error("Moderatsiya xizmati javob bermadi."); }
+        catch { throw new Error(t.errModerationNoResponse); }
       } catch (err: any) {
         setStep("keyword", "failed");
         setStep("url", "waiting");
-        setError(err?.message || "Matn tekshiruvi xatosi");
+        setError(err?.message || t.errTextReview);
         return;
       }
 
@@ -89,7 +165,7 @@ export default function ScanningPage() {
           setStep("keyword", "failed");
           setStep("url", "waiting");
         }
-        setError("❌ " + (reason || "Matn tekshiruvidan o'tmadi"));
+        setError("❌ " + (reason || t.errTextFailed));
         return;
       }
 
@@ -97,7 +173,6 @@ export default function ScanningPage() {
       setStep("url", "done");
       await new Promise((r) => setTimeout(r, 200));
 
-      // ── Step 3: Image upload ──────────────────────────────────────────────
       setStep("upload", "running");
       let imageURL: string;
       try {
@@ -107,17 +182,16 @@ export default function ScanningPage() {
           body: JSON.stringify({ imageBase64 }),
         });
         const imgData = await imgRes.json();
-        if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || "Rasm yuklanmadi.");
+        if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || t.errImageUpload);
         imageURL = imgData.url;
         setStep("upload", "done");
       } catch (err: any) {
         setStep("upload", "failed");
-        setError(err?.message || "Rasm yuklanmadi. Qayta urinib ko'ring.");
+        setError(err?.message || t.errImageUpload);
         return;
       }
       await new Promise((r) => setTimeout(r, 200));
 
-      // ── Step 4: AI vision tekshiruvi (URL orqali — ishonchli) ────────────
       setStep("ai", "running");
 
       let aiData: any;
@@ -133,23 +207,22 @@ export default function ScanningPage() {
           }),
         });
         try { aiData = await aiRes.json(); }
-        catch { throw new Error("AI tekshiruvi javob bermadi."); }
+        catch { throw new Error(t.errAiNoResponse); }
       } catch (err: any) {
         setStep("ai", "failed");
-        setError(err?.message || "AI tekshiruvi xatosi");
+        setError(err?.message || t.errAiNoResponse);
         return;
       }
 
       if (!aiData.approved) {
         setStep("ai", "failed");
-        setError("❌ " + (aiData.reason || "Rasm AI tekshiruvidan o'tmadi"));
+        setError("❌ " + (aiData.reason || t.errAiFailed));
         return;
       }
 
       setStep("ai", "done");
       await new Promise((r) => setTimeout(r, 200));
 
-      // ── Step 5: Firestore save ────────────────────────────────────────────
       setStep("save", "running");
       try {
         const adRef = await addDoc(collection(db, "ads"), {
@@ -178,14 +251,15 @@ export default function ScanningPage() {
         router.replace(`/ads/${adRef.id}/pending`);
       } catch (err: any) {
         setStep("save", "failed");
-        setError("Ma'lumotlar saqlanmadi: " + (err?.message || "Qayta urinib ko'ring."));
+        setError(t.errSaveFailed + ": " + (err?.message || ""));
       }
     };
 
     run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const statusIcon = (s: StepStatus, running: boolean) => {
+  const statusIcon = (s: StepStatus) => {
     if (s === "done") return (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
         <circle cx="10" cy="10" r="10" fill="#10B981"/>
@@ -206,7 +280,7 @@ export default function ScanningPage() {
 
   const allDone = Object.values(stepStatuses).every((s) => s === "done");
   const anyFailed = Object.values(stepStatuses).some((s) => s === "failed");
-  const currentStep = STEPS_UZ.find((s) => stepStatuses[s.id] === "running");
+  const currentStep = steps.find((s) => stepStatuses[s.id] === "running");
 
   return (
     <div style={{
@@ -248,7 +322,6 @@ export default function ScanningPage() {
         {/* Scanning visual */}
         {!anyFailed && !allDone && (
           <div style={{ position: "relative", width: 96, height: 96, margin: "0 auto 28px", borderRadius: "50%", background: "rgba(124,58,237,.12)", border: "2px solid #7C3AED", overflow: "hidden", animation: "glow 2.5s ease infinite" }}>
-            {/* AI brain icon */}
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", opacity: .85 }}>
               <circle cx="24" cy="24" r="22" fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeDasharray="4 3" style={{ animation: "spin 8s linear infinite" }}/>
               <path d="M16 24a8 8 0 0116 0" fill="none" stroke="#A855F7" strokeWidth="2" strokeLinecap="round"/>
@@ -257,7 +330,6 @@ export default function ScanningPage() {
               <circle cx="16" cy="24" r="2.5" fill="#7C3AED" opacity=".6"/>
               <circle cx="32" cy="24" r="2.5" fill="#7C3AED" opacity=".6"/>
             </svg>
-            {/* Scan line */}
             <div style={{ position: "absolute", left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, #A855F7, transparent)", animation: "scan 1.5s ease-in-out infinite alternate", opacity: .7 }} />
           </div>
         )}
@@ -280,21 +352,21 @@ export default function ScanningPage() {
 
         {/* Heading */}
         <h1 style={{ margin: "0 0 6px", fontSize: "1.2rem", fontWeight: 700, color: "#EDE9FE", textAlign: "center" }}>
-          {allDone ? "Reklama tasdiqlandi!" : anyFailed ? "Tekshiruvdan o'tmadi" : "AI tekshiruvi davom etmoqda"}
+          {allDone ? t.headingDone : anyFailed ? t.headingFailed : t.headingRunning}
         </h1>
         <p style={{ margin: "0 0 28px", fontSize: ".83rem", color: "#6D5B8E", textAlign: "center", minHeight: 18 }}>
           {allDone
-            ? "Muvaffaqiyatli! To'lov sahifasiga yo'naltirilmoqda..."
+            ? t.subDone
             : anyFailed
-            ? "Quyidagi muammo aniqlandi"
+            ? t.subFailed
             : currentStep
             ? currentStep.sublabel + dots
-            : "Tayyorlanmoqda..."}
+            : t.subRunning}
         </p>
 
         {/* Steps */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {STEPS_UZ.map((step) => {
+          {steps.map((step) => {
             const s = stepStatuses[step.id];
             return (
               <div key={step.id} style={{
@@ -304,7 +376,7 @@ export default function ScanningPage() {
                 border: `1px solid ${s === "running" ? "#7C3AED" : s === "done" ? "#10B98130" : s === "failed" ? "#EF444430" : "#2D1F50"}`,
                 transition: "all .3s ease",
               }}>
-                {statusIcon(s, s === "running")}
+                {statusIcon(s)}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: ".83rem", fontWeight: 600, color: s === "failed" ? "#F87171" : s === "done" ? "#6EE7B7" : s === "running" ? "#EDE9FE" : "#6D5B8E" }}>
                     {step.label}
@@ -314,7 +386,7 @@ export default function ScanningPage() {
                   )}
                 </div>
                 {s === "running" && (
-                  <span style={{ fontSize: ".75rem", color: "#7C3AED", fontWeight: 700, animation: "pulse 1.2s ease infinite" }}>Tekshirmoqda</span>
+                  <span style={{ fontSize: ".75rem", color: "#7C3AED", fontWeight: 700, animation: "pulse 1.2s ease infinite" }}>{t.checking}</span>
                 )}
               </div>
             );
@@ -338,7 +410,7 @@ export default function ScanningPage() {
               color: "#A855F7", fontSize: ".88rem", fontWeight: 700, cursor: "pointer",
             }}
           >
-            ← Orqaga qaytish
+            {t.backBtn}
           </button>
         )}
       </div>
@@ -346,7 +418,7 @@ export default function ScanningPage() {
       {/* Bottom note */}
       {!anyFailed && !allDone && (
         <p style={{ marginTop: 20, fontSize: ".75rem", color: "#4A3C6E", textAlign: "center", animation: "fadeUp .5s ease .3s both" }}>
-          Bu sahifani yopmang — tekshiruv davom etmoqda
+          {t.dontClose}
         </p>
       )}
     </div>

@@ -5,11 +5,63 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad } from "@/types";
+import { useLang } from "@/contexts/LangContext";
+
+const T = {
+  en: {
+    rejected: "Rejected",
+    reason: "Reason:",
+    rejectionFallback: "Did not meet moderation requirements",
+    noPayment: "✓ No payment was taken",
+    resubmit: "Resubmit",
+    approved: "AI check passed!",
+    approvedMsg: "Your ad is approved. Complete payment\nto publish it.",
+    step1: "AI moderation",
+    step2: "Payment",
+    step3: "Publish — go live",
+    next: "Next",
+    payBtn: "💳 Proceed to payment",
+    payWarning: "Ad will be removed in 24 hours if payment is not made",
+  },
+  uz: {
+    rejected: "Rad etildi",
+    reason: "Sabab:",
+    rejectionFallback: "Moderatsiya talablariga javob bermadi",
+    noPayment: "✓ Hech qanday to'lov olinmadi",
+    resubmit: "Qayta yuborish",
+    approved: "AI tekshiruvi o'tdi!",
+    approvedMsg: "Reklamangiz tasdiqlandi. Nashr qilish uchun\nto'lovni amalga oshiring.",
+    step1: "AI moderatsiya",
+    step2: "To'lov",
+    step3: "Nashr — efirga chiqish",
+    next: "Navbat",
+    payBtn: "💳 To'lovga o'tish",
+    payWarning: "To'lov qilmasangiz reklama 24 soatdan so'ng o'chadi",
+  },
+  ru: {
+    rejected: "Отклонено",
+    reason: "Причина:",
+    rejectionFallback: "Не соответствует требованиям модерации",
+    noPayment: "✓ Оплата не была произведена",
+    resubmit: "Отправить снова",
+    approved: "AI-проверка пройдена!",
+    approvedMsg: "Ваша реклама одобрена. Выполните оплату,\nчтобы опубликовать её.",
+    step1: "AI модерация",
+    step2: "Оплата",
+    step3: "Публикация — запуск",
+    next: "Далее",
+    payBtn: "💳 Перейти к оплате",
+    payWarning: "Реклама будет удалена через 24 часа, если оплата не будет произведена",
+  },
+};
 
 export default function AdPendingPage() {
   const { adId } = useParams<{ adId: string }>();
   const router = useRouter();
   const [ad, setAd] = useState<Ad | null>(null);
+  const { lang: globalLang } = useLang();
+  const lang = (["en","uz","ru"].includes(globalLang) ? globalLang : "en") as keyof typeof T;
+  const t = T[lang];
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "ads", adId), (snap) => {
@@ -54,21 +106,21 @@ export default function AdPendingPage() {
               display: "flex", alignItems: "center", justifyContent: "center",
               margin: "0 auto 24px", fontSize: 36,
             }}>❌</div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>Rad etildi</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8 }}>{t.rejected}</h1>
             <div style={{
               background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
               borderRadius: 12, padding: "14px 16px", marginBottom: 16, textAlign: "left",
             }}>
-              <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>Sabab:</p>
+              <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 4 }}>{t.reason}</p>
               <p style={{ fontSize: 14, color: "#F87171", fontWeight: 500 }}>
-                {ad.rejectionReason || "Moderatsiya talablariga javob bermadi"}
+                {ad.rejectionReason || t.rejectionFallback}
               </p>
             </div>
             <div style={{
               background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)",
               borderRadius: 10, padding: "10px 14px", marginBottom: 24,
             }}>
-              <p style={{ fontSize: 13, color: "#34D399" }}>✓ Hech qanday to'lov olinmadi</p>
+              <p style={{ fontSize: 13, color: "#34D399" }}>{t.noPayment}</p>
             </div>
             <button
               onClick={() => router.push("/create")}
@@ -79,7 +131,7 @@ export default function AdPendingPage() {
                 border: "none", cursor: "pointer",
               }}
             >
-              Qayta yuborish
+              {t.resubmit}
             </button>
           </div>
         </div>
@@ -87,7 +139,6 @@ export default function AdPendingPage() {
     );
   }
 
-  // status === "pending" — AI o'tdi, to'lov kutilmoqda
   return (
     <div style={{ minHeight: "calc(100vh - 64px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
       <div style={cardStyle}>
@@ -104,10 +155,12 @@ export default function AdPendingPage() {
               margin: "0 auto 20px", fontSize: 36,
             }}>✅</div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginBottom: 8, letterSpacing: -0.3 }}>
-              AI tekshiruvi o'tdi!
+              {t.approved}
             </h1>
             <p style={{ color: "#9CA3AF", fontSize: 14, lineHeight: 1.6 }}>
-              Reklamangiz tasdiqlandi. Nashr qilish uchun<br />to'lovni amalga oshiring.
+              {t.approvedMsg.split("\n").map((line, i) => (
+                <span key={i}>{line}{i === 0 && <br />}</span>
+              ))}
             </p>
           </div>
 
@@ -135,9 +188,9 @@ export default function AdPendingPage() {
           {/* Steps */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
             {[
-              { label: "AI moderatsiya", done: true },
-              { label: "To'lov", done: false, active: true },
-              { label: "Nashr — efirga chiqish", done: false },
+              { label: t.step1, done: true },
+              { label: t.step2, done: false, active: true },
+              { label: t.step3, done: false },
             ].map((step, i) => (
               <div key={i} style={{
                 display: "flex", alignItems: "center", gap: 12,
@@ -166,7 +219,7 @@ export default function AdPendingPage() {
                   <span style={{
                     fontSize: 11, color: "#7C3AED", fontWeight: 600,
                     background: "rgba(124,58,237,0.15)", borderRadius: 6, padding: "2px 8px",
-                  }}>Navbat</span>
+                  }}>{t.next}</span>
                 )}
               </div>
             ))}
@@ -184,11 +237,11 @@ export default function AdPendingPage() {
               letterSpacing: -0.2,
             }}
           >
-            💳 To'lovga o'tish
+            {t.payBtn}
           </button>
 
           <p style={{ textAlign: "center", fontSize: 12, color: "#4B5563", marginTop: 14 }}>
-            To'lov qilmasangiz reklama 24 soatdan so'ng o'chadi
+            {t.payWarning}
           </p>
         </div>
       </div>

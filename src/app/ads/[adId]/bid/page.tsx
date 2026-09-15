@@ -6,13 +6,53 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, CATEGORIES } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import Link from "next/link";
 import { ArrowUp, Info, Trophy } from "lucide-react";
+
+const T = {
+  en: {
+    pageLabel: "Raise Bid", totalSpent: "Total spent", placeAd: "Post Ad",
+    loading: "Loading...", title: "Raise Bid",
+    rankChange: "Ranking change", currently: "Current", newLabel: "New",
+    dayLabel: "/day", currentStatus: "Current status", currentBid: "Current bid",
+    daysLeft: "Days remaining", newBidLabel: "New daily bid (USD)",
+    minLabel: "Min:", diffNote: "Pay only the difference for", remaining: "remaining days",
+    diffLabel: "Difference", daysLabel: "days",
+    payBtn: "Pay $ and reach #1", redirecting: "Redirecting...",
+    cancelBtn: "← Cancel", toTop: "🏆 You'll reach #1",
+  },
+  uz: {
+    pageLabel: "Bid oshirish", totalSpent: "Jami sarflangan", placeAd: "Reklama berish",
+    loading: "Yuklanmoqda...", title: "Bidni oshirish",
+    rankChange: "Reyting o'zgarishi", currently: "Hozirgi", newLabel: "Yangi",
+    dayLabel: "/kun", currentStatus: "Joriy holat", currentBid: "Joriy bid",
+    daysLeft: "Qolgan kunlar", newBidLabel: "Yangi kunlik bid (USD)",
+    minLabel: "Minimal:", diffNote: "Faqat qolgan", remaining: "kun uchun farq to'lanadi",
+    diffLabel: "Farq", daysLabel: "kun",
+    payBtn: "to'lash va 1-o'ringa chiqish", redirecting: "Yo'naltirilmoqda...",
+    cancelBtn: "← Bekor qilish", toTop: "🏆 1-o'ringa chiqasiz",
+  },
+  ru: {
+    pageLabel: "Повысить ставку", totalSpent: "Всего потрачено", placeAd: "Разместить",
+    loading: "Загрузка...", title: "Повысить ставку",
+    rankChange: "Изменение рейтинга", currently: "Текущая", newLabel: "Новая",
+    dayLabel: "/день", currentStatus: "Текущий статус", currentBid: "Текущая ставка",
+    daysLeft: "Осталось дней", newBidLabel: "Новая ежедневная ставка (USD)",
+    minLabel: "Мин.:", diffNote: "Оплачивается разница за", remaining: "оставшихся дней",
+    diffLabel: "Разница", daysLabel: "дн.",
+    payBtn: "Оплатить $ и выйти на #1", redirecting: "Перенаправление...",
+    cancelBtn: "← Отмена", toTop: "🏆 Вы выйдете на #1",
+  },
+};
 
 export default function BidUpgradePage() {
   const { adId } = useParams<{ adId: string }>();
   const router = useRouter();
   const { firebaseUser, userProfile, loading: authLoading } = useAuth();
+  const { lang: globalLang } = useLang();
+  const lang = (["en","uz","ru"].includes(globalLang) ? globalLang : "en") as keyof typeof T;
+  const t = T[lang];
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
   const [newBid, setNewBid] = useState(1);
@@ -38,7 +78,7 @@ export default function BidUpgradePage() {
     if (!ad) return;
     const currentBidUSD = ad.dailyBidCents / 100;
     if (newBid <= currentBidUSD) {
-      setError(`Yangi bid joriy biddan ($${currentBidUSD}/kun) yuqori bo'lishi kerak`);
+      setError(`${t.newBidLabel}: > $${currentBidUSD}${t.dayLabel}`);
       return;
     }
     setError("");
@@ -59,13 +99,13 @@ export default function BidUpgradePage() {
       if (data.url) window.location.href = data.url;
       else throw new Error(data.error);
     } catch (err: any) {
-      setError("Xato: " + err.message);
+      setError("Error: " + err.message);
       setPaying(false);
     }
   };
 
   const initials = userProfile?.displayName?.charAt(0).toUpperCase() || "?";
-  const brandName = userProfile?.displayName || "Profil";
+  const brandName = userProfile?.displayName || "Profile";
   const spent = userProfile?.totalSpentCents || 0;
 
   const currentBidUSD = ad ? ad.dailyBidCents / 100 : 0;
@@ -97,26 +137,26 @@ export default function BidUpgradePage() {
             </svg>
             <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
             <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "#6D5B8E" }}>
-              Bid oshirish
+              {t.pageLabel}
             </span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>Jami sarflangan</span>
+              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
             </div>
             <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
               <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
               <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
             </Link>
-            <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ Reklama berish</Link>
+            <Link href="/create" style={{ padding: "9px 16px", borderRadius: 10, background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>+ {t.placeAd}</Link>
           </div>
         </div>
       </header>
 
       {loading || !ad || !catMeta ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-          <span style={{ color: "#6D5B8E" }}>Yuklanmoqda...</span>
+          <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
         </div>
       ) : (
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "38px 24px 60px", animation: "fade .35s ease both" }}>
@@ -131,7 +171,7 @@ export default function BidUpgradePage() {
                 <Trophy size={20} color="#fff" />
               </div>
               <div>
-                <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.4rem", fontWeight: 700, letterSpacing: "-.02em" }}>Bidni oshirish</h1>
+                <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.4rem", fontWeight: 700, letterSpacing: "-.02em" }}>{t.title}</h1>
                 <p style={{ fontSize: ".8rem", color: "#6D5B8E", marginTop: 2 }}>{catMeta.emoji} {catMeta.label} · {ad.title}</p>
               </div>
             </div>
@@ -145,44 +185,44 @@ export default function BidUpgradePage() {
 
           {/* Ranking preview */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
-            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>Reyting o&apos;zgarishi</div>
+            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.rankChange}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               {/* Before */}
               <div style={{ flex: 1, background: "#160F2A", borderRadius: 12, padding: "14px 16px", border: "1px solid #2D1F50", textAlign: "center" }}>
-                <div style={{ fontSize: ".68rem", color: "#6D5B8E", marginBottom: 6 }}>Hozirgi</div>
+                <div style={{ fontSize: ".68rem", color: "#6D5B8E", marginBottom: 6 }}>{t.currently}</div>
                 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.4rem", fontWeight: 700, color: "#FCD34D" }}>${currentBidUSD.toFixed(0)}</div>
-                <div style={{ fontSize: ".72rem", color: "#6D5B8E" }}>/kun</div>
+                <div style={{ fontSize: ".72rem", color: "#6D5B8E" }}>{t.dayLabel}</div>
               </div>
               <ArrowUp size={20} color="#7C3AED" style={{ flexShrink: 0 }} />
               {/* After */}
               <div style={{ flex: 1, background: "rgba(124,58,237,.12)", borderRadius: 12, padding: "14px 16px", border: "1px solid #7C3AED", textAlign: "center" }}>
-                <div style={{ fontSize: ".68rem", color: "#A78BFA", marginBottom: 6 }}>Yangi</div>
+                <div style={{ fontSize: ".68rem", color: "#A78BFA", marginBottom: 6 }}>{t.newLabel}</div>
                 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.4rem", fontWeight: 700, color: "#A855F7" }}>${newBid.toFixed(0)}</div>
-                <div style={{ fontSize: ".72rem", color: "#A78BFA" }}>/kun</div>
+                <div style={{ fontSize: ".72rem", color: "#A78BFA" }}>{t.dayLabel}</div>
               </div>
             </div>
             <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10, background: "rgba(52,211,153,.08)", border: "1px solid rgba(52,211,153,.2)", fontSize: ".8rem", color: "#34D399", textAlign: "center" }}>
-              🏆 1-o&apos;ringa chiqasiz
+              {t.toTop}
             </div>
           </div>
 
           {/* Current status */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
-            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>Joriy holat</div>
+            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.currentStatus}</div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".85rem", marginBottom: 10 }}>
-              <span style={{ color: "#A78BFA" }}>Joriy bid</span>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${currentBidUSD.toFixed(2)}/kun</span>
+              <span style={{ color: "#A78BFA" }}>{t.currentBid}</span>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${currentBidUSD.toFixed(2)}{t.dayLabel}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".85rem" }}>
-              <span style={{ color: "#A78BFA" }}>Qolgan kunlar</span>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#EDE9FE" }}>{daysRemaining} kun</span>
+              <span style={{ color: "#A78BFA" }}>{t.daysLeft}</span>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#EDE9FE" }}>{daysRemaining} {t.daysLabel}</span>
             </div>
           </div>
 
           {/* New bid input */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
             <label style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, display: "block", marginBottom: 12 }}>
-              Yangi kunlik bid (USD)
+              {t.newBidLabel}
             </label>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: "1.4rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace" }}>$</span>
@@ -194,10 +234,10 @@ export default function BidUpgradePage() {
                 step={0.5}
                 style={{ flex: 1, background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 10, padding: "12px 14px", fontSize: "1.4rem", fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#EDE9FE", outline: "none" }}
               />
-              <span style={{ fontSize: ".9rem", color: "#6D5B8E" }}>/kun</span>
+              <span style={{ fontSize: ".9rem", color: "#6D5B8E" }}>{t.dayLabel}</span>
             </div>
             <div style={{ marginTop: 8, fontSize: ".76rem", color: "#6D5B8E" }}>
-              Minimal: ${(currentBidUSD + 0.5).toFixed(2)}/kun
+              {t.minLabel} ${(currentBidUSD + 0.5).toFixed(2)}{t.dayLabel}
             </div>
           </div>
 
@@ -206,15 +246,15 @@ export default function BidUpgradePage() {
             <div style={{ background: "rgba(124,58,237,.08)", border: "1px solid rgba(124,58,237,.25)", borderRadius: 16, padding: 20, marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 14 }}>
                 <Info size={14} color="#A78BFA" style={{ flexShrink: 0, marginTop: 2 }} />
-                <p style={{ fontSize: ".78rem", color: "#A78BFA" }}>Faqat qolgan {daysRemaining} kun uchun farq to&apos;lanadi</p>
+                <p style={{ fontSize: ".78rem", color: "#A78BFA" }}>{t.diffNote} {daysRemaining} {t.remaining}</p>
               </div>
               <div style={{ fontSize: ".85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#6D5B8E" }}>Farq (${newBid.toFixed(2)} − ${currentBidUSD.toFixed(2)})/kun</span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#EDE9FE" }}>${diffPerDay.toFixed(2)}/kun</span>
+                  <span style={{ color: "#6D5B8E" }}>{t.diffLabel} (${newBid.toFixed(2)} − ${currentBidUSD.toFixed(2)}){t.dayLabel}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#EDE9FE" }}>${diffPerDay.toFixed(2)}{t.dayLabel}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid #2D1F50" }}>
-                  <span style={{ color: "#6D5B8E" }}>× {daysRemaining} kun</span>
+                  <span style={{ color: "#6D5B8E" }}>× {daysRemaining} {t.daysLabel}</span>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.1rem", fontWeight: 700, color: "#34D399" }}>= ${extraToPay.toFixed(2)}</span>
                 </div>
               </div>
@@ -228,14 +268,14 @@ export default function BidUpgradePage() {
             style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: (paying || diffPerDay <= 0 || daysRemaining === 0) ? "#4C1D95" : "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#1A1230", fontSize: "1rem", fontWeight: 800, cursor: (paying || diffPerDay <= 0) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, boxShadow: (diffPerDay > 0 && !paying) ? "0 4px 20px rgba(245,158,11,.35)" : "none" }}
           >
             <ArrowUp size={18} />
-            {paying ? "Yo'naltirilmoqda..." : `$${extraToPay.toFixed(2)} to'lash va 1-o'ringa chiqish`}
+            {paying ? t.redirecting : `$${extraToPay.toFixed(2)} ${t.payBtn}`}
           </button>
 
           <button
             onClick={() => router.back()}
             style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "1px solid #2D1F50", background: "transparent", color: "#6D5B8E", fontSize: ".85rem", cursor: "pointer" }}
           >
-            ← Bekor qilish
+            {t.cancelBtn}
           </button>
         </div>
       )}

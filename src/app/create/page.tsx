@@ -3,11 +3,13 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
+import { LANGS } from "@/lib/i18n";
 import { CATEGORIES, Category } from "@/types";
 import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Lang = "uz" | "en";
+type Lang = "uz" | "en" | "ru";
 
 // ─── Translations ─────────────────────────────────────────────────────────────
 const T = {
@@ -67,6 +69,14 @@ const T = {
     noAdsTitle: "Reklama joylashtiring",
     noAdsBody: "Hamyon tayyor. Bitta formada reklama yaratasiz.",
     sideCta: "Reklama berish",
+    dayLabel: "kun",
+    browseLabel: "Tanlash",
+    removeLabel: "Oʻchirish",
+    customLabel: "O'zim",
+    customDurLabel: "belgilayman",
+    loadingLabel: "Yuklanmoqda...",
+    visitSiteLabel: "Saytga oʻting",
+    newCampaignLabel: "Yangi kampaniya",
   },
   en: {
     dashLabel: "Dashboard",
@@ -124,6 +134,79 @@ const T = {
     noAdsTitle: "Place an ad",
     noAdsBody: "Wallet ready. Create an ad in one form.",
     sideCta: "Place ad",
+    dayLabel: "days",
+    browseLabel: "Browse",
+    removeLabel: "Remove",
+    customLabel: "Custom",
+    customDurLabel: "duration",
+    loadingLabel: "Loading...",
+    visitSiteLabel: "Visit site",
+    newCampaignLabel: "New campaign",
+  },
+  ru: {
+    dashLabel: "Панель",
+    totalSpent: "Всего потрачено",
+    navAll: "Все объявления",
+    navMyAds: "Мои объявления",
+    navCats: "Категории",
+    navWallet: "Платежи",
+    navProfile: "Профиль",
+    navGuide: "Как это работает",
+    logout: "Выйти",
+    sideMain: "Меню",
+    ctaCreate: "Разместить рекламу",
+    createTitle: "Новое объявление",
+    createSub: "Заполните все поля и отправьте на модерацию.",
+    titleLabel: "Заголовок",
+    titlePh: "Название компании или продукта",
+    imageLabel: "Изображение",
+    imageNote: "PNG, JPG, WebP — макс. 5 МБ",
+    imageClick: "Нажмите или перетащите, чтобы загрузить",
+    urlLabel: "URL сайта",
+    urlPh: "https://вашсайт.com",
+    urlNote: "Должен начинаться с HTTPS",
+    catLabel: "Категория",
+    descLabel: "Краткое описание (необязательно)",
+    descPh: "О вашей компании или продукте...",
+    bidLabel: "Ежедневная ставка (USD/день)",
+    bidNote: "Больше ставка — выше позиция",
+    durLabel: "Длительность кампании",
+    popular: "Популярное",
+    totalLabel: "Итого к оплате",
+    totalNote: "Оплата снимается только после одобрения",
+    submitBtn: "Отправить на модерацию →",
+    submitting: "🤖 ИИ проверяет...",
+    previewTitle: "Предпросмотр",
+    previewNote: "Так будет выглядеть ваша реклама",
+    costTitle: "Расчёт стоимости",
+    perDay: "Ежедневная ставка",
+    days: "Длительность",
+    total: "Итого",
+    rulesTitle: "⚠️ Важные правила",
+    rule1: "Реклама сначала проверяется ИИ (30–90 сек.).",
+    rule2: "Оплата снимается только после одобрения.",
+    rule3: "За отклонённую рекламу плата не взимается.",
+    rule4: "URL без HTTPS не принимаются.",
+    previewBrand: "Название бренда",
+    previewDesc: "Краткое описание появится здесь...",
+    errTitle: "Введите заголовок",
+    errTitleLong: "Заголовок не должен превышать 60 символов",
+    errUrl: "URL должен начинаться с https://",
+    errImage: "Загрузите изображение",
+    errBid: "Минимальная ставка $1 в день",
+    errDesc: "Описание не должно превышать 200 символов",
+    errSubmit: "Что-то пошло не так",
+    noAdsTitle: "Разместить рекламу",
+    noAdsBody: "Кошелёк готов. Создайте рекламу в одной форме.",
+    sideCta: "Разместить",
+    dayLabel: "дней",
+    browseLabel: "Выбрать",
+    removeLabel: "Удалить",
+    customLabel: "Своё",
+    customDurLabel: "длительность",
+    loadingLabel: "Загрузка...",
+    visitSiteLabel: "Перейти на сайт",
+    newCampaignLabel: "Новая кампания",
   },
 };
 
@@ -144,7 +227,7 @@ const label: React.CSSProperties = {
 function AppHeader({
   lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet,
 }: {
-  lang: Lang; setLang: (l: Lang) => void;
+  lang: Lang; setLang: (l: string) => void;
   totalSpentCents: number; brandName: string; brandInitial: string;
   onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void;
 }) {
@@ -164,8 +247,9 @@ function AppHeader({
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
-            <button onClick={() => setLang("uz")} style={{ ...btnBase, background: lang === "uz" ? "#2D1F50" : "transparent", color: lang === "uz" ? "#EDE9FE" : "#6D5B8E" }}>UZ</button>
-            <button onClick={() => setLang("en")} style={{ ...btnBase, background: lang === "en" ? "#2D1F50" : "transparent", color: lang === "en" ? "#EDE9FE" : "#6D5B8E" }}>EN</button>
+            {LANGS.map((l) => (
+              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
+            ))}
           </div>
           <button onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
             <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
@@ -406,7 +490,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
       {/* Page header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: ".7rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 6 }}>
-          📢 {lang === "uz" ? "Yangi kampaniya" : "New campaign"}
+          📢 {t.newCampaignLabel}
         </div>
         <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-.03em", color: "#EDE9FE", lineHeight: 1.15 }}>
           {t.createTitle}
@@ -499,7 +583,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     onClick={() => { setImageFile(null); setImagePreview(null); }}
                     style={{ padding: "6px 12px", borderRadius: 8, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.25)", color: "#F87171", fontSize: ".77rem", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
                   >
-                    Oʻchirish
+                    {t.removeLabel}
                   </button>
                 </div>
               ) : (
@@ -518,7 +602,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     <div style={{ fontSize: ".72rem", color: "#6D5B8E", marginTop: 2 }}>{t.imageNote}</div>
                   </div>
                   <span style={{ padding: "7px 14px", borderRadius: 9, background: "rgba(124,58,237,.15)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".78rem", fontWeight: 700, flexShrink: 0 }}>
-                    {lang === "uz" ? "Tanlash" : "Browse"}
+                    {t.browseLabel}
                   </span>
                 </div>
               )}
@@ -557,7 +641,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
             <div style={{ ...card, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
                 <label style={{ ...label, marginBottom: 0 }}>{t.bidLabel}</label>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: "#A855F7" }}>${bidDollars}/kun</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: "#A855F7" }}>${bidDollars}/{t.dayLabel}</span>
               </div>
               <input
                 type="range"
@@ -602,7 +686,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                       )}
                       <div style={{ fontSize: "1.1rem", fontWeight: 700, fontFamily: "'Unbounded',sans-serif" }}>{d}</div>
                       <div style={{ fontSize: ".68rem", color: active ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
-                        {lang === "uz" ? "kun" : "days"}
+                        {t.dayLabel}
                       </div>
                       <div style={{ fontSize: ".76rem", fontWeight: 600, color: active ? "#EDE9FE" : "#6D5B8E", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
                         ${dayTotal}
@@ -621,9 +705,9 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     cursor: "pointer", textAlign: "center", transition: "all .15s",
                   }}
                 >
-                  <div style={{ fontSize: ".9rem", fontWeight: 700 }}>{lang === "uz" ? "O'zim" : "Custom"}</div>
+                  <div style={{ fontSize: ".9rem", fontWeight: 700 }}>{t.customLabel}</div>
                   <div style={{ fontSize: ".68rem", color: isCustomDur ? "#A855F7" : "#6D5B8E", marginTop: 2 }}>
-                    {lang === "uz" ? "belgilayman" : "duration"}
+                    {t.customDurLabel}
                   </div>
                   <div style={{ fontSize: ".76rem", fontWeight: 600, color: isCustomDur && customDays ? "#EDE9FE" : "#6D5B8E", marginTop: 5, fontFamily: "'JetBrains Mono',monospace" }}>
                     {isCustomDur && customDays ? `$${(bidCents * parseInt(customDays) / 100).toFixed(2)}` : "?"}
@@ -643,11 +727,11 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                       const n = parseInt(val);
                       if (!isNaN(n) && n >= 1 && n <= 365) setDuration(n);
                     }}
-                    placeholder={lang === "uz" ? "Kunlar soni (1–365)" : "Days (1–365)"}
+                    placeholder={`${t.dayLabel} (1–365)`}
                     style={{ ...inp, flex: 1 }}
                   />
                   <span style={{ fontSize: ".83rem", color: "#6D5B8E", whiteSpace: "nowrap" }}>
-                    {lang === "uz" ? "kun" : "days"}
+                    {t.dayLabel}
                   </span>
                 </div>
               )}
@@ -659,7 +743,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                 <div style={{ fontSize: ".67rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 2 }}>{t.totalLabel}</div>
                 <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalDollars}</div>
                 <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 3 }}>
-                  ${bidDollars} × {duration} {lang === "uz" ? "kun" : "days"}
+                  ${bidDollars} × {duration} {t.dayLabel}
                   {displayCat ? ` · ${displayCat.emoji} ${displayCat.label}` : ""}
                 </div>
               </div>
@@ -724,9 +808,9 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               )}
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".82rem", fontWeight: 700, color: "#FCD34D" }}>${bidDollars}/kun</span>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".82rem", fontWeight: 700, color: "#FCD34D" }}>${bidDollars}/{t.dayLabel}</span>
                 <span style={{ padding: "7px 14px", borderRadius: 9, background: "#7C3AED", color: "#fff", fontSize: ".78rem", fontWeight: 700 }}>
-                  {lang === "uz" ? "Saytga oʻting" : "Visit site"}
+                  {t.visitSiteLabel}
                 </span>
               </div>
 
@@ -739,7 +823,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
                   { k: t.perDay, v: `$${bidDollars}` },
-                  { k: t.days, v: `${duration} ${lang === "uz" ? "kun" : "days"}` },
+                  { k: t.days, v: `${duration} ${t.dayLabel}` },
                   { k: t.total, v: `$${totalDollars}`, highlight: true },
                 ].map((row) => (
                   <div key={row.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: row.highlight ? 0 : 10, borderBottom: row.highlight ? "none" : "1px solid #2D1F50" }}>
@@ -773,7 +857,9 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
 function CreatePageInner() {
   const router = useRouter();
   const { firebaseUser, userProfile, signOut, loading } = useAuth();
-  const [lang, setLang] = useState<Lang>("uz");
+  const { lang: globalLang, setLang: setGlobalLang } = useLang();
+  const lang = (["uz","en","ru"].includes(globalLang) ? globalLang : "en") as Lang;
+  const setLang = (l: string) => setGlobalLang(l as Lang);
 
   useEffect(() => {
     if (!loading && !firebaseUser) router.replace("/auth");
@@ -786,7 +872,7 @@ function CreatePageInner() {
   if (loading || !firebaseUser) {
     return (
       <div style={{ minHeight: "100vh", background: "#0E0B1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#6D5B8E", fontSize: ".9rem" }}>Yuklanmoqda...</span>
+        <span style={{ color: "#6D5B8E", fontSize: ".9rem" }}>{T[lang].loadingLabel}</span>
       </div>
     );
   }
@@ -837,7 +923,7 @@ export default function CreatePage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: "100vh", background: "#0E0B1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#6D5B8E" }}>Yuklanmoqda...</span>
+        <span style={{ color: "#6D5B8E" }}>Loading...</span>
       </div>
     }>
       <CreatePageInner />

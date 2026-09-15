@@ -5,9 +5,172 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LangContext";
 import { CATEGORIES, Category } from "@/types";
 import Link from "next/link";
 import Image from "next/image";
+
+const T = {
+  en: {
+    loading: "Loading...",
+    errImageType: "Only image files allowed",
+    errImageSize: "Image must be under 5 MB",
+    errTitle: "Enter a title",
+    errTitleMax: "Title must be 60 characters or less",
+    errUrl: "URL must start with https://",
+    errCategory: "Select a category",
+    errBid: "Minimum daily bid is $1",
+    errDescMax: "Description must be 200 characters or less",
+    errDuration: "Duration must be between 1 and 365 days",
+    errModFail: "Did not pass moderation",
+    errImageUpload: "Image upload failed",
+    errGeneral: "Error: Please try again",
+    badge: "Edit",
+    totalSpent: "Total spent",
+    backDash: "← Dashboard",
+    pageLabel: "EDIT AD",
+    pageTitle: "Edit Ad",
+    pageSubtitle: "Changed content will go through AI review again.",
+    titleLabel: "Title",
+    titlePlaceholder: "Company or product name",
+    urlLabel: "Website URL",
+    urlPlaceholder: "https://yoursite.com",
+    urlHint: "Must start with HTTPS",
+    descLabel: "Short description (optional)",
+    descPlaceholder: "About your company or product...",
+    imageLabel: "Image",
+    newImageSelected: "✓ New image selected",
+    existingImage: "Existing image · update optional",
+    changeImage: "Choose another image",
+    updateImage: "Update image",
+    imageHint: "PNG, JPG, WebP — max 5 MB",
+    categoryLabel: "Category",
+    bidLabel: "Daily bid (USD/day)",
+    perDay: "/day",
+    bidHint: "Higher bid = higher rank",
+    durationLabel: "Campaign duration",
+    dayLabel: "days",
+    customDur: "Custom",
+    daysPlaceholder: "Number of days",
+    daysRange: "1 to 365 days",
+    submitting: "🤖 AI checking...",
+    submitBtn: "Submit for moderation →",
+    priceSummary: "Price summary",
+    dailyBid: "Daily bid",
+    period: "Period",
+    total: "Total",
+    notes: "Notes",
+    note1: "Changed ad will go through AI review again",
+    note2: "You'll be redirected to payment after approval",
+    note3: "No charge for rejected ads",
+  },
+  uz: {
+    loading: "Yuklanmoqda...",
+    errImageType: "Faqat rasm fayli yuklang",
+    errImageSize: "Rasm 5 MB dan kichik bo'lsin",
+    errTitle: "Sarlavha kiriting",
+    errTitleMax: "Sarlavha 60 belgidan oshmasin",
+    errUrl: "URL https:// bilan boshlanishi kerak",
+    errCategory: "Toifa tanlang",
+    errBid: "Minimal kunlik narx $1",
+    errDescMax: "Tavsif 200 belgidan oshmasin",
+    errDuration: "Davr 1 dan 365 kungacha bo'lishi kerak",
+    errModFail: "Moderatsiyadan o'tmadi",
+    errImageUpload: "Rasm yuklanmadi",
+    errGeneral: "Xato: Qayta urinib ko'ring",
+    badge: "Tahrirlash",
+    totalSpent: "Jami sarflangan",
+    backDash: "← Dashboard",
+    pageLabel: "REKLAMANI TAHRIRLASH",
+    pageTitle: "Reklamani tahrirlash",
+    pageSubtitle: "O'zgartirilgan ma'lumotlar qayta AI tekshiruvidan o'tadi.",
+    titleLabel: "Sarlavha",
+    titlePlaceholder: "Kompaniya yoki mahsulot nomi",
+    urlLabel: "Veb-sayt URL",
+    urlPlaceholder: "https://sizningsayt.uz",
+    urlHint: "HTTPS bilan boshlanishi shart",
+    descLabel: "Qisqa tavsif (ixtiyoriy)",
+    descPlaceholder: "Kompaniya yoki mahsulot haqida...",
+    imageLabel: "Rasm",
+    newImageSelected: "✓ Yangi rasm tanlandi",
+    existingImage: "Mavjud rasm · yangilash ixtiyoriy",
+    changeImage: "Boshqa rasm tanlash",
+    updateImage: "Rasmni yangilash",
+    imageHint: "PNG, JPG, WebP — max 5 MB",
+    categoryLabel: "Toifa",
+    bidLabel: "Kunlik taklif (USD/kun)",
+    perDay: "/kun",
+    bidHint: "Ko'proq to'lagan — yuqoriroq o'rin",
+    durationLabel: "Kampaniya davri",
+    dayLabel: "kun",
+    customDur: "O'zim belgilayman",
+    daysPlaceholder: "Kunlar soni",
+    daysRange: "1 dan 365 kungacha",
+    submitting: "🤖 AI tekshiryapti...",
+    submitBtn: "Moderatsiyaga yuborish →",
+    priceSummary: "Narx hisobi",
+    dailyBid: "Kunlik taklif",
+    period: "Davr",
+    total: "Jami",
+    notes: "Eslatmalar",
+    note1: "O'zgartirilgan reklama qayta AI tekshiruvidan o'tadi",
+    note2: "Tasdiqlangandan so'ng to'lov sahifasiga o'tasiz",
+    note3: "Rad etilgan reklama uchun hech qanday to'lov yo'q",
+  },
+  ru: {
+    loading: "Загрузка...",
+    errImageType: "Разрешены только файлы изображений",
+    errImageSize: "Изображение должно быть меньше 5 МБ",
+    errTitle: "Введите заголовок",
+    errTitleMax: "Заголовок не более 60 символов",
+    errUrl: "URL должен начинаться с https://",
+    errCategory: "Выберите категорию",
+    errBid: "Минимальная дневная ставка $1",
+    errDescMax: "Описание не более 200 символов",
+    errDuration: "Длительность от 1 до 365 дней",
+    errModFail: "Не прошло модерацию",
+    errImageUpload: "Не удалось загрузить изображение",
+    errGeneral: "Ошибка: Попробуйте ещё раз",
+    badge: "Редактировать",
+    totalSpent: "Всего потрачено",
+    backDash: "← Панель управления",
+    pageLabel: "РЕДАКТИРОВАТЬ РЕКЛАМУ",
+    pageTitle: "Редактировать рекламу",
+    pageSubtitle: "Изменённые данные пройдут повторную AI проверку.",
+    titleLabel: "Заголовок",
+    titlePlaceholder: "Название компании или продукта",
+    urlLabel: "URL сайта",
+    urlPlaceholder: "https://yoursite.com",
+    urlHint: "Должен начинаться с HTTPS",
+    descLabel: "Краткое описание (необязательно)",
+    descPlaceholder: "О вашей компании или продукте...",
+    imageLabel: "Изображение",
+    newImageSelected: "✓ Новое изображение выбрано",
+    existingImage: "Текущее изображение · обновление необязательно",
+    changeImage: "Выбрать другое изображение",
+    updateImage: "Обновить изображение",
+    imageHint: "PNG, JPG, WebP — макс. 5 МБ",
+    categoryLabel: "Категория",
+    bidLabel: "Дневная ставка (USD/день)",
+    perDay: "/день",
+    bidHint: "Выше ставка — выше позиция",
+    durationLabel: "Длительность кампании",
+    dayLabel: "дн.",
+    customDur: "Своё значение",
+    daysPlaceholder: "Количество дней",
+    daysRange: "От 1 до 365 дней",
+    submitting: "🤖 AI проверяет...",
+    submitBtn: "Отправить на модерацию →",
+    priceSummary: "Итого",
+    dailyBid: "Дневная ставка",
+    period: "Период",
+    total: "Итого",
+    notes: "Заметки",
+    note1: "Изменённая реклама пройдёт повторную AI проверку",
+    note2: "После одобрения вы перейдёте на страницу оплаты",
+    note3: "За отклонённую рекламу плата не взимается",
+  },
+};
 
 const inp: React.CSSProperties = {
   width: "100%", padding: "12px 14px", borderRadius: 11,
@@ -27,13 +190,15 @@ export default function EditAdPage() {
   const { adId } = useParams<{ adId: string }>();
   const router = useRouter();
   const { firebaseUser, userProfile } = useAuth();
+  const { lang: globalLang } = useLang();
+  const lang = (["en","uz","ru"].includes(globalLang) ? globalLang : "en") as keyof typeof T;
+  const t = T[lang];
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [url, setUrl] = useState("");
@@ -46,17 +211,14 @@ export default function EditAdPage() {
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
 
-  // Load existing ad
   useEffect(() => {
     if (!adId) return;
     getDoc(doc(db, "ads", adId)).then((snap) => {
       if (!snap.exists()) { router.push("/dashboard"); return; }
       const data = snap.data();
-      // Only owner can edit
       if (firebaseUser && data.advertiserUID !== firebaseUser.uid) {
         router.push("/dashboard"); return;
       }
-      // Only pending or rejected ads
       if (data.status !== "pending" && data.status !== "rejected") {
         router.push("/dashboard"); return;
       }
@@ -75,8 +237,8 @@ export default function EditAdPage() {
   }, [adId, firebaseUser?.uid]);
 
   const handleFileChange = (file: File) => {
-    if (!file.type.startsWith("image/")) { setError("Faqat rasm fayli yuklang"); return; }
-    if (file.size > 5 * 1024 * 1024) { setError("Rasm 5 MB dan kichik bo'lsin"); return; }
+    if (!file.type.startsWith("image/")) { setError(t.errImageType); return; }
+    if (file.size > 5 * 1024 * 1024) { setError(t.errImageSize); return; }
     setNewImageFile(file);
     const reader = new FileReader();
     reader.onload = (e) => setNewImagePreview(e.target?.result as string);
@@ -108,15 +270,15 @@ export default function EditAdPage() {
 
   const handleSubmit = async () => {
     setError("");
-    if (!title.trim()) return setError("Sarlavha kiriting");
-    if (title.length > 60) return setError("Sarlavha 60 belgidan oshmasin");
-    if (!url.trim() || !url.startsWith("https://")) return setError("URL https:// bilan boshlanishi kerak");
-    if (!category) return setError("Toifa tanlang");
-    if (bidCents < 100) return setError("Minimal kunlik narx $1");
-    if (description.length > 200) return setError("Tavsif 200 belgidan oshmasin");
+    if (!title.trim()) return setError(t.errTitle);
+    if (title.length > 60) return setError(t.errTitleMax);
+    if (!url.trim() || !url.startsWith("https://")) return setError(t.errUrl);
+    if (!category) return setError(t.errCategory);
+    if (bidCents < 100) return setError(t.errBid);
+    if (description.length > 200) return setError(t.errDescMax);
 
     const effectiveDays = isCustomDur ? parseInt(customDays) || 0 : duration;
-    if (effectiveDays < 1 || effectiveDays > 365) return setError("Davr 1 dan 365 kungacha bo'lishi kerak");
+    if (effectiveDays < 1 || effectiveDays > 365) return setError(t.errDuration);
 
     if (!firebaseUser) return;
     setSubmitting(true);
@@ -127,7 +289,6 @@ export default function EditAdPage() {
       let imageMimeTypeMod: string | undefined;
       let finalImageURL = existingImageURL;
 
-      // If new image selected, encode original + compressed for moderation
       if (newImageFile) {
         imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -140,7 +301,6 @@ export default function EditAdPage() {
         imageMimeTypeMod = compressed.mimeType;
       }
 
-      // Run AI moderation — compressed rasm bilan (512px, JPEG 0.75)
       const idToken = await firebaseUser.getIdToken();
       const modRes = await fetch("/api/moderation", {
         method: "POST",
@@ -155,11 +315,10 @@ export default function EditAdPage() {
       });
       const modData = await modRes.json();
       if (!modData.approved) {
-        setError("❌ " + (modData.reason || "Moderatsiyadan o'tmadi"));
+        setError("❌ " + (modData.reason || t.errModFail));
         return;
       }
 
-      // Upload new image via server-side API
       if (imageBase64) {
         const idToken = await firebaseUser!.getIdToken();
         const imgRes = await fetch("/api/upload/image", {
@@ -168,11 +327,10 @@ export default function EditAdPage() {
           body: JSON.stringify({ imageBase64 }),
         });
         const imgData = await imgRes.json();
-        if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || "Rasm yuklanmadi");
+        if (!imgRes.ok || !imgData.url) throw new Error(imgData.error || t.errImageUpload);
         finalImageURL = imgData.url;
       }
 
-      // Update Firestore — keep status as "pending"
       await updateDoc(doc(db, "ads", adId), {
         title: title.trim(),
         description: description.trim(),
@@ -188,7 +346,7 @@ export default function EditAdPage() {
 
       router.push(`/ads/${adId}/pending`);
     } catch (err: any) {
-      setError("Xato: " + (err?.message || "Qayta urinib ko'ring"));
+      setError(t.errGeneral + (err?.message ? ": " + err.message : ""));
     } finally {
       setSubmitting(false);
     }
@@ -202,7 +360,7 @@ export default function EditAdPage() {
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#6D5B8E" }}>Yuklanmoqda...</span>
+        <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
       </div>
     );
   }
@@ -221,11 +379,11 @@ export default function EditAdPage() {
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
             <Link href="/dashboard" style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", textDecoration: "none" }}>PRIMIO</Link>
-            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>Tahrirlash</span>
+            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.badge}</span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
             <div style={{ padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>Jami sarflangan</span>
+              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
             </div>
             <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
@@ -237,11 +395,11 @@ export default function EditAdPage() {
       </header>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 26px 60px", animation: "fade .35s ease both" }}>
-        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 20 }}>← Dashboard</Link>
+        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 20 }}>{t.backDash}</Link>
 
-        <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 9 }}>REKLAMANI TAHRIRLASH</div>
-        <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.7rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 6 }}>Reklamani tahrirlash</h1>
-        <p style={{ fontSize: ".88rem", color: "#A78BFA", marginBottom: 24, lineHeight: 1.6 }}>O'zgartirilgan ma'lumotlar qayta AI tekshiruvidan o'tadi.</p>
+        <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 9 }}>{t.pageLabel}</div>
+        <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.7rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 6 }}>{t.pageTitle}</h1>
+        <p style={{ fontSize: ".88rem", color: "#A78BFA", marginBottom: 24, lineHeight: 1.6 }}>{t.pageSubtitle}</p>
 
         {error && (
           <div style={{ marginBottom: 18, padding: "12px 16px", borderRadius: 12, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.28)", color: "#F87171", fontSize: ".84rem" }}>
@@ -255,35 +413,35 @@ export default function EditAdPage() {
 
             {/* Title */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Sarlavha</label>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} style={inp} placeholder="Kompaniya yoki mahsulot nomi" />
+              <label style={fieldLabel}>{t.titleLabel}</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} style={inp} placeholder={t.titlePlaceholder} />
               <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{title.length}/60</div>
             </div>
 
             {/* URL */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Veb-sayt URL</label>
-              <input value={url} onChange={(e) => setUrl(e.target.value)} style={{ ...inp, fontFamily: "'JetBrains Mono',monospace" }} placeholder="https://sizningsayt.uz" />
-              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>HTTPS bilan boshlanishi shart</div>
+              <label style={fieldLabel}>{t.urlLabel}</label>
+              <input value={url} onChange={(e) => setUrl(e.target.value)} style={{ ...inp, fontFamily: "'JetBrains Mono',monospace" }} placeholder={t.urlPlaceholder} />
+              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{t.urlHint}</div>
             </div>
 
             {/* Description */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Qisqa tavsif (ixtiyoriy)</label>
+              <label style={fieldLabel}>{t.descLabel}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={200}
                 rows={3}
                 style={{ ...inp, resize: "vertical", lineHeight: 1.6 }}
-                placeholder="Kompaniya yoki mahsulot haqida..."
+                placeholder={t.descPlaceholder}
               />
               <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{description.length}/200</div>
             </div>
 
             {/* Image */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Rasm</label>
+              <label style={fieldLabel}>{t.imageLabel}</label>
               <div style={{ marginBottom: 12 }}>
                 {(newImagePreview || existingImageURL) && (
                   <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
@@ -294,10 +452,10 @@ export default function EditAdPage() {
                       style={{ borderRadius: 10, objectFit: "cover", border: "1px solid #2D1F50" }}
                     />
                     {newImagePreview && (
-                      <span style={{ fontSize: ".78rem", color: "#34D399" }}>✓ Yangi rasm tanlandi</span>
+                      <span style={{ fontSize: ".78rem", color: "#34D399" }}>{t.newImageSelected}</span>
                     )}
                     {!newImagePreview && (
-                      <span style={{ fontSize: ".78rem", color: "#6D5B8E" }}>Mavjud rasm · yangilash ixtiyoriy</span>
+                      <span style={{ fontSize: ".78rem", color: "#6D5B8E" }}>{t.existingImage}</span>
                     )}
                   </div>
                 )}
@@ -312,15 +470,15 @@ export default function EditAdPage() {
                   onClick={() => fileInputRef.current?.click()}
                   style={{ padding: "10px 18px", borderRadius: 10, border: "1px dashed #2D1F50", background: "#160F2A", color: "#A78BFA", fontSize: ".82rem", cursor: "pointer" }}
                 >
-                  {newImageFile ? "Boshqa rasm tanlash" : "Rasmni yangilash"}
+                  {newImageFile ? t.changeImage : t.updateImage}
                 </button>
-                <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>PNG, JPG, WebP — max 5 MB</div>
+                <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{t.imageHint}</div>
               </div>
             </div>
 
             {/* Category */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Toifa</label>
+              <label style={fieldLabel}>{t.categoryLabel}</label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
                 {CAT_KEYS.map((k) => {
                   const c = CATEGORIES[k];
@@ -340,7 +498,7 @@ export default function EditAdPage() {
 
             {/* Bid */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Kunlik taklif (USD/kun)</label>
+              <label style={fieldLabel}>{t.bidLabel}</label>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span style={{ color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace", fontSize: "1.1rem" }}>$</span>
                 <input
@@ -351,25 +509,25 @@ export default function EditAdPage() {
                   onChange={(e) => setBidCents(Math.max(100, Math.round(parseFloat(e.target.value) * 100 || 100)))}
                   style={{ ...inp, width: 140, fontFamily: "'JetBrains Mono',monospace" }}
                 />
-                <span style={{ fontSize: ".8rem", color: "#6D5B8E" }}>/kun</span>
+                <span style={{ fontSize: ".8rem", color: "#6D5B8E" }}>{t.perDay}</span>
               </div>
-              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>Ko'proq to'lagan — yuqoriroq o'rin</div>
+              <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{t.bidHint}</div>
             </div>
 
             {/* Duration */}
             <div style={{ ...card, padding: 22 }}>
-              <label style={fieldLabel}>Kampaniya davri</label>
+              <label style={fieldLabel}>{t.durationLabel}</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: isCustomDur ? 10 : 0 }}>
                 {DURATIONS.map((d) => {
                   const on = !isCustomDur && duration === d;
                   return (
                     <button key={d} onClick={() => { setIsCustomDur(false); setDuration(d); }} style={{ padding: "10px 0", borderRadius: 10, border: `1px solid ${on ? "#7C3AED" : "#2D1F50"}`, background: on ? "rgba(124,58,237,.12)" : "#160F2A", color: on ? "#A855F7" : "#EDE9FE", fontSize: ".88rem", fontWeight: on ? 700 : 500, cursor: "pointer" }}>
-                      {d} kun
+                      {d} {t.dayLabel}
                     </button>
                   );
                 })}
                 <button onClick={() => setIsCustomDur(!isCustomDur)} style={{ padding: "10px 0", borderRadius: 10, border: `1px solid ${isCustomDur ? "#7C3AED" : "#2D1F50"}`, background: isCustomDur ? "rgba(124,58,237,.12)" : "#160F2A", color: isCustomDur ? "#A855F7" : "#EDE9FE", fontSize: ".88rem", fontWeight: isCustomDur ? 700 : 500, cursor: "pointer" }}>
-                  O'zim belgilayman
+                  {t.customDur}
                 </button>
               </div>
               {isCustomDur && (
@@ -381,9 +539,9 @@ export default function EditAdPage() {
                     value={customDays}
                     onChange={(e) => setCustomDays(e.target.value)}
                     style={{ ...inp, width: 140, fontFamily: "'JetBrains Mono',monospace" }}
-                    placeholder="Kunlar soni"
+                    placeholder={t.daysPlaceholder}
                   />
-                  <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>1 dan 365 kungacha</div>
+                  <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{t.daysRange}</div>
                 </div>
               )}
             </div>
@@ -394,39 +552,39 @@ export default function EditAdPage() {
               disabled={submitting}
               style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: submitting ? "#4C1D95" : "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontSize: "1rem", fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer", boxShadow: submitting ? "none" : "0 4px 20px rgba(124,58,237,.35)" }}
             >
-              {submitting ? "🤖 AI tekshiryapti..." : "Moderatsiyaga yuborish →"}
+              {submitting ? t.submitting : t.submitBtn}
             </button>
           </div>
 
           {/* RIGHT — Summary */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ ...card, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>Narx hisobi</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.priceSummary}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: ".85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#A78BFA" }}>Kunlik taklif</span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#FCD34D", fontWeight: 600 }}>${(bidCents / 100).toFixed(2)}/kun</span>
+                  <span style={{ color: "#A78BFA" }}>{t.dailyBid}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#FCD34D", fontWeight: 600 }}>${(bidCents / 100).toFixed(2)}{t.perDay}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#A78BFA" }}>Davr</span>
+                  <span style={{ color: "#A78BFA" }}>{t.period}</span>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#EDE9FE", fontWeight: 600 }}>
-                    {isCustomDur ? (parseInt(customDays) || "–") : duration} kun
+                    {isCustomDur ? (parseInt(customDays) || "–") : duration} {t.dayLabel}
                   </span>
                 </div>
                 <div style={{ height: 1, background: "#2D1F50", margin: "4px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "#EDE9FE", fontWeight: 700 }}>Jami</span>
+                  <span style={{ color: "#EDE9FE", fontWeight: 700 }}>{t.total}</span>
                   <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "#34D399" }}>${totalUSD.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>Eslatmalar</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{t.notes}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 9, fontSize: ".8rem", color: "#A78BFA", lineHeight: 1.55 }}>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#F59E0B" }}>•</span> O'zgartirilgan reklama qayta AI tekshiruvidan o'tadi</div>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>•</span> Tasdiqlangandan so'ng to'lov sahifasiga o'tasiz</div>
-                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>•</span> Rad etilgan reklama uchun hech qanday to'lov yo'q</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#F59E0B" }}>•</span> {t.note1}</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>•</span> {t.note2}</div>
+                <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>•</span> {t.note3}</div>
               </div>
             </div>
           </div>
