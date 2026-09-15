@@ -5,15 +5,15 @@ export const maxDuration = 30;
 
 const XAI_API = "https://api.x.ai/v1/chat/completions";
 
-const VISION_MODELS = [
-  "grok-2-vision-1212",
-];
-
+const VISION_MODELS = ["grok-2-vision-1212"];
 const MODEL_TEXT = "grok-3-mini";
 
-const HF_NSFW_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
+// HF model 1: explicit NSFW (porn)
+const HF_EXPLICIT_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
+// HF model 2: 5-category classifier — catches "sexy" (bikini, revealing clothing)
+const HF_SEXY_MODEL = "https://api-inference.huggingface.co/models/AdamCodd/vit-base-nsfw-detector";
 
-// ── Blocked keyword patterns (EN + UZ + RU) ──────────────────────────────────
+// ── Blocked keyword patterns ──────────────────────────────────────────────────
 const BLOCKED_PATTERNS = [
   /\bsex\b/i, /\bseks\b/i, /\bporn\b/i, /\bporno\b/i, /\bparno\b/i,
   /\bxxx\b/i, /\bnude\b/i, /\bnudity\b/i, /\berotic\b/i, /\berotik\b/i,
@@ -36,7 +36,6 @@ const BLOCKED_PATTERNS = [
   /\bnazi\b/i, /\bfascis/i, /\bwhite.suprem/i, /\bhatred\b/i,
 ];
 
-// Ultra-strict system prompt — err on the side of rejection
 const SYSTEM_PROMPT = `You are an extremely strict advertising content moderator for a family-friendly platform.
 Your default is REJECTED. Only approve clearly professional business content.
 
@@ -62,26 +61,22 @@ DRUGS / SUBSTANCES:
 HATE / EXTREMISM:
 - Hate symbols, extremist imagery, offensive gestures
 
-GAMBLING:
-- Casino imagery, cards, dice, betting
-
-FRAUD:
-- Fake products, deceptive imagery
+GAMBLING / FRAUD:
+- Casino imagery, betting, fake products, deceptive imagery
 
 APPROVE ONLY when the image clearly shows:
 - A product on a plain or neutral background
 - A logo, icon, or graphic design
-- A building, office, or storefront (exterior/interior)
+- A building, office, or storefront
 - A screenshot of an app or website
 - Food presented professionally
 - A landscape, city, or travel destination
 - Text-only or infographic content
-- Professional service illustration (no people, or fully-clothed professionals in formal/business attire only)
+- Fully-clothed professionals in formal business attire (suit/uniform, no skin below collar)
 
-RULE: If there is ANY doubt — any skin showing, any suggestive element, any inappropriate content — respond REJECTED.
-A business ad does NOT need to show a person's body. If a person is shown, they must be in full professional attire (suit, formal wear, uniform) with no skin visible below the collar.
+RULE: If there is ANY doubt — respond REJECTED.
 
-RESPONSE: Reply with ONLY one of these two:
+RESPONSE: Reply with ONLY one of these two formats:
 APPROVED
 or
 REJECTED: [one sentence reason in Uzbek]`;
@@ -89,12 +84,8 @@ REJECTED: [one sentence reason in Uzbek]`;
 function domainBlocked(url: string): string | null {
   try {
     const h = new URL(url).hostname.toLowerCase();
-    for (const p of BLOCKED_PATTERNS) {
-      if (p.test(h)) return `Sayt domeni taqiqlangan: ${h}`;
-    }
-  } catch {
-    return "URL formati noto'g'ri";
-  }
+    for (const p of BLOCKED_PATTERNS) if (p.test(h)) return `Sayt domeni taqiqlangan: ${h}`;
+  } catch { return "URL formati noto'g'ri"; }
   return null;
 }
 
@@ -106,12 +97,10 @@ function hasValidToken(req: NextRequest): boolean {
     if (parts.length !== 3) return false;
     const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
     return !!(payload.user_id || payload.sub);
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
-async function groqChat(model: string, messages: any[], timeoutMs = 12000): Promise<string> {
+async function xaiChat(model: string, messages: any[], timeoutMs = 12000): Promise<string> {
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) return "";
   const res = await fetch(XAI_API, {
@@ -120,132 +109,131 @@ async function groqChat(model: string, messages: any[], timeoutMs = 12000): Prom
     body: JSON.stringify({ model, messages, temperature: 0, max_tokens: 200 }),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Groq ${res.status}: ${err.slice(0, 200)}`);
-  }
+  if (!res.ok) throw new Error(`xAI ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   return (data.choices?.[0]?.message?.content?.trim() || "")
     .replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 }
 
-// Returns: { approved, reason } | null (if all models failed)
-async function checkImageWithGroqVision(
-  imageBase64: string,
-  mimeType: string,
-  imageURL: string | undefined,
-  adInfo: string
+// ── Grok Vision check ─────────────────────────────────────────────────────────
+async function checkVision(
+  imageBase64: string, mimeType: string, imageURL: string | undefined, adInfo: string
 ): Promise<{ approved: boolean; reason?: string } | null> {
   if (!process.env.XAI_API_KEY) return null;
 
-  const imgContent = imageURL
-    ? { type: "image_url" as const, image_url: { url: imageURL } }
-    : { type: "image_url" as const, image_url: { url: `data:${mimeType};base64,${imageBase64}` } };
+  // Always use base64 for reliability (don't rely on external URL fetch)
+  const imgContent = {
+    type: "image_url" as const,
+    image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+  };
 
   const userPrompt =
     `Examine this image very carefully:\n${adInfo}\n\n` +
-    `Look specifically for: any bare skin (chest, stomach, shoulders, legs), bikini, swimwear, underwear, ` +
-    `revealing or tight clothing, suggestive poses, weapons, blood, drugs, hate symbols.\n` +
-    `If ANY of these are present, respond REJECTED.\n` +
-    `Only respond APPROVED if the image is clearly professional business content with no people, ` +
-    `or only fully-clothed people in formal attire.`;
+    `Step 1: Describe what you see in the image (person/object/scene, clothing details, pose).\n` +
+    `Step 2: Check for: bare skin, bikini, swimwear, underwear, revealing clothing, suggestive pose, ` +
+    `weapons, blood, drugs, hate symbols.\n` +
+    `Step 3: Respond APPROVED or REJECTED based on the rules.\n\n` +
+    `Remember: ANY bare skin below the collar = REJECTED. Bikini = REJECTED. Swimwear = REJECTED.`;
 
   for (const model of VISION_MODELS) {
     try {
-      const reply = await groqChat(model, [
+      const reply = await xaiChat(model, [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: [imgContent, { type: "text", text: userPrompt }] },
       ], 15000);
 
       if (!reply) continue;
+      console.log(`xAI vision [${model}]: ${reply.slice(0, 300)}`);
 
-      console.log(`Groq vision [${model}] response: ${reply.slice(0, 200)}`);
-
-      if (reply.toUpperCase().startsWith("REJECTED")) {
-        const reason = reply.replace(/^REJECTED:?\s*/i, "").trim()
-          || "Rasm moderatsiya talablariga javob bermadi";
+      // Check if REJECTED appears anywhere in the response (model might explain then conclude)
+      if (/REJECTED/i.test(reply)) {
+        const match = reply.match(/REJECTED:?\s*(.+)/i);
+        const reason = match?.[1]?.trim() || "Rasm moderatsiya talablariga javob bermadi";
         return { approved: false, reason };
       }
-      if (reply.toUpperCase().startsWith("APPROVED")) {
-        return { approved: true };
-      }
-      // Ambiguous response — treat as rejection for safety
-      console.warn(`Vision model ${model} gave ambiguous response — treating as REJECTED`);
-      return { approved: false, reason: "Rasm tekshiruvidan noaniq natija — qayta urinib ko'ring" };
+      if (/APPROVED/i.test(reply)) return { approved: true };
+
+      // Ambiguous — reject for safety
+      console.warn(`Vision ambiguous response — REJECTED for safety`);
+      return { approved: false, reason: "Rasm tekshiruvidan noaniq natija — boshqa rasm tanlang" };
     } catch (e: any) {
-      console.warn(`Groq vision ${model} failed: ${e?.message?.slice(0, 150)}`);
+      console.warn(`xAI vision ${model} error: ${e?.message?.slice(0, 150)}`);
     }
   }
-  return null; // all models failed/unavailable
+  return null;
 }
 
-// Returns: { isNsfw, score } | null (if check failed)
-async function checkNsfwHuggingFace(
-  imageBase64: string,
-  mimeType: string
-): Promise<{ isNsfw: boolean; score: number } | null> {
+// ── HF model 1: Falconsai explicit NSFW ──────────────────────────────────────
+async function checkHfExplicit(
+  imageBase64: string, mimeType: string
+): Promise<{ flagged: boolean; score: number } | null> {
   try {
-    const binaryData = Buffer.from(imageBase64, "base64");
+    const body = Buffer.from(imageBase64, "base64");
     const headers: Record<string, string> = { "Content-Type": mimeType };
     if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
 
-    const tryFetch = async (timeoutMs: number) => {
-      const res = await fetch(HF_NSFW_MODEL, {
-        method: "POST", headers, body: binaryData,
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      return res;
-    };
-
-    let res = await tryFetch(5000);
+    let res = await fetch(HF_EXPLICIT_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(5000) });
     if (res.status === 503) {
-      console.log("HF NSFW: model loading, waiting 16s...");
-      await new Promise((r) => setTimeout(r, 16000));
-      res = await tryFetch(7000);
+      await new Promise((r) => setTimeout(r, 12000));
+      res = await fetch(HF_EXPLICIT_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(7000) });
     }
-
-    if (!res.ok) { console.warn("HF NSFW failed:", res.status); return null; }
+    if (!res.ok) { console.warn("HF explicit failed:", res.status); return null; }
     const data = await res.json();
-    if (!Array.isArray(data)) { console.warn("HF NSFW unexpected:", data); return null; }
-
+    if (!Array.isArray(data)) return null;
     const score = data.find((d: any) => d.label === "nsfw")?.score ?? 0;
-    console.log(`HF NSFW score: ${score.toFixed(3)}`);
-    // Threshold 0.40 — stricter than before (was 0.65)
-    return { isNsfw: score > 0.40, score };
+    console.log(`HF explicit NSFW score: ${score.toFixed(3)}`);
+    return { flagged: score > 0.35, score };
   } catch (e: any) {
-    console.warn("HF NSFW error:", e?.message?.slice(0, 100));
+    console.warn("HF explicit error:", e?.message?.slice(0, 80));
+    return null;
+  }
+}
+
+// ── HF model 2: AdamCodd sexy/porn detector ───────────────────────────────────
+// Labels: drawings | hentai | neutral | porn | sexy
+// "sexy" catches bikini, revealing clothing, suggestive poses
+async function checkHfSexy(
+  imageBase64: string, mimeType: string
+): Promise<{ flagged: boolean; sexy: number; porn: number } | null> {
+  try {
+    const body = Buffer.from(imageBase64, "base64");
+    const headers: Record<string, string> = { "Content-Type": mimeType };
+    if (process.env.HF_TOKEN) headers["Authorization"] = `Bearer ${process.env.HF_TOKEN}`;
+
+    let res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(5000) });
+    if (res.status === 503) {
+      await new Promise((r) => setTimeout(r, 12000));
+      res = await fetch(HF_SEXY_MODEL, { method: "POST", headers, body, signal: AbortSignal.timeout(7000) });
+    }
+    if (!res.ok) { console.warn("HF sexy failed:", res.status); return null; }
+    const data = await res.json();
+    if (!Array.isArray(data)) return null;
+
+    const sexy = data.find((d: any) => d.label === "sexy")?.score ?? 0;
+    const porn = data.find((d: any) => d.label === "porn")?.score ?? 0;
+    console.log(`HF sexy score: ${sexy.toFixed(3)}, porn: ${porn.toFixed(3)}`);
+
+    // Reject if "sexy" > 0.30 OR "porn" > 0.25
+    return { flagged: sexy > 0.30 || porn > 0.25, sexy, porn };
+  } catch (e: any) {
+    console.warn("HF sexy error:", e?.message?.slice(0, 80));
     return null;
   }
 }
 
 export async function GET() {
-  const apiKey = process.env.XAI_API_KEY;
-  if (!apiKey) return NextResponse.json({ ok: false, error: "XAI_API_KEY yo'q" });
-  try {
-    const modelsRes = await fetch("https://api.groq.com/openai/v1/models", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(8000),
-    });
-    const modelsData = await modelsRes.json();
-    const allIds: string[] = modelsData.data?.map((m: any) => m.id) ?? [];
-    return NextResponse.json({
-      ok: true,
-      strategy: "Groq vision + HF NSFW in parallel (both must pass)",
-      vision_models_configured: VISION_MODELS,
-      hf_token: !!process.env.HF_TOKEN,
-      groq_models_available: allIds.filter((id) =>
-        id.includes("vision") || id.includes("llama-4") || id.includes("scout") || id.includes("maverick")
-      ),
-    });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message });
-  }
+  return NextResponse.json({
+    ok: true,
+    strategy: "xAI Grok Vision + HF Falconsai (explicit) + HF AdamCodd (sexy) — all 3 in parallel",
+    vision_models: VISION_MODELS,
+    hf_models: [HF_EXPLICIT_MODEL, HF_SEXY_MODEL],
+    xai_key: !!process.env.XAI_API_KEY,
+    hf_token: !!process.env.HF_TOKEN,
+  });
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasValidToken(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!hasValidToken(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -254,9 +242,7 @@ export async function POST(req: NextRequest) {
       imageBase64?: string; mimeType?: string; imageURL?: string;
     };
 
-    if (!title || !destinationURL) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
+    if (!title || !destinationURL) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
     // ── 1. Keyword / domain check ─────────────────────────────────────────────
     const domainErr = domainBlocked(destinationURL);
@@ -264,99 +250,71 @@ export async function POST(req: NextRequest) {
 
     const allText = [title, description, destinationURL].filter(Boolean).join(" ");
     for (const p of BLOCKED_PATTERNS) {
-      if (p.test(allText)) {
-        return NextResponse.json({
-          approved: false,
-          reason: "Sarlavha yoki tavsifda taqiqlangan so'z aniqlandi",
-        });
-      }
+      if (p.test(allText)) return NextResponse.json({ approved: false, reason: "Sarlavha yoki tavsifda taqiqlangan so'z aniqlandi" });
     }
 
     // ── 2. URL availability check ─────────────────────────────────────────────
     try {
-      const urlCheck = await fetch(destinationURL, {
-        method: "HEAD",
-        signal: AbortSignal.timeout(2000),
-        redirect: "follow",
-      });
+      const urlCheck = await fetch(destinationURL, { method: "HEAD", signal: AbortSignal.timeout(2000), redirect: "follow" });
       if (!urlCheck.ok && urlCheck.status !== 405 && urlCheck.status !== 403) {
-        return NextResponse.json({
-          approved: false,
-          reason: `Sayt ishlamayapti (${urlCheck.status}). To'g'ri URL kiriting.`,
-        });
+        return NextResponse.json({ approved: false, reason: `Sayt ishlamayapti (${urlCheck.status}). To'g'ri URL kiriting.` });
       }
     } catch {
-      return NextResponse.json({
-        approved: false,
-        reason: "URL manzilga ulanib bo'lmadi. Saytni tekshiring.",
-      });
+      return NextResponse.json({ approved: false, reason: "URL manzilga ulanib bo'lmadi. Saytni tekshiring." });
     }
 
     const hasImage = !!(imageBase64 && mimeType);
     const adInfo = `Title: "${title}"\nDescription: "${description || "(none)"}"\nURL: ${destinationURL}`;
 
-    // ── 3. Image moderation — Groq vision AND HF NSFW run in parallel ─────────
-    if (hasImage && process.env.XAI_API_KEY) {
-      const [visionResult, hfResult] = await Promise.all([
-        checkImageWithGroqVision(imageBase64, mimeType, imageURL, adInfo),
-        checkNsfwHuggingFace(imageBase64, mimeType),
+    // ── 3. Image moderation — 3 checks in parallel ────────────────────────────
+    if (hasImage) {
+      const [visionResult, hfExplicit, hfSexy] = await Promise.all([
+        checkVision(imageBase64, mimeType, imageURL, adInfo),
+        checkHfExplicit(imageBase64, mimeType),
+        checkHfSexy(imageBase64, mimeType),
       ]);
 
-      // HF NSFW — if it says NSFW, reject immediately regardless of vision
-      if (hfResult !== null && hfResult.isNsfw) {
+      console.log(`Image check results — vision: ${JSON.stringify(visionResult)}, explicit: ${JSON.stringify(hfExplicit)}, sexy: ${JSON.stringify(hfSexy)}`);
+
+      // HF sexy model (bikini/revealing clothing) — highest priority
+      if (hfSexy?.flagged) {
         return NextResponse.json({
           approved: false,
-          reason: "Rasm uyatsiz yoki 18+ kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
+          reason: "Rasm uyatsiz, bikini yoki yarimochar kiyimli shaxsni aks ettirmoqda. Biznes reklamaga mos rasm tanlang.",
         });
       }
 
-      // Groq vision — if it rejected, reject immediately
+      // HF explicit model (pornographic)
+      if (hfExplicit?.flagged) {
+        return NextResponse.json({
+          approved: false,
+          reason: "Rasm 18+ yoki nomaqbul kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
+        });
+      }
+
+      // xAI Grok Vision
       if (visionResult !== null && !visionResult.approved) {
         return NextResponse.json({ approved: false, reason: visionResult.reason });
       }
 
-      // If BOTH checks succeeded and approved → continue to text check
-      // If vision failed (returned null) AND HF didn't catch it → reject for safety
-      if (visionResult === null && hfResult === null) {
-        console.warn("⚠️ All image checks failed — rejecting for safety");
-        return NextResponse.json({
-          approved: false,
-          reason: "Rasm tekshiruvida xatolik yuz berdi. Iltimos qayta urinib ko'ring.",
-        });
-      }
-
-      // If only HF ran (vision null) and HF approved (score low) — still proceed
-      // If only vision ran (HF null) and vision approved — still proceed
-    } else if (hasImage && !process.env.XAI_API_KEY) {
-      // No Groq — use HF only
-      const hfResult = await checkNsfwHuggingFace(imageBase64, mimeType);
-      if (hfResult === null) {
-        return NextResponse.json({
-          approved: false,
-          reason: "Rasm tekshiruvida xatolik yuz berdi. Qayta urinib ko'ring.",
-        });
-      }
-      if (hfResult.isNsfw) {
-        return NextResponse.json({
-          approved: false,
-          reason: "Rasm uyatsiz yoki 18+ kontent sifatida aniqlandi. Iltimos mos rasm tanlang.",
-        });
+      // All 3 failed to respond → reject for safety
+      if (visionResult === null && hfExplicit === null && hfSexy === null) {
+        console.warn("⚠️ All 3 image checks failed — rejecting for safety");
+        return NextResponse.json({ approved: false, reason: "Rasm tekshiruvida xatolik yuz berdi. Qayta urinib ko'ring." });
       }
     }
 
-    // ── 4. Text moderation via Groq ───────────────────────────────────────────
+    // ── 4. Text moderation ────────────────────────────────────────────────────
     if (process.env.XAI_API_KEY) {
       try {
-        const reply = await groqChat(MODEL_TEXT, [
+        const reply = await xaiChat(MODEL_TEXT, [
           { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: `Check this ad text (no image):\n${adInfo}\n\nRespond APPROVED or REJECTED: [reason in Uzbek].`,
-          },
+          { role: "user", content: `Check this ad text (no image):\n${adInfo}\n\nRespond APPROVED or REJECTED: [reason in Uzbek].` },
         ], 8000);
 
-        if (reply.toUpperCase().startsWith("REJECTED")) {
-          const reason = reply.replace(/^REJECTED:?\s*/i, "").trim() || "Moderatsiyadan o'tmadi";
+        if (/REJECTED/i.test(reply)) {
+          const match = reply.match(/REJECTED:?\s*(.+)/i);
+          const reason = match?.[1]?.trim() || "Moderatsiyadan o'tmadi";
           return NextResponse.json({ approved: false, reason });
         }
       } catch (e: any) {
