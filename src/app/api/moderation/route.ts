@@ -373,18 +373,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── STEP 2: Grok text check (title + description) ─────────────────────────
-  const textResult = await grokCheckText(title, description || "");
+  // ── STEPS 2+3: Grok text + URL (parallel) ────────────────────────────────
+  const [textResult, urlResult] = await Promise.all([
+    grokCheckText(title, description || ""),
+    grokCheckUrl(destinationURL),
+  ]);
   if (textResult !== null && !textResult.approved) {
     return NextResponse.json({ approved: false, reason: textResult.reason });
   }
-  // If textResult is null (API error) → continue (keyword already passed)
-
-  // ── STEP 3: Grok URL analysis ─────────────────────────────────────────────
-  const urlResult = await grokCheckUrl(destinationURL);
   if (urlResult !== null && !urlResult.approved) {
     return NextResponse.json({ approved: false, reason: urlResult.reason });
   }
+  // Track whether AI text checks ran (for image fallback decision)
+  const textAiRan = textResult !== null || urlResult !== null;
 
   // ── STEP 4: URL availability ──────────────────────────────────────────────
   try {
@@ -458,13 +459,16 @@ export async function POST(req: NextRequest) {
     // 5a. Grok vision result
     if (visionResult === null) {
       // Grok Vision API unavailable.
-      // If at least one HF model ran successfully → trust HF result (they didn't flag it above).
       const hfRan = hfSexyData !== null || hfExplicitScore !== null;
       if (hfRan) {
-        // HF ran, didn't flag anything → approve (HF is the safety net)
+        // HF ran and didn't flag anything → approve via HF fallback
         console.warn("Grok vision unavailable — approved via HF fallback");
+      } else if (textAiRan) {
+        // All image checks failed BUT keyword + Grok text/URL already cleared this ad.
+        // Trust the text-layer analysis rather than blocking the user with a retry error.
+        console.warn("All image checks unavailable — approved via text-layer fallback (keyword+AI text passed)");
       } else {
-        // All checks failed → reject for safety
+        // No AI layer ran at all → reject for safety
         return NextResponse.json({
           approved: false,
           reason: "Rasm tekshiruvi vaqtincha ishlamayapti. Bir necha daqiqadan keyin qayta urinib ko'ring.",
