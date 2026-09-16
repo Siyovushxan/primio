@@ -22,6 +22,7 @@ const T = {
     next: "Next",
     payBtn: "💳 Proceed to payment",
     payWarning: "Ad will be removed in 24 hours if payment is not made",
+    aiDisclaimer: "⚠️ Important: AI review is automated and may make mistakes. Ads containing violence, adult (18+), or other prohibited content will be removed even after passing AI review — without a refund. Do not waste money on such ads.",
   },
   uz: {
     rejected: "Rad etildi",
@@ -37,6 +38,7 @@ const T = {
     next: "Navbat",
     payBtn: "💳 To'lovga o'tish",
     payWarning: "To'lov qilmasangiz reklama 24 soatdan so'ng o'chadi",
+    aiDisclaimer: "⚠️ Muhim: AI tekshiruvi avtomatik bo'lib, xato qilishi mumkin. Zo'ravonlik, 18+ yoki boshqa taqiqlangan kontent o'z ichiga olgan reklamalar AI tekshiruvidan o'tsa ham — to'lovsiz o'chiriladi. Bunday reklamalarga pul sarflamang.",
   },
   ru: {
     rejected: "Отклонено",
@@ -52,6 +54,7 @@ const T = {
     next: "Далее",
     payBtn: "💳 Перейти к оплате",
     payWarning: "Реклама будет удалена через 24 часа, если оплата не будет произведена",
+    aiDisclaimer: "⚠️ Важно: AI-проверка автоматическая и может ошибаться. Объявления с насилием, контентом 18+ или другим запрещённым материалом будут удалены даже после прохождения AI-проверки — без возврата средств. Не тратьте деньги на такие объявления.",
   },
 };
 
@@ -223,6 +226,17 @@ export default function AdPendingPage() {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* AI disclaimer */}
+          <div style={{
+            background: "rgba(245,158,11,0.08)",
+            border: "1px solid rgba(245,158,11,0.25)",
+            borderRadius: 12, padding: "12px 14px", marginBottom: 16,
+          }}>
+            <p style={{ fontSize: 12, color: "#FCD34D", lineHeight: 1.6, margin: 0 }}>
+              {t.aiDisclaimer}
+            </p>
           </div>
 
           {/* Pay button */}

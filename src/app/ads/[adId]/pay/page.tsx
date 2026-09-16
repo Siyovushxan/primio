@@ -24,6 +24,7 @@ const T = {
     step1: "AI approved", step2: "Payment", step3: "Ad live", step4: "View stats",
     g1: "Full refund if moderation fails", g2: "Technical issues reviewed",
     g3: "Dodo Payments secure system",
+    aiDisclaimer: "⚠️ AI review may make mistakes. Ads with violence, 18+ or other prohibited content will be removed without a refund — even if they passed AI review. Do not pay for such ads.",
   },
   uz: {
     pageLabel: "To'lov", totalSpent: "Jami sarflangan", placeAd: "Reklama berish",
@@ -40,6 +41,7 @@ const T = {
     g1: "Moderatsiyadan o'tmasa — to'liq qaytarish",
     g2: "Texnik xatolik bo'lsa — ko'rib chiqiladi",
     g3: "Dodo Payments xavfsiz to'lov tizimi",
+    aiDisclaimer: "⚠️ AI tekshiruvi xato qilishi mumkin. Zo'ravonlik, 18+ yoki boshqa taqiqlangan kontent bo'lgan reklamalar AI tekshiruvidan o'tsa ham to'lovsiz o'chiriladi. Bunday reklamalarga to'lov qilmang.",
   },
   ru: {
     pageLabel: "Оплата", totalSpent: "Всего потрачено", placeAd: "Разместить рекламу",
@@ -56,6 +58,7 @@ const T = {
     g1: "Полный возврат при отказе модерации",
     g2: "Технические ошибки рассматриваются",
     g3: "Безопасная система Dodo Payments",
+    aiDisclaimer: "⚠️ AI-проверка может ошибаться. Объявления с насилием, контентом 18+ или другим запрещённым материалом будут удалены без возврата средств — даже если прошли AI-проверку. Не оплачивайте такие объявления.",
   },
 };
 
@@ -222,6 +225,10 @@ export default function PaymentPage() {
               <div style={{ fontSize: ".78rem", color: "#6D5B8E", marginTop: 6, textAlign: "right" }}>
                 ${(ad.dailyBidCents / 100).toFixed(2)}/{t.dayLabel} x {ad.durationDays} {t.dayLabel}
               </div>
+            </div>
+
+            <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 12, padding: "11px 13px", marginBottom: 14 }}>
+              <p style={{ fontSize: 12, color: "#FCD34D", lineHeight: 1.6, margin: 0 }}>{t.aiDisclaimer}</p>
             </div>
 
             <button
