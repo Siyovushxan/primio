@@ -25,6 +25,23 @@ function timeAgo(ts: any, t: Translations): string {
   return date.toLocaleDateString();
 }
 
+function formatPlacedAt(ts: any): string {
+  if (!ts) return "";
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const MONTHS = ["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
+  const d = date.getDate();
+  const m = MONTHS[date.getMonth()];
+  const y = date.getFullYear();
+  const h = date.getHours().toString().padStart(2, "0");
+  const min = date.getMinutes().toString().padStart(2, "0");
+  return `${d} ${m} ${y}, ${h}:${min}`;
+}
+
+function isFresh(ad: Ad): boolean {
+  if (!ad.expiresAt) return false;
+  return (ad.expiresAt as any).toMillis() > Date.now();
+}
+
 function fmt(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -35,7 +52,8 @@ function trackClick(adId: string) {
   fetch(`/api/ads/${adId}/click`, { method: "POST" }).catch(() => {});
 }
 
-function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations }) {
+function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations; }) {
+  const fresh = isFresh(ad);
   const cat = CATEGORIES[ad.category];
   const medal = MEDAL[position - 1];
   const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : "0.0";
@@ -123,10 +141,22 @@ function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations
           </div>
         </div>
 
-        {/* Date */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 12 }}>
-          <Clock size={11} color="#4B3B6E" />
-          <span style={{ fontSize: ".72rem", color: "#4B3B6E" }}>{timeAgo(ad.startsAt || ad.createdAt, t)}</span>
+        {/* Date + fresh/expired status */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <Clock size={11} color="#4B3B6E" />
+            <span style={{ fontSize: ".72rem", color: "#4B3B6E" }}>
+              {formatPlacedAt(ad.startsAt || ad.createdAt)}
+            </span>
+          </div>
+          <span style={{
+            padding: "2px 7px", borderRadius: 100, fontSize: ".64rem", fontWeight: 700,
+            background: fresh ? "rgba(52,211,153,.1)" : "rgba(107,114,128,.1)",
+            border: `1px solid ${fresh ? "rgba(52,211,153,.3)" : "rgba(107,114,128,.25)"}`,
+            color: fresh ? "#34D399" : "#6D5B8E",
+          }}>
+            {fresh ? "● Aktiv" : "○ Muddat o'tgan"}
+          </span>
         </div>
 
         {/* CTA */}
@@ -162,13 +192,21 @@ export default function BrowsePage() {
     const q = query(collection(db, "ads"), ...constraints);
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Ad));
+      const now = Date.now();
       list.sort((a, b) => {
+        // 1. Higher daily bid wins
         const bidDiff = b.dailyBidCents - a.dailyBidCents;
         if (bidDiff !== 0) return bidDiff;
-        // Tiebreaker: newer payment (more recent startsAt) wins
-        const aTime = (a.startsAt as any)?.toMillis?.() ?? (a.createdAt as any)?.toMillis?.() ?? 0;
-        const bTime = (b.startsAt as any)?.toMillis?.() ?? (b.createdAt as any)?.toMillis?.() ?? 0;
-        return bTime - aTime;
+
+        // 2. Equal bids: FRESH (within paid period) beats EXPIRED-HOLDING
+        const aFresh = a.expiresAt ? (a.expiresAt as any).toMillis() > now : false;
+        const bFresh = b.expiresAt ? (b.expiresAt as any).toMillis() > now : false;
+        if (aFresh !== bFresh) return aFresh ? -1 : 1;
+
+        // 3. Both same state: older placement wins (seniority)
+        const aStart = (a.startsAt as any)?.toMillis?.() ?? (a.createdAt as any)?.toMillis?.() ?? 0;
+        const bStart = (b.startsAt as any)?.toMillis?.() ?? (b.createdAt as any)?.toMillis?.() ?? 0;
+        return aStart - bStart; // older (smaller ms) = higher position
       });
       setAds(list);
       setLoading(false);
