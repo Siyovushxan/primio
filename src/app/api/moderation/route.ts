@@ -326,10 +326,10 @@ async function grokCheckImage(
 // ══════════════════════════════════════════════════════════════════════════════
 
 export async function GET() {
-  // Test xAI text model
   let xaiTextStatus = "not_tested";
   let xaiVisionStatus = "not_tested";
   let xaiError = "";
+  const availableModels: string[] = [];
 
   if (process.env.XAI_API_KEY) {
     // Test text model
@@ -344,8 +344,7 @@ export async function GET() {
       if (!textRes.ok) xaiError = (await textRes.text()).slice(0, 200);
     } catch (e: any) { xaiTextStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
 
-    // List available models from xAI
-    let availableModels: string[] = [];
+    // List available models
     try {
       const modelsRes = await fetch("https://api.x.ai/v1/models", {
         headers: { Authorization: `Bearer ${process.env.XAI_API_KEY}` },
@@ -353,11 +352,11 @@ export async function GET() {
       });
       if (modelsRes.ok) {
         const modelsData = await modelsRes.json();
-        availableModels = (modelsData.data || []).map((m: { id: string }) => m.id);
+        availableModels.push(...(modelsData.data || []).map((m: { id: string }) => m.id));
       }
     } catch {}
 
-    // Test vision model (tiny 1x1 white pixel)
+    // Test vision model
     try {
       const pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==";
       const visionRes = await fetch(XAI_API, {
@@ -367,7 +366,7 @@ export async function GET() {
           model: VISION_MODEL,
           messages: [{ role: "user", content: [
             { type: "image_url", image_url: { url: `data:image/png;base64,${pixel}` } },
-            { type: "text", text: "What color is this image? Reply in one word." }
+            { type: "text", text: "What color? One word." },
           ]}],
           max_tokens: 10,
         }),
@@ -376,7 +375,6 @@ export async function GET() {
       xaiVisionStatus = visionRes.ok ? "ok" : `error_${visionRes.status}`;
       if (!visionRes.ok) xaiError = (await visionRes.text()).slice(0, 200);
     } catch (e: any) { xaiVisionStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
-
   }
 
   return NextResponse.json({
