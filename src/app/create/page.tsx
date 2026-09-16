@@ -401,7 +401,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
     new Promise((resolve, reject) => {
       const img = new window.Image();
       img.onload = () => {
-        const MAX = 200;
+        const MAX = 512;
         let { width, height } = img;
         if (width > MAX || height > MAX) {
           if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
@@ -413,7 +413,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
         const ctx = canvas.getContext("2d");
         if (!ctx) { reject(new Error("Canvas not supported")); return; }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
         URL.revokeObjectURL(img.src);
         resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
       };

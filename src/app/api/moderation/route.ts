@@ -429,7 +429,7 @@ export async function POST(req: NextRequest) {
           const sexy = data.find((d: { label: string; score: number }) => d.label === "sexy")?.score ?? 0;
           const porn = data.find((d: { label: string; score: number }) => d.label === "porn")?.score ?? 0;
           console.log(`HF sexy: ${sexy.toFixed(3)}, porn: ${porn.toFixed(3)}`);
-          return { sexy, porn, flagged: sexy > 0.30 || porn > 0.25 };
+          return { sexy, porn, flagged: sexy > 0.20 || porn > 0.15 };
         } catch { return null; }
       })(),
     ]);
@@ -449,7 +449,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5c. HF explicit NSFW — always check
-    if (hfExplicitScore !== null && hfExplicitScore > 0.35) {
+    if (hfExplicitScore !== null && hfExplicitScore > 0.20) {
       return NextResponse.json({
         approved: false,
         reason: "Rasm 18+ yoki pornografik kontent sifatida aniqlandi. Mos rasm tanlang.",
@@ -461,14 +461,12 @@ export async function POST(req: NextRequest) {
       // Grok Vision API unavailable.
       const hfRan = hfSexyData !== null || hfExplicitScore !== null;
       if (hfRan) {
-        // HF ran and didn't flag anything → approve via HF fallback
+        // HF ran and didn't flag anything → approve via HF fallback only
         console.warn("Grok vision unavailable — approved via HF fallback");
-      } else if (textAiRan) {
-        // All image checks failed BUT keyword + Grok text/URL already cleared this ad.
-        // Trust the text-layer analysis rather than blocking the user with a retry error.
-        console.warn("All image checks unavailable — approved via text-layer fallback (keyword+AI text passed)");
       } else {
-        // No AI layer ran at all → reject for safety
+        // All image checks failed — cannot validate image content via text checks alone.
+        // Reject for safety regardless of text/URL results.
+        console.error("All image checks failed — rejecting for safety");
         return NextResponse.json({
           approved: false,
           reason: "Rasm tekshiruvi vaqtincha ishlamayapti. Bir necha daqiqadan keyin qayta urinib ko'ring.",
