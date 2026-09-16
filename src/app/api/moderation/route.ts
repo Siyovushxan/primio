@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const XAI_API    = "https://api.x.ai/v1/chat/completions";
-const VISION_MODEL = "grok-2-vision";
+const VISION_MODEL = "grok-4.5";
 const TEXT_MODEL   = "grok-3-mini";
 
 const HF_EXPLICIT_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
