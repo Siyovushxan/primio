@@ -87,7 +87,7 @@ Approve ONLY if it is a genuine product, business, app, or service advertisement
 Reply ONLY:
 APPROVED
 or
-REJECTED: [reason in Uzbek, one sentence]`;
+REJECTED: [reason in English, one sentence]`;
 
 const URL_PROMPT = `You are a STRICT website URL safety checker. Default = REJECTED.
 
@@ -104,7 +104,7 @@ Approve if it looks like a legitimate business website, app, social media, news,
 Reply ONLY:
 APPROVED
 or
-REJECTED: [reason in Uzbek, one sentence]`;
+REJECTED: [reason in English, one sentence]`;
 
 const VISION_PROMPT = `You are an EXTREMELY STRICT image moderator for a family-friendly ad platform.
 Default = REJECTED. Only approve clean professional business images.
@@ -156,7 +156,7 @@ RULE: ANY doubt → REJECTED.
 Reply ONLY:
 APPROVED
 or
-REJECTED: [reason in Uzbek, one sentence]`;
+REJECTED: [reason in English, one sentence]`;
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -255,7 +255,7 @@ async function grokCheckText(title: string, description: string): Promise<{ appr
         `Does this text contain or advertise anything inappropriate (porn, weapons, drugs, murder, kidnapping, profanity)?`,
     },
   ], 10000);
-  return parseVerdict(reply, "Sarlavha yoki tavsif noqonuniy yoki nomaqbul kontent o'z ichiga oladi");
+  return parseVerdict(reply, "The title or description contains illegal or inappropriate content.");
 }
 
 /** CHECK 2 — URL domain & path analysis */
@@ -269,7 +269,7 @@ async function grokCheckUrl(url: string): Promise<{ approved: boolean; reason?: 
         `Does this URL/domain look like it hosts pornography, weapons sales, drugs, illegal services, or scam content?`,
     },
   ], 10000);
-  return parseVerdict(reply, "Veb-sayt URL manzili shubhali yoki nomaqbul kontent bilan bog'liq ko'rinmoqda");
+  return parseVerdict(reply, "The website URL appears to be associated with suspicious or inappropriate content.");
 }
 
 /** CHECK 3 — Image vision (with 1 retry) */
@@ -304,7 +304,7 @@ async function grokCheckImage(
   let reply = await xaiCall(VISION_MODEL, messages, 18000);
   if (reply) {
     console.log("Grok vision reply:", reply.slice(0, 250));
-    return parseVerdict(reply, "Rasm moderatsiya talablariga javob bermadi");
+    return parseVerdict(reply, "The image does not meet moderation requirements.");
   }
 
   // Retry once after 3 seconds
@@ -313,7 +313,7 @@ async function grokCheckImage(
   reply = await xaiCall(VISION_MODEL, messages, 18000);
   if (reply) {
     console.log("Grok vision retry reply:", reply.slice(0, 250));
-    return parseVerdict(reply, "Rasm moderatsiya talablariga javob bermadi");
+    return parseVerdict(reply, "The image does not meet moderation requirements.");
   }
 
   // Both attempts failed → null (caller will reject for safety)
@@ -415,7 +415,7 @@ export async function POST(req: NextRequest) {
     if (p.test(allText)) {
       return NextResponse.json({
         approved: false,
-        reason: "Sarlavha, tavsif yoki URL taqiqlangan so'z yoki xizmat turini o'z ichiga oladi.",
+        reason: "The title, description, or URL contains a banned word or prohibited service.",
       });
     }
   }
@@ -444,13 +444,13 @@ export async function POST(req: NextRequest) {
     if (!urlCheck.ok && urlCheck.status !== 405 && urlCheck.status !== 403) {
       return NextResponse.json({
         approved: false,
-        reason: `Sayt ishlamayapti (${urlCheck.status}). To'g'ri URL kiriting.`,
+        reason: `The website is not accessible (${urlCheck.status}). Please enter a valid URL.`,
       });
     }
   } catch {
     return NextResponse.json({
       approved: false,
-      reason: "URL manzilga ulanib bo'lmadi. Saytni tekshiring.",
+      reason: "Could not connect to the URL. Please check your website.",
     });
   }
 
@@ -491,7 +491,7 @@ export async function POST(req: NextRequest) {
     if (hfSexyData?.flagged) {
       return NextResponse.json({
         approved: false,
-        reason: "Rasm yarimochar kiyimli yoki uyatsiz kontent sifatida aniqlandi. Biznes reklamaga mos rasm tanlang.",
+        reason: "The image contains revealing or inappropriate content. Please use a professional business image.",
       });
     }
 
@@ -499,7 +499,7 @@ export async function POST(req: NextRequest) {
     if (hfExplicitScore !== null && hfExplicitScore > 0.20) {
       return NextResponse.json({
         approved: false,
-        reason: "Rasm 18+ yoki pornografik kontent sifatida aniqlandi. Mos rasm tanlang.",
+        reason: "The image was detected as explicit or adult content. Please choose an appropriate image.",
       });
     }
 
@@ -516,7 +516,7 @@ export async function POST(req: NextRequest) {
         console.error("All image checks failed — rejecting for safety");
         return NextResponse.json({
           approved: false,
-          reason: "Rasm tekshiruvi vaqtincha ishlamayapti. Bir necha daqiqadan keyin qayta urinib ko'ring.",
+          reason: "Image review is temporarily unavailable. Please try again in a few minutes.",
         });
       }
     } else if (!visionResult.approved) {
