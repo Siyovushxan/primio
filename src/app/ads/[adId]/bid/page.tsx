@@ -21,6 +21,12 @@ const T = {
     diffLabel: "Difference", daysLabel: "days",
     payBtn: "Pay $ and reach #1", redirecting: "Redirecting...",
     cancelBtn: "← Cancel", toTop: "🏆 You'll reach #1",
+    expiredTitle: "Ad period has ended",
+    expiredMsg: "Bid upgrade only works for active ads. To compete at #1 again, renew or create a new ad.",
+    renewBtn: "Renew ad",
+    newAdBtn: "Create new ad",
+    lowDaysWarn: (d: number) => `⚠️ Only ${d} days left — bid upgrade may not be worth it.`,
+    zeroDaysNote: "0 days remaining — bid upgrade has no effect.",
   },
   uz: {
     pageLabel: "Bid oshirish", totalSpent: "Jami sarflangan", placeAd: "Reklama berish",
@@ -32,6 +38,12 @@ const T = {
     diffLabel: "Farq", daysLabel: "kun",
     payBtn: "to'lash va 1-o'ringa chiqish", redirecting: "Yo'naltirilmoqda...",
     cancelBtn: "← Bekor qilish", toTop: "🏆 1-o'ringa chiqasiz",
+    expiredTitle: "Reklama davri tugagan",
+    expiredMsg: "Bid oshirish faqat faol reklamalar uchun ishlaydi. 1-o'rinda yana ko'rinish uchun reklamani yangilang yoki yangi reklama bering.",
+    renewBtn: "Reklamani yangilash",
+    newAdBtn: "Yangi reklama berish",
+    lowDaysWarn: (d: number) => `⚠️ Faqat ${d} kun qoldi — bid oshirish samarali bo'lmasligi mumkin.`,
+    zeroDaysNote: "0 kun qoldi — bid oshirish hech qanday ta'sir qilmaydi.",
   },
   ru: {
     pageLabel: "Повысить ставку", totalSpent: "Всего потрачено", placeAd: "Разместить",
@@ -43,6 +55,12 @@ const T = {
     diffLabel: "Разница", daysLabel: "дн.",
     payBtn: "Оплатить $ и выйти на #1", redirecting: "Перенаправление...",
     cancelBtn: "← Отмена", toTop: "🏆 Вы выйдете на #1",
+    expiredTitle: "Период рекламы завершён",
+    expiredMsg: "Повышение ставки работает только для активных объявлений. Чтобы снова быть на #1, обновите или создайте новое объявление.",
+    renewBtn: "Обновить рекламу",
+    newAdBtn: "Создать новое объявление",
+    lowDaysWarn: (d: number) => `⚠️ Осталось всего ${d} дней — повышение ставки может быть нецелесообразным.`,
+    zeroDaysNote: "0 дней осталось — повышение ставки не имеет эффекта.",
   },
 };
 
@@ -158,6 +176,39 @@ export default function BidUpgradePage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
           <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
         </div>
+      ) : daysRemaining === 0 ? (
+        /* ── Expired state: redirect user to renew or create new ad ── */
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 24px", animation: "fade .35s ease both", textAlign: "center" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(245,158,11,.12)", border: "2px solid rgba(245,158,11,.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", fontSize: 32 }}>
+            ⏰
+          </div>
+          <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.3rem", fontWeight: 700, marginBottom: 12 }}>
+            {t.expiredTitle}
+          </h2>
+          <p style={{ color: "#9CA3AF", fontSize: ".88rem", lineHeight: 1.6, marginBottom: 32 }}>
+            {t.expiredMsg}
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button
+              onClick={() => router.push(`/ads/${adId}/renew`)}
+              style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontWeight: 700, fontSize: "1rem", cursor: "pointer" }}
+            >
+              🔄 {t.renewBtn}
+            </button>
+            <button
+              onClick={() => router.push("/create")}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "1px solid #2D1F50", background: "transparent", color: "#A78BFA", fontWeight: 600, fontSize: ".9rem", cursor: "pointer" }}
+            >
+              ✚ {t.newAdBtn}
+            </button>
+            <button
+              onClick={() => router.push("/dashboard")}
+              style={{ width: "100%", padding: "11px 0", borderRadius: 12, border: "none", background: "transparent", color: "#4B5563", fontSize: ".84rem", cursor: "pointer" }}
+            >
+              {t.cancelBtn}
+            </button>
+          </div>
+        </div>
       ) : (
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "38px 24px 60px", animation: "fade .35s ease both" }}>
           <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 20 }}>
@@ -176,6 +227,13 @@ export default function BidUpgradePage() {
               </div>
             </div>
           </div>
+
+          {/* Low days warning */}
+          {daysRemaining > 0 && daysRemaining <= 2 && (
+            <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(245,158,11,.08)", border: "1px solid rgba(245,158,11,.25)", color: "#FCD34D", fontSize: ".84rem" }}>
+              {t.lowDaysWarn(daysRemaining)}
+            </div>
+          )}
 
           {error && (
             <div style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 12, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.25)", color: "#F87171", fontSize: ".84rem" }}>
