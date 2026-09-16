@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const XAI_API    = "https://api.x.ai/v1/chat/completions";
-const VISION_MODEL = "grok-2-vision-1212";
+const VISION_MODEL = "grok-2-vision";
 const TEXT_MODEL   = "grok-3-mini";
 
 const HF_EXPLICIT_MODEL = "https://api-inference.huggingface.co/models/Falconsai/nsfw_image_detection";
@@ -326,18 +326,52 @@ async function grokCheckImage(
 // ══════════════════════════════════════════════════════════════════════════════
 
 export async function GET() {
+  // Test xAI text model
+  let xaiTextStatus = "not_tested";
+  let xaiVisionStatus = "not_tested";
+  let xaiError = "";
+
+  if (process.env.XAI_API_KEY) {
+    // Test text model
+    try {
+      const textRes = await fetch(XAI_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.XAI_API_KEY}` },
+        body: JSON.stringify({ model: TEXT_MODEL, messages: [{ role: "user", content: "Reply: OK" }], max_tokens: 5 }),
+        signal: AbortSignal.timeout(8000),
+      });
+      xaiTextStatus = textRes.ok ? "ok" : `error_${textRes.status}`;
+      if (!textRes.ok) xaiError = (await textRes.text()).slice(0, 200);
+    } catch (e: any) { xaiTextStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
+
+    // Test vision model (tiny 1x1 white pixel)
+    try {
+      const pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==";
+      const visionRes = await fetch(XAI_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.XAI_API_KEY}` },
+        body: JSON.stringify({
+          model: VISION_MODEL,
+          messages: [{ role: "user", content: [
+            { type: "image_url", image_url: { url: `data:image/png;base64,${pixel}` } },
+            { type: "text", text: "What color is this image? Reply in one word." }
+          ]}],
+          max_tokens: 10,
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+      xaiVisionStatus = visionRes.ok ? "ok" : `error_${visionRes.status}`;
+      if (!visionRes.ok) xaiError = (await visionRes.text()).slice(0, 200);
+    } catch (e: any) { xaiVisionStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
+  }
+
   return NextResponse.json({
     ok: true,
-    checks: [
-      "1. Keyword regex (instant)",
-      "2. Grok text check (title + description)",
-      "3. Grok URL check (domain analysis)",
-      "4. URL availability",
-      "5a. Grok vision (image) — with retry",
-      "5b. HF Falconsai explicit NSFW",
-      "5c. HF AdamCodd sexy detector",
-    ],
+    models: { text: TEXT_MODEL, vision: VISION_MODEL },
     xai_key: !!process.env.XAI_API_KEY,
+    xai_text: xaiTextStatus,
+    xai_vision: xaiVisionStatus,
+    xai_error: xaiError || undefined,
     hf_token: !!process.env.HF_TOKEN,
   });
 }
