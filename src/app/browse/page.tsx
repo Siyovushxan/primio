@@ -162,7 +162,14 @@ export default function BrowsePage() {
     const q = query(collection(db, "ads"), ...constraints);
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Ad));
-      list.sort((a, b) => b.dailyBidCents - a.dailyBidCents);
+      list.sort((a, b) => {
+        const bidDiff = b.dailyBidCents - a.dailyBidCents;
+        if (bidDiff !== 0) return bidDiff;
+        // Tiebreaker: newer payment (more recent startsAt) wins
+        const aTime = (a.startsAt as any)?.toMillis?.() ?? (a.createdAt as any)?.toMillis?.() ?? 0;
+        const bTime = (b.startsAt as any)?.toMillis?.() ?? (b.createdAt as any)?.toMillis?.() ?? 0;
+        return bTime - aTime;
+      });
       setAds(list);
       setLoading(false);
     }, (err) => {
