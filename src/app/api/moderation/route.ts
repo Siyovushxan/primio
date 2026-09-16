@@ -377,13 +377,6 @@ export async function GET() {
       if (!visionRes.ok) xaiError = (await visionRes.text()).slice(0, 200);
     } catch (e: any) { xaiVisionStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
 
-    if (availableModels.length > 0) {
-      return NextResponse.json({
-        ok: true,
-        available_xai_models: availableModels,
-        vision_models: availableModels.filter(m => m.includes("vision")),
-      });
-    }
   }
 
   return NextResponse.json({
@@ -394,6 +387,7 @@ export async function GET() {
     xai_vision: xaiVisionStatus,
     xai_error: xaiError || undefined,
     hf_token: !!process.env.HF_TOKEN,
+    available_models: availableModels.length > 0 ? availableModels : undefined,
   });
 }
 
