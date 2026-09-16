@@ -344,6 +344,19 @@ export async function GET() {
       if (!textRes.ok) xaiError = (await textRes.text()).slice(0, 200);
     } catch (e: any) { xaiTextStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
 
+    // List available models from xAI
+    let availableModels: string[] = [];
+    try {
+      const modelsRes = await fetch("https://api.x.ai/v1/models", {
+        headers: { Authorization: `Bearer ${process.env.XAI_API_KEY}` },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (modelsRes.ok) {
+        const modelsData = await modelsRes.json();
+        availableModels = (modelsData.data || []).map((m: { id: string }) => m.id);
+      }
+    } catch {}
+
     // Test vision model (tiny 1x1 white pixel)
     try {
       const pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==";
@@ -363,6 +376,14 @@ export async function GET() {
       xaiVisionStatus = visionRes.ok ? "ok" : `error_${visionRes.status}`;
       if (!visionRes.ok) xaiError = (await visionRes.text()).slice(0, 200);
     } catch (e: any) { xaiVisionStatus = `timeout_or_error: ${e?.message?.slice(0, 80)}`; }
+
+    if (availableModels.length > 0) {
+      return NextResponse.json({
+        ok: true,
+        available_xai_models: availableModels,
+        vision_models: availableModels.filter(m => m.includes("vision")),
+      });
+    }
   }
 
   return NextResponse.json({
