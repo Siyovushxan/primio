@@ -25,6 +25,10 @@ const T = {
     g1: "Full refund if moderation fails", g2: "Technical issues reviewed",
     g3: "Dodo Payments secure system",
     aiDisclaimer: "⚠️ AI review may make mistakes. Ads with violence, 18+ or other prohibited content will be removed without a refund — even if they passed AI review. Do not pay for such ads.",
+    termsAgree: "I have read and agree to the PRIMIO",
+    termsLink: "Public Offer Agreement",
+    termsAgree2: "",
+    errTerms: "Please agree to the Public Offer Agreement",
   },
   uz: {
     pageLabel: "To'lov", totalSpent: "Jami sarflangan", placeAd: "Reklama berish",
@@ -42,6 +46,10 @@ const T = {
     g2: "Texnik xatolik bo'lsa — ko'rib chiqiladi",
     g3: "Dodo Payments xavfsiz to'lov tizimi",
     aiDisclaimer: "⚠️ AI tekshiruvi xato qilishi mumkin. Zo'ravonlik, 18+ yoki boshqa taqiqlangan kontent bo'lgan reklamalar AI tekshiruvidan o'tsa ham to'lovsiz o'chiriladi. Bunday reklamalarga to'lov qilmang.",
+    termsAgree: "Men PRIMIO",
+    termsLink: "Ommaviy Oferta Shartnomasini",
+    termsAgree2: "o'qidim va qabul qilaman",
+    errTerms: "Ommaviy oferta shartlariga rozilik bildiring",
   },
   ru: {
     pageLabel: "Оплата", totalSpent: "Всего потрачено", placeAd: "Разместить рекламу",
@@ -59,6 +67,10 @@ const T = {
     g2: "Технические ошибки рассматриваются",
     g3: "Безопасная система Dodo Payments",
     aiDisclaimer: "⚠️ AI-проверка может ошибаться. Объявления с насилием, контентом 18+ или другим запрещённым материалом будут удалены без возврата средств — даже если прошли AI-проверку. Не оплачивайте такие объявления.",
+    termsAgree: "Я прочитал и принимаю",
+    termsLink: "Публичную Оферту PRIMIO",
+    termsAgree2: "",
+    errTerms: "Пожалуйста, примите условия Публичной Оферты",
   },
 };
 
@@ -74,6 +86,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   useEffect(() => {
     if (!adId) return;
@@ -89,6 +102,7 @@ export default function PaymentPage() {
 
   const handlePay = async () => {
     if (!ad || !firebaseUser) return;
+    if (!termsAgreed) { setError(t.errTerms); return; }
     setPaying(true);
     setError("");
     try {
@@ -230,6 +244,23 @@ export default function PaymentPage() {
             <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 12, padding: "11px 13px", marginBottom: 14 }}>
               <p style={{ fontSize: 12, color: "#FCD34D", lineHeight: 1.6, margin: 0 }}>{t.aiDisclaimer}</p>
             </div>
+
+            {/* Terms agreement checkbox */}
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+              <input
+                type="checkbox"
+                checked={termsAgreed}
+                onChange={(e) => setTermsAgreed(e.target.checked)}
+                style={{ marginTop: 2, width: 16, height: 16, accentColor: "#7C3AED", flexShrink: 0, cursor: "pointer" }}
+              />
+              <span style={{ fontSize: ".78rem", color: "#9CA3AF", lineHeight: 1.5 }}>
+                {t.termsAgree}{" "}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "#A855F7", textDecoration: "underline" }}>
+                  {t.termsLink}
+                </a>
+                {t.termsAgree2 ? " " + t.termsAgree2 : ""}
+              </span>
+            </label>
 
             <button
               onClick={handlePay}

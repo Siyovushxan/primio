@@ -77,6 +77,10 @@ const T = {
     loadingLabel: "Yuklanmoqda...",
     visitSiteLabel: "Saytga oʻting",
     newCampaignLabel: "Yangi kampaniya",
+    termsAgree: "Men PRIMIO",
+    termsLink: "Ommaviy Oferta Shartnomasini",
+    termsAgree2: "o'qidim va qabul qilaman",
+    errTerms: "Ommaviy oferta shartlariga rozilik bildiring",
   },
   en: {
     dashLabel: "Dashboard",
@@ -142,6 +146,10 @@ const T = {
     loadingLabel: "Loading...",
     visitSiteLabel: "Visit site",
     newCampaignLabel: "New campaign",
+    termsAgree: "I have read and agree to the PRIMIO",
+    termsLink: "Public Offer Agreement",
+    termsAgree2: "",
+    errTerms: "Please agree to the Public Offer Agreement",
   },
   ru: {
     dashLabel: "Панель",
@@ -207,6 +215,10 @@ const T = {
     loadingLabel: "Загрузка...",
     visitSiteLabel: "Перейти на сайт",
     newCampaignLabel: "Новая кампания",
+    termsAgree: "Я прочитал и принимаю",
+    termsLink: "Публичную Оферту PRIMIO",
+    termsAgree2: "",
+    errTerms: "Пожалуйста, примите условия Публичной Оферты",
   },
 };
 
@@ -344,6 +356,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const [restoredBase64, setRestoredBase64] = useState<{full: string; mod: string; mime: string} | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [termsAgreed, setTermsAgreed] = useState(false);
 
   // Scanning sahifasidan ?restore=1 bilan qaytganda formni tiklash
   // Boshqa holatlarda (yangi reklama) sessionStorage tozalanadi
@@ -432,6 +445,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
     if (!category) return setError(t.catLabel);
     if (bidCents < 100) return setError(t.errBid);
     if (description.length > 200) return setError(t.errDesc);
+    if (!termsAgreed) return setError(t.errTerms);
 
     setSubmitting(true);
     try {
@@ -749,6 +763,22 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               </div>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontSize: ".7rem", color: "#6D5B8E", marginBottom: 8 }}>{t.totalNote}</div>
+                {/* Terms agreement checkbox */}
+                <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+                  <input
+                    type="checkbox"
+                    checked={termsAgreed}
+                    onChange={(e) => setTermsAgreed(e.target.checked)}
+                    style={{ marginTop: 2, width: 16, height: 16, accentColor: "#7C3AED", flexShrink: 0, cursor: "pointer" }}
+                  />
+                  <span style={{ fontSize: ".78rem", color: "#9CA3AF", lineHeight: 1.5 }}>
+                    {t.termsAgree}{" "}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: "#A855F7", textDecoration: "underline" }}>
+                      {t.termsLink}
+                    </a>
+                    {t.termsAgree2 ? " " + t.termsAgree2 : ""}
+                  </span>
+                </label>
                 <button
                   type="submit"
                   disabled={submitting}
