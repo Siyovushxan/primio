@@ -155,7 +155,7 @@ function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations
             border: `1px solid ${fresh ? "rgba(52,211,153,.3)" : "rgba(107,114,128,.25)"}`,
             color: fresh ? "#34D399" : "#6D5B8E",
           }}>
-            {fresh ? "● Aktiv" : "○ Muddat o'tgan"}
+            {fresh ? "● Active" : "○ Expired"}
           </span>
         </div>
 
@@ -181,6 +181,7 @@ export default function BrowsePage() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCat, setActiveCat] = useState<Category | null>(null);
+  const [showCats, setShowCats] = useState(false);
   const { loading: authLoading } = useAuth();
   const { t } = useLang();
 
@@ -221,7 +222,7 @@ export default function BrowsePage() {
     <div style={{ minHeight: "calc(100vh - 64px)", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
       <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}*{box-sizing:border-box}`}</style>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px" }}>
+      <div className="browse-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px" }}>
         {/* Header */}
         <div style={{ marginBottom: 32, animation: "fade .3s ease both" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 6 }}>
@@ -238,26 +239,46 @@ export default function BrowsePage() {
         </div>
 
         {/* Category filters */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 36 }}>
-          <button
-            onClick={() => setActiveCat(null)}
-            style={{ padding: "8px 18px", borderRadius: 100, border: `1px solid ${!activeCat ? "#7C3AED" : "#2D1F50"}`, background: !activeCat ? "#7C3AED" : "#160F2A", color: !activeCat ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
-          >
-            {t.browseAll}
-          </button>
-          {CATEGORY_KEYS.map((cat) => {
-            const active = activeCat === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setActiveCat(cat)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`, background: active ? "#7C3AED" : "#160F2A", color: active ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", transition: "all .15s" }}
-              >
-                <span>{CATEGORIES[cat].emoji}</span>
-                <span>{CATEGORIES[cat].label}</span>
-              </button>
-            );
-          })}
+        <div style={{ marginBottom: 28 }}>
+          {/* Mobile toggle row */}
+          <div className="cats-mobile-row" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+            <button
+              onClick={() => setActiveCat(null)}
+              style={{ padding: "8px 18px", borderRadius: 100, border: `1px solid ${!activeCat ? "#7C3AED" : "#2D1F50"}`, background: !activeCat ? "#7C3AED" : "#160F2A", color: !activeCat ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 700, cursor: "pointer" }}
+            >
+              {t.browseAll}
+            </button>
+            {activeCat && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 100, background: "#7C3AED", border: "1px solid #7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 600 }}>
+                <span>{CATEGORIES[activeCat].emoji}</span>
+                <span>{CATEGORIES[activeCat].label}</span>
+                <button onClick={() => setActiveCat(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", cursor: "pointer", fontSize: ".9rem", padding: "0 0 0 4px", lineHeight: 1 }}>×</button>
+              </div>
+            )}
+            <button
+              className="cats-toggle-btn"
+              onClick={() => setShowCats(s => !s)}
+              style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 100, border: "1px solid #2D1F50", background: showCats ? "rgba(124,58,237,.12)" : "#160F2A", color: showCats ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: 600, cursor: "pointer" }}
+            >
+              🏷 {showCats ? "Hide" : "Filter"}
+            </button>
+          </div>
+          {/* Full cat list — always visible on desktop, toggled on mobile */}
+          <div className={`cats-list${showCats ? " cats-open" : ""}`} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {CATEGORY_KEYS.map((cat) => {
+              const active = activeCat === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => { setActiveCat(cat); setShowCats(false); }}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`, background: active ? "#7C3AED" : "#160F2A", color: active ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", transition: "all .15s" }}
+                >
+                  <span>{CATEGORIES[cat].emoji}</span>
+                  <span>{CATEGORIES[cat].label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Stats bar */}

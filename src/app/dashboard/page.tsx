@@ -272,21 +272,21 @@ function AppHeader({
           <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
           <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "nowrap" }}>
+          <div className="dash-header-lang" style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
             {LANGS.map((l) => (
               <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
             ))}
           </div>
-          <button onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
+          <button className="dash-header-spent" onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
             <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(totalSpentCents / 100).toFixed(0)}</span>
           </button>
           <button onClick={onGoProfile} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
-            <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{brandInitial}</span>
-            <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
+            <span style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".75rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
+            <span className="dash-header-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
-          <button onClick={onGoCreate} style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, cursor: "pointer" }}>+ {t.ctaCreate}</button>
+          <button onClick={onGoCreate} style={{ padding: "9px 14px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>+ {t.ctaCreate}</button>
         </div>
       </div>
     </header>
@@ -374,6 +374,7 @@ function fmtN(n: number) {
 function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string | null; lang: Lang; onRaise: (id: string, bid: number) => void }) {
   const t = T[lang];
   const [catFilter, setCatFilter] = useState<Category | "any">("any");
+  const [showCats, setShowCats] = useState(false);
 
   const active = allAds.filter((a) => a.status === "active");
   const scoped = (catFilter === "any" ? active : active.filter((a) => a.category === catFilter))
@@ -435,16 +436,26 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
       </div>
 
       {/* Category filter */}
-      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap", marginBottom: 24 }}>
-        {([{ k: "any" as const, label: t.catAll }] as { k: Category | "any"; label: string }[])
-          .concat(CAT_KEYS.map((k) => ({ k, label: `${CATEGORIES[k].emoji} ${T[lang].catNames[k]}` })))
-          .map((c) => (
-            <button key={c.k} onClick={() => setCatFilter(c.k)} style={{
-              padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === c.k ? "#7C3AED" : "#2D1F50"}`,
-              background: catFilter === c.k ? "rgba(124,58,237,.16)" : "transparent",
-              color: catFilter === c.k ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: catFilter === c.k ? 700 : 500, cursor: "pointer",
-            }}>{c.label}</button>
+      <div style={{ marginBottom: 24 }}>
+        <div className="cats-mobile-row" style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 6 }}>
+          <button onClick={() => setCatFilter("any")} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === "any" ? "#7C3AED" : "#2D1F50"}`, background: catFilter === "any" ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === "any" ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: catFilter === "any" ? 700 : 500, cursor: "pointer" }}>{t.catAll}</button>
+          {catFilter !== "any" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 100, background: "rgba(124,58,237,.16)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".79rem", fontWeight: 700 }}>
+              {CATEGORIES[catFilter as Category].emoji} {T[lang].catNames[catFilter as Category]}
+              <button onClick={() => setCatFilter("any")} style={{ background: "none", border: "none", color: "rgba(168,85,247,.7)", cursor: "pointer", fontSize: ".85rem", padding: "0 0 0 2px", lineHeight: 1 }}>×</button>
+            </div>
+          )}
+          <button className="cats-toggle-btn" onClick={() => setShowCats(s => !s)} style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 100, border: "1px solid #2D1F50", background: showCats ? "rgba(124,58,237,.12)" : "transparent", color: showCats ? "#A855F7" : "#6D5B8E", fontSize: ".77rem", fontWeight: 600, cursor: "pointer" }}>
+            🏷 {showCats ? "Hide" : "Filter"}
+          </button>
+        </div>
+        <div className={`cats-list${showCats ? " cats-open" : ""}`} style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+          {CAT_KEYS.map((k) => (
+            <button key={k} onClick={() => { setCatFilter(k); setShowCats(false); }} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === k ? "#7C3AED" : "#2D1F50"}`, background: catFilter === k ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === k ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: catFilter === k ? 700 : 500, cursor: "pointer" }}>
+              {`${CATEGORIES[k].emoji} ${T[lang].catNames[k]}`}
+            </button>
           ))}
+        </div>
       </div>
 
       {scoped.length === 0 && (
