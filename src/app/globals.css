@@ -99,25 +99,37 @@ input, select, textarea { font-family: inherit; }
   .rg-hero, .rg-pricing { grid-template-columns: 1fr !important; gap: 24px; }
 }
 
-/* ── Category filter mobile behaviour ─────────────────────────────────────── */
-.cats-toggle-btn { display: none; }
-.cats-mobile-row { flex-wrap: wrap; }
-.cats-list { display: flex; flex-wrap: wrap; gap: 8px; }
+/* ── Category filters: horizontal scroll on all screens (nowrap on mobile) ── */
+.cats-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cats-list button { flex-shrink: 0; }
+/* Toggle btn hidden everywhere — we use scroll instead */
+.cats-toggle-btn { display: none !important; }
+.cats-mobile-row { display: none !important; }
 
 /* ── Mobile: < 640px ───────────────────────────────────────────────────────── */
 @media (max-width: 639px) {
   .rg-2, .rg-3, .rg-hero, .rg-pricing { grid-template-columns: 1fr !important; gap: 14px; }
   .rg-4 { grid-template-columns: repeat(2, minmax(0,1fr)) !important; gap: 9px; }
 
-  /* Category filter: hide pills by default, show toggle button */
-  .cats-toggle-btn { display: flex !important; }
-  .cats-list { display: none !important; }
-  .cats-list.cats-open { display: flex !important; flex-direction: column; width: 100%; }
+  /* Category filters: horizontal scroll */
+  .cats-list {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .cats-list::-webkit-scrollbar { display: none; }
 
-  /* Dashboard header: hide heavy items */
-  .dash-header-lang { display: none !important; }
-  .dash-header-spent { display: none !important; }
-  .dash-header-name { display: none !important; }
+  /* Dashboard header: hide DASHBOARD badge + name, keep lang + spent compact */
+  .dash-header-badge { display: none !important; }
+  .dash-header-name  { display: none !important; }
+  .dash-header-spent { padding: 5px 9px !important; }
+  .dash-header-spent .spent-label { display: none !important; }
 
   /* Sidebar → horizontal scrollable nav strip */
   .dash-layout { flex-direction: column; }
@@ -125,6 +137,7 @@ input, select, textarea { font-family: inherit; }
     width: 100% !important;
     min-height: auto !important;
     flex-direction: row !important;
+    align-items: center !important;
     padding: 8px 12px !important;
     gap: 4px !important;
     border-right: none !important;
@@ -134,12 +147,35 @@ input, select, textarea { font-family: inherit; }
     scrollbar-width: none;
   }
   .dash-sidebar::-webkit-scrollbar { display: none; }
-  /* Hide: section label (first div), promo card (last div), guide + logout buttons */
-  .dash-sidebar > div:first-child  { display: none !important; }
-  .dash-sidebar > div:last-of-type { display: none !important; }
-  .dash-sidebar > button:nth-last-of-type(-n+2) { display: none !important; }
-  /* Compact nav buttons */
-  .dash-sidebar > button {
+
+  /* Hide only: section label (MENU text div) */
+  .sidebar-section-label { display: none !important; }
+
+  /* Wallet status card: compact horizontal chip */
+  .sidebar-promo {
+    margin-top: 0 !important;
+    padding: 7px 12px !important;
+    border-radius: 100px !important;
+    flex-shrink: 0;
+    min-width: fit-content;
+    display: flex !important;
+    align-items: center;
+  }
+  .sidebar-promo > div:first-child { display: none !important; }
+  .sidebar-promo > div:nth-child(2) { display: none !important; }
+  .sidebar-promo > button {
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    font-size: .77rem !important;
+    color: #A855F7 !important;
+    white-space: nowrap;
+  }
+
+  /* All sidebar buttons compact */
+  .dash-sidebar > button,
+  .dash-sidebar .sidebar-guide,
+  .dash-sidebar .sidebar-signout {
     padding: 7px 13px !important;
     border-radius: 100px !important;
     white-space: nowrap;
@@ -149,21 +185,9 @@ input, select, textarea { font-family: inherit; }
   }
 
   .dash-main { padding: 0 14px 80px !important; }
-
-  /* Browse page: tighter padding on mobile */
   .browse-container { padding: 20px 14px 80px !important; }
-
-  /* Landing hero on mobile */
   .hero-top { padding: 32px 0 24px !important; }
-
-  /* Ranking cards: 1 column on mobile */
-  .rank-grid { grid-template-columns: 1fr !important; }
-
-  /* Form grid: single column */
-  .rg-form { grid-template-columns: 1fr !important; }
-  .rg-auth { grid-template-columns: 1fr !important; }
-  .rg-wallet { grid-template-columns: 1fr !important; }
-  .rg-profile { grid-template-columns: 1fr !important; }
+  .rg-form, .rg-auth, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
 }
 
 @layer components {

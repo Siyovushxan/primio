@@ -181,7 +181,6 @@ export default function BrowsePage() {
   const [ads, setAds] = useState<Ad[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCat, setActiveCat] = useState<Category | null>(null);
-  const [showCats, setShowCats] = useState(false);
   const { loading: authLoading } = useAuth();
   const { t } = useLang();
 
@@ -240,37 +239,19 @@ export default function BrowsePage() {
 
         {/* Category filters */}
         <div style={{ marginBottom: 28 }}>
-          {/* Mobile toggle row */}
-          <div className="cats-mobile-row" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          <div className="cats-list" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button
               onClick={() => setActiveCat(null)}
               style={{ padding: "8px 18px", borderRadius: 100, border: `1px solid ${!activeCat ? "#7C3AED" : "#2D1F50"}`, background: !activeCat ? "#7C3AED" : "#160F2A", color: !activeCat ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 700, cursor: "pointer" }}
             >
               {t.browseAll}
             </button>
-            {activeCat && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 100, background: "#7C3AED", border: "1px solid #7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 600 }}>
-                <span>{CATEGORIES[activeCat].emoji}</span>
-                <span>{CATEGORIES[activeCat].label}</span>
-                <button onClick={() => setActiveCat(null)} style={{ background: "none", border: "none", color: "rgba(255,255,255,.7)", cursor: "pointer", fontSize: ".9rem", padding: "0 0 0 4px", lineHeight: 1 }}>×</button>
-              </div>
-            )}
-            <button
-              className="cats-toggle-btn"
-              onClick={() => setShowCats(s => !s)}
-              style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 100, border: "1px solid #2D1F50", background: showCats ? "rgba(124,58,237,.12)" : "#160F2A", color: showCats ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: 600, cursor: "pointer" }}
-            >
-              🏷 {showCats ? "Hide" : "Filter"}
-            </button>
-          </div>
-          {/* Full cat list — always visible on desktop, toggled on mobile */}
-          <div className={`cats-list${showCats ? " cats-open" : ""}`} style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {CATEGORY_KEYS.map((cat) => {
               const active = activeCat === cat;
               return (
                 <button
                   key={cat}
-                  onClick={() => { setActiveCat(cat); setShowCats(false); }}
+                  onClick={() => setActiveCat(cat)}
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 100, border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`, background: active ? "#7C3AED" : "#160F2A", color: active ? "#fff" : "#6D5B8E", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", transition: "all .15s" }}
                 >
                   <span>{CATEGORIES[cat].emoji}</span>
