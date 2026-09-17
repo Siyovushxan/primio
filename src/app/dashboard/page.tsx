@@ -533,7 +533,7 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                     </div>
                     {/* Buttons */}
                     <a href={ad.destinationURL} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", padding: "10px 0", borderRadius: 11, background: "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontSize: ".84rem", fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
-                      🔗 Saytga o&apos;tish
+                      🔗 Visit site
                     </a>
                     {isMine ? (
                       <Link href={`/ads/${ad.id}/bid`} style={{ display: "block", textAlign: "center", padding: "10px 0", borderRadius: 11, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>{t.raise}</Link>

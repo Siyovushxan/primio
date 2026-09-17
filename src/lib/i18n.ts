@@ -488,7 +488,7 @@ const translations = {
     browseEmpty: "Hali reklama yo'q",
     browseEmptySub: "Bu toifada birinchi bo'ling!",
     browsePlaceAd: "Reklama berish →",
-    browseVisitSite: "Saytga o'tish",
+    browseVisitSite: "Visit site",
     browseJustNow: "Hozirgina",
     browseMinAgo: "daqiqa oldin",
     browseHoursAgo: "soat oldin",
