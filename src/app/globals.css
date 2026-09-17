@@ -176,12 +176,20 @@ input, select, textarea { font-family: inherit; }
   .dash-sidebar > button,
   .dash-sidebar .sidebar-guide,
   .dash-sidebar .sidebar-signout {
+    width: auto !important;
+    margin-top: 0 !important;
     padding: 7px 13px !important;
     border-radius: 100px !important;
-    white-space: nowrap;
-    flex-shrink: 0;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
     font-size: .77rem !important;
-    min-width: fit-content;
+    min-width: fit-content !important;
+  }
+  /* Hide icon spans inside sidebar buttons on mobile to save space */
+  .dash-sidebar > button > span:first-child,
+  .dash-sidebar .sidebar-guide > span:first-child,
+  .dash-sidebar .sidebar-signout > span:first-child {
+    display: none !important;
   }
 
   .dash-main { padding: 0 14px 80px !important; }
