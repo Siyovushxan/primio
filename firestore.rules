@@ -17,8 +17,18 @@ service cloud.firestore {
         && request.resource.data.status == "pending"
         && request.resource.data.totalPaidCents == 0
         && request.resource.data.moderationPassed == true;
-      // Update/delete: only ad owner
-      allow update, delete: if request.auth != null
+      // Update: owner only, server-controlled fields are immutable from client
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.advertiserUID
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+             "status", "expiresAt", "startsAt",
+             "totalPaidCents", "dailyBidCents",
+             "moderationPassed", "advertiserUID",
+             "impressions", "clicks",
+             "pendingPaymentId", "externalTxId", "paymentMethod"
+           ]);
+      // Delete: owner only
+      allow delete: if request.auth != null
         && request.auth.uid == resource.data.advertiserUID;
     }
 

@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { adminAuth } from "@/lib/firebaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-function hasValidToken(req: NextRequest): boolean {
+async function hasValidToken(req: NextRequest): Promise<boolean> {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) return false;
   try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-    return !!(payload.user_id || payload.sub);
+    await adminAuth.verifyIdToken(token);
+    return true;
   } catch {
     return false;
   }
 }
 
 export async function POST(req: NextRequest) {
-  if (!hasValidToken(req)) {
+  if (!await hasValidToken(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
