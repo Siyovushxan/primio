@@ -229,23 +229,55 @@ export default function BrowsePage() {
       </div>
 
       <div className="browse-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px", position: "relative", zIndex: 1 }}>
-        {/* Header */}
+        {/* ── Header: title+badge (left) · stats 2×2 (right) ────────────── */}
         <div style={{ marginBottom: 24, animation: "fade .3s ease both" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
-            <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.35rem, 5vw, 2rem)", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.15 }}>
-              {activeCat ? `${CATEGORIES[activeCat].emoji} ${CATEGORIES[activeCat].label}` : t.browseAllAds}
-            </h1>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap" }}>
+
+            {/* Left — title + subtitle */}
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.35rem,5vw,2rem)", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.15 }}>
+                  {activeCat ? `${CATEGORIES[activeCat].emoji} ${CATEGORIES[activeCat].label}` : t.browseAllAds}
+                </h1>
+                {!loading && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ".72rem", color: "#22C55E", fontFamily: "'JetBrains Mono',monospace", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)", borderRadius: 100, padding: "4px 12px", whiteSpace: "nowrap", animation: "badge-pulse 3s ease-in-out infinite" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E", display: "inline-block", animation: "livedot 2s ease-in-out infinite" }} />
+                    {ads.length} {t.browseLive}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: ".86rem", color: "#6D5B8E", lineHeight: 1.55, maxWidth: "56ch" }}>{t.browseSub}</p>
+            </div>
+
+            {/* Right — 2×2 stat grid */}
             {!loading && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ".75rem", color: "#22C55E", fontFamily: "'JetBrains Mono',monospace", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)", borderRadius: 100, padding: "4px 12px", whiteSpace: "nowrap", animation: "badge-pulse 3s ease-in-out infinite" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E", display: "inline-block", animation: "livedot 2s ease-in-out infinite" }} />
-                {ads.length} {t.browseLive}
-              </span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flexShrink: 0 }}>
+                {[
+                  { label: t.browseStats[0], value: ads.length, color: "#34D399" },
+                  { label: t.browseStats[1], value: ads.reduce((s, a) => s + (a.impressions || 0), 0), color: "#A78BFA" },
+                  { label: t.browseStats[2], value: ads.reduce((s, a) => s + (a.clicks || 0), 0), color: "#FCD34D" },
+                  { label: t.browseStats[3], value: (() => {
+                    const imp = ads.reduce((s, a) => s + (a.impressions || 0), 0);
+                    const clk = ads.reduce((s, a) => s + (a.clicks || 0), 0);
+                    return imp > 0 ? `${((clk / imp) * 100).toFixed(1)}%` : "0.0%";
+                  })(), color: "#F59E0B" },
+                ].map((stat) => (
+                  <div key={stat.label} className="browse-stat-card" style={{ background: "linear-gradient(135deg,rgba(45,31,80,.6) 0%,rgba(22,15,42,.9) 100%)", border: "1px solid rgba(45,31,80,.8)", borderRadius: 12, padding: "12px 16px", minWidth: 108, transition: "all .2s ease" }}>
+                    <div style={{ fontSize: ".57rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 5, whiteSpace: "nowrap" }}>{stat.label}</div>
+                    <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: stat.color }}>
+                      {typeof stat.value === "number" ? fmt(stat.value) : stat.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-          <p style={{ fontSize: ".86rem", color: "#6D5B8E", lineHeight: 1.55 }}>{t.browseSub}</p>
         </div>
 
-        {/* Category filters */}
+        {/* ── Divider ────────────────────────────────────────────────────────── */}
+        <div style={{ height: 1, background: "linear-gradient(90deg,rgba(124,58,237,.2),rgba(45,31,80,.4),transparent)", marginBottom: 20 }} />
+
+        {/* ── Category filters ───────────────────────────────────────────────── */}
         <div style={{ marginBottom: 28 }}>
           <div className="cats-list" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button
@@ -269,30 +301,6 @@ export default function BrowsePage() {
             })}
           </div>
         </div>
-
-        {/* Stats bar */}
-        {!loading && ads.length > 0 && (
-          <div style={{ display: "flex", gap: 10, marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", paddingBottom: 2 }}>
-            <style>{`.stats-scroll::-webkit-scrollbar{display:none}`}</style>
-            {[
-              { label: t.browseStats[0], value: ads.length, color: "#34D399" },
-              { label: t.browseStats[1], value: ads.reduce((s, a) => s + (a.impressions || 0), 0), color: "#A78BFA" },
-              { label: t.browseStats[2], value: ads.reduce((s, a) => s + (a.clicks || 0), 0), color: "#FCD34D" },
-              { label: t.browseStats[3], value: (() => {
-                const totalImp = ads.reduce((s, a) => s + (a.impressions || 0), 0);
-                const totalClk = ads.reduce((s, a) => s + (a.clicks || 0), 0);
-                return totalImp > 0 ? `${((totalClk / totalImp) * 100).toFixed(1)}%` : "0.0%";
-              })(), color: "#F59E0B" },
-            ].map((stat) => (
-              <div key={stat.label} className="browse-stat-card" style={{ flexShrink: 0, minWidth: 130, background: "linear-gradient(135deg, rgba(45,31,80,.6) 0%, rgba(22,15,42,.9) 100%)", border: "1px solid rgba(45,31,80,.8)", borderRadius: 14, padding: "14px 18px", transition: "all .2s ease" }}>
-                <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 7, whiteSpace: "nowrap" }}>{stat.label}</div>
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.2rem", fontWeight: 700, color: stat.color }}>
-                  {typeof stat.value === "number" ? fmt(stat.value) : stat.value}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Content */}
         {loading ? (
