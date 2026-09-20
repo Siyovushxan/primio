@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
@@ -331,18 +331,23 @@ export default function EditAdPage() {
         finalImageURL = imgData.url;
       }
 
-      await updateDoc(doc(db, "ads", adId), {
-        title: title.trim(),
-        description: description.trim(),
-        destinationURL: url.trim(),
-        category,
-        dailyBidCents: bidCents,
-        durationDays: effectiveDays,
-        imageURL: finalImageURL,
-        status: "pending",
-        moderationPassed: true,
-        updatedAt: serverTimestamp(),
+      const updateRes = await fetch(`/api/ads/${adId}/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          destinationURL: url.trim(),
+          category,
+          dailyBidCents: bidCents,
+          durationDays: effectiveDays,
+          imageURL: finalImageURL,
+        }),
       });
+      if (!updateRes.ok) {
+        const errData = await updateRes.json();
+        throw new Error(errData.error || t.errGeneral);
+      }
 
       router.push(`/ads/${adId}/pending`);
     } catch (err: any) {

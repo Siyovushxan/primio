@@ -23,9 +23,9 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { adId, amount, type, newDailyBidCents } = await req.json();
+    const { adId, type, newDailyBidCents, durationDays } = await req.json();
 
-    if (!adId || !amount) {
+    if (!adId) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
@@ -38,17 +38,33 @@ export async function POST(req: NextRequest) {
     // Verify caller owns this ad
     if (ad.advertiserUID !== callerUid) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    };
+    }
 
-    const isBidUpgrade = type === "bid_upgrade";
-    if (isBidUpgrade) {
+    // Validate status and inputs per payment type, then compute amount server-side
+    let amount: number;
+    if (type === "bid_upgrade") {
       if (ad.status !== "active") {
         return NextResponse.json({ error: "Ad is not active" }, { status: 400 });
       }
+      const newBid = Number(newDailyBidCents);
+      if (!newBid || newBid <= ad.dailyBidCents) {
+        return NextResponse.json({ error: "New bid must exceed current bid" }, { status: 400 });
+      }
+      const expiresAt: Date = ad.expiresAt?.toDate?.() ?? new Date();
+      const remainingDays = Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000));
+      amount = (newBid - ad.dailyBidCents) * remainingDays;
+    } else if (type === "renewal") {
+      if (ad.status !== "expired") {
+        return NextResponse.json({ error: "Only expired ads can be renewed" }, { status: 400 });
+      }
+      const days = Math.max(1, Number(durationDays) || ad.durationDays);
+      amount = ad.dailyBidCents * days;
     } else {
+      // purchase — new ad awaiting first payment
       if (ad.status !== "pending") {
         return NextResponse.json({ error: "Ad is not in pending status" }, { status: 400 });
       }
+      amount = ad.dailyBidCents * ad.durationDays;
     }
 
     // Get user email for Dodo customer record
@@ -84,8 +100,9 @@ export async function POST(req: NextRequest) {
         metadata: {
           adId,
           advertiserUID: ad.advertiserUID,
-          type: isBidUpgrade ? "bid_upgrade" : "purchase",
+          type: type === "bid_upgrade" ? "bid_upgrade" : type === "renewal" ? "renewal" : "purchase",
           newDailyBidCents: String(newDailyBidCents || ""),
+          durationDays: String(durationDays || ""),
         },
         payment_link: true,
         return_url: `${baseUrl}/payment/success?adId=${adId}`,

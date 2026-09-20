@@ -96,9 +96,9 @@ export default function HomePage() {
   ];
 
   const STATS = [
-    { val: 340, suffix: "+", label: t.lang === "uz" ? "Jonli reklamalar" : t.lang === "ru" ? "Живых рекламы" : "Live Ads" },
-    { val: 18, suffix: "", label: t.lang === "uz" ? "Toifalar" : t.lang === "ru" ? "Категории" : "Categories" },
-    { val: 12000, suffix: "+", label: t.lang === "uz" ? "Kunlik ko'rishlar" : t.lang === "ru" ? "Ежедневных просмотров" : "Daily Views" },
+    { val: 340, suffix: "+", label: lang === "uz" ? "Jonli reklamalar" : lang === "ru" ? "Живых рекламы" : "Live Ads" },
+    { val: 18, suffix: "", label: lang === "uz" ? "Toifalar" : lang === "ru" ? "Категории" : "Categories" },
+    { val: 12000, suffix: "+", label: lang === "uz" ? "Kunlik ko'rishlar" : lang === "ru" ? "Ежедневных просмотров" : "Daily Views" },
   ];
 
   return (

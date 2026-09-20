@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useLang } from "@/contexts/LangContext";
 
 type StepStatus = "waiting" | "running" | "done" | "failed";
@@ -225,30 +223,26 @@ export default function ScanningPage() {
 
       setStep("save", "running");
       try {
-        const adRef = await addDoc(collection(db, "ads"), {
-          advertiserUID: uid,
-          title,
-          description,
-          imageURL,
-          destinationURL: url,
-          category,
-          dailyBidCents: bidCents,
-          durationDays: duration,
-          totalPaidCents: 0,
-          status: "pending",
-          moderationPassed: true,
-          startsAt: null,
-          expiresAt: null,
-          impressions: 0,
-          clicks: 0,
-          externalTxId: "",
-          paymentMethod: "",
-          createdAt: serverTimestamp(),
+        const saveRes = await fetch("/api/ads/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({
+            advertiserUID: uid,
+            title,
+            description,
+            imageURL,
+            destinationURL: url,
+            category,
+            dailyBidCents: bidCents,
+            durationDays: duration,
+          }),
         });
+        const saveData = await saveRes.json();
+        if (!saveRes.ok) throw new Error(saveData.error || t.errSaveFailed);
         setStep("save", "done");
         sessionStorage.removeItem("primio_scan");
         await new Promise((r) => setTimeout(r, 700));
-        router.replace(`/ads/${adRef.id}/pending`);
+        router.replace(`/ads/${saveData.adId}/pending`);
       } catch (err: any) {
         setStep("save", "failed");
         setError(t.errSaveFailed + ": " + (err?.message || ""));
