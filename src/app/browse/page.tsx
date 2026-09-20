@@ -264,7 +264,8 @@ export default function BrowsePage() {
 
         {/* Stats bar */}
         {!loading && ads.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))", gap: 10, marginBottom: 24 }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", paddingBottom: 2 }}>
+            <style>{`.stats-scroll::-webkit-scrollbar{display:none}`}</style>
             {[
               { label: t.browseStats[0], value: ads.length, color: "#34D399" },
               { label: t.browseStats[1], value: ads.reduce((s, a) => s + (a.impressions || 0), 0), color: "#A78BFA" },
@@ -275,9 +276,9 @@ export default function BrowsePage() {
                 return totalImp > 0 ? `${((totalClk / totalImp) * 100).toFixed(1)}%` : "0.0%";
               })(), color: "#F59E0B" },
             ].map((stat) => (
-              <div key={stat.label} style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 14, padding: "12px 14px" }}>
-                <div style={{ fontSize: ".66rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 4 }}>{stat.label}</div>
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.1rem", fontWeight: 700, color: stat.color }}>
+              <div key={stat.label} style={{ flexShrink: 0, minWidth: 130, background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 14, padding: "12px 16px" }}>
+                <div style={{ fontSize: ".62rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 6, whiteSpace: "nowrap" }}>{stat.label}</div>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: stat.color }}>
                   {typeof stat.value === "number" ? fmt(stat.value) : stat.value}
                 </div>
               </div>
