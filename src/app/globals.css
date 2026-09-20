@@ -54,6 +54,15 @@ input, select, textarea { font-family: inherit; }
 @keyframes livedot { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
 @keyframes slidein { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Shared 3D / motion animations ─────────────────────────────────────────── */
+@keyframes slideUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes float3d { 0%,100%{transform:perspective(1000px) rotateX(-6deg) rotateY(14deg) rotateZ(-1deg) translateY(0)} 33%{transform:perspective(1000px) rotateX(-10deg) rotateY(10deg) rotateZ(1deg) translateY(-12px)} 66%{transform:perspective(1000px) rotateX(-4deg) rotateY(18deg) rotateZ(-2deg) translateY(-6px)} }
+@keyframes float-sm { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-10px) rotate(2deg)} }
+@keyframes orb-drift { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(30px,-40px) scale(1.1)} 66%{transform:translate(-20px,20px) scale(.9)} }
+@keyframes orb-drift2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-40px,30px) scale(1.15)} 80%{transform:translate(20px,-20px) scale(.85)} }
+@keyframes glow-pulse { 0%,100%{box-shadow:0 0 30px rgba(124,58,237,.3),0 0 80px rgba(124,58,237,.08)} 50%{box-shadow:0 0 50px rgba(124,58,237,.5),0 0 120px rgba(124,58,237,.15)} }
+@keyframes badge-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+@keyframes rank-glow { 0%,100%{text-shadow:0 0 10px rgba(245,158,11,.4)} 50%{text-shadow:0 0 25px rgba(245,158,11,.9),0 0 50px rgba(245,158,11,.4)} }
 
 /* ── Responsive grid utilities ─────────────────────────────────────────────── */
 .rg-2        { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }

@@ -61,23 +61,23 @@ function AdCard({ ad, position, t }: { ad: Ad; position: number; t: Translations
 
   return (
     <div style={{
-      background: "#1A1230",
-      border: `1px solid ${isTop3 ? "rgba(124,58,237,.4)" : "#2D1F50"}`,
+      background: `linear-gradient(160deg, rgba(45,31,80,.7) 0%, rgba(14,11,26,.97) 100%)`,
+      border: `1px solid ${isTop3 ? "rgba(124,58,237,.4)" : "rgba(45,31,80,.6)"}`,
       borderRadius: 20,
       overflow: "hidden",
       transition: "transform .2s, border-color .2s, box-shadow .2s",
-      boxShadow: isTop3 ? "0 0 24px rgba(124,58,237,.1)" : "none",
+      boxShadow: isTop3 ? "0 0 30px rgba(124,58,237,.15), 0 4px 20px rgba(0,0,0,.3)" : "0 4px 16px rgba(0,0,0,.2)",
       cursor: "default",
     }}
     onMouseEnter={e => {
-      (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)";
-      (e.currentTarget as HTMLElement).style.boxShadow = "0 16px 40px rgba(0,0,0,.4)";
-      (e.currentTarget as HTMLElement).style.borderColor = "#7C3AED";
+      (e.currentTarget as HTMLElement).style.transform = "translateY(-5px) scale(1.01)";
+      (e.currentTarget as HTMLElement).style.boxShadow = "0 20px 50px rgba(124,58,237,.2), 0 0 0 1px rgba(124,58,237,.3)";
+      (e.currentTarget as HTMLElement).style.borderColor = "rgba(124,58,237,.55)";
     }}
     onMouseLeave={e => {
       (e.currentTarget as HTMLElement).style.transform = "";
-      (e.currentTarget as HTMLElement).style.boxShadow = isTop3 ? "0 0 24px rgba(124,58,237,.1)" : "none";
-      (e.currentTarget as HTMLElement).style.borderColor = isTop3 ? "rgba(124,58,237,.4)" : "#2D1F50";
+      (e.currentTarget as HTMLElement).style.boxShadow = isTop3 ? "0 0 30px rgba(124,58,237,.15), 0 4px 20px rgba(0,0,0,.3)" : "0 4px 16px rgba(0,0,0,.2)";
+      (e.currentTarget as HTMLElement).style.borderColor = isTop3 ? "rgba(124,58,237,.4)" : "rgba(45,31,80,.6)";
     }}>
       {/* Image */}
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#160F2A", overflow: "hidden" }}>
@@ -218,18 +218,26 @@ export default function BrowsePage() {
   }, [activeCat, authLoading]);
 
   return (
-    <div style={{ minHeight: "calc(100vh - 64px)", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
-      <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}*{box-sizing:border-box}`}</style>
+    <div style={{ minHeight: "calc(100vh - 64px)", background: "#0A0715", color: "#EDE9FE", fontFamily: "system-ui,sans-serif", position: "relative", overflow: "hidden" }}>
+      <style>{`@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}*{box-sizing:border-box}.browse-stat-card:hover{border-color:rgba(124,58,237,.4)!important;transform:translateY(-2px);}`}</style>
 
-      <div className="browse-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px" }}>
+      {/* Background orbs */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", top: 0, right: "10%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(124,58,237,.09) 0%, transparent 70%)", animation: "orb-drift 22s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", bottom: "20%", left: "0", width: 350, height: 350, borderRadius: "50%", background: "radial-gradient(circle, rgba(245,158,11,.06) 0%, transparent 70%)", animation: "orb-drift2 28s ease-in-out infinite" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(124,58,237,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,.025) 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      </div>
+
+      <div className="browse-container" style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 80px", position: "relative", zIndex: 1 }}>
         {/* Header */}
         <div style={{ marginBottom: 24, animation: "fade .3s ease both" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
             <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.35rem, 5vw, 2rem)", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.15 }}>
               {activeCat ? `${CATEGORIES[activeCat].emoji} ${CATEGORIES[activeCat].label}` : t.browseAllAds}
             </h1>
             {!loading && (
-              <span style={{ fontSize: ".78rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace", background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 100, padding: "3px 10px", whiteSpace: "nowrap" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ".75rem", color: "#22C55E", fontFamily: "'JetBrains Mono',monospace", background: "rgba(34,197,94,.08)", border: "1px solid rgba(34,197,94,.25)", borderRadius: 100, padding: "4px 12px", whiteSpace: "nowrap", animation: "badge-pulse 3s ease-in-out infinite" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E", display: "inline-block", animation: "livedot 2s ease-in-out infinite" }} />
                 {ads.length} {t.browseLive}
               </span>
             )}
@@ -276,9 +284,9 @@ export default function BrowsePage() {
                 return totalImp > 0 ? `${((totalClk / totalImp) * 100).toFixed(1)}%` : "0.0%";
               })(), color: "#F59E0B" },
             ].map((stat) => (
-              <div key={stat.label} style={{ flexShrink: 0, minWidth: 130, background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 14, padding: "12px 16px" }}>
-                <div style={{ fontSize: ".62rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 6, whiteSpace: "nowrap" }}>{stat.label}</div>
-                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.15rem", fontWeight: 700, color: stat.color }}>
+              <div key={stat.label} className="browse-stat-card" style={{ flexShrink: 0, minWidth: 130, background: "linear-gradient(135deg, rgba(45,31,80,.6) 0%, rgba(22,15,42,.9) 100%)", border: "1px solid rgba(45,31,80,.8)", borderRadius: 14, padding: "14px 18px", transition: "all .2s ease" }}>
+                <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 7, whiteSpace: "nowrap" }}>{stat.label}</div>
+                <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.2rem", fontWeight: 700, color: stat.color }}>
                   {typeof stat.value === "number" ? fmt(stat.value) : stat.value}
                 </div>
               </div>
@@ -294,7 +302,7 @@ export default function BrowsePage() {
             ))}
           </div>
         ) : ads.length === 0 ? (
-          <div style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 24, padding: "64px 32px", textAlign: "center" }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(45,31,80,.5) 0%, rgba(22,15,42,.8) 100%)", border: "1px solid rgba(124,58,237,.2)", borderRadius: 24, padding: "64px 32px", textAlign: "center" }}>
             <div style={{ fontSize: "3.5rem", marginBottom: 16 }}>
               {activeCat ? CATEGORIES[activeCat].emoji : "📢"}
             </div>
