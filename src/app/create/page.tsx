@@ -496,7 +496,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
-    <div style={{ padding: "28px 32px 60px", flex: 1, minWidth: 0 }}>
+    <div className="create-inner" style={{ padding: "28px 32px 60px", flex: 1, minWidth: 0 }}>
       {/* Page header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: ".7rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 6 }}>
@@ -553,7 +553,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
             </div>
 
             {/* ── 2. Rasm + Toifa yonma-yon ─────────────────────────── */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }}>
+            <div className="create-inner-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "start" }}>
 
               {/* Rasm */}
               <div style={{ ...card, padding: 16 }}>
@@ -781,7 +781,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
           </div>
 
           {/* ── RIGHT: Preview + Breakdown + Rules ─────────────────── */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 80 }}>
+          <div className="create-right-col" style={{ display: "flex", flexDirection: "column", gap: 16, position: "sticky", top: 80 }}>
 
             {/* Ad preview card */}
             <div style={{ ...card, padding: 20 }}>

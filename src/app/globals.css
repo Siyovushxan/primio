@@ -161,6 +161,10 @@ input, select, textarea { font-family: inherit; }
 
   /* Create page title+URL grid: stack on mobile */
   .create-title-url-grid { grid-template-columns: 1fr !important; }
+  /* Create page inner padding: tighter on mobile */
+  .create-inner { padding: 20px 0 100px !important; }
+  /* Create page right sticky col: unstick on mobile to avoid overlay */
+  .create-right-col { position: static !important; }
 }
 
 /* ── CSS custom properties ──────────────────────────────────────────────────── */
