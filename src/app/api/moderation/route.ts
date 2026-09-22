@@ -389,6 +389,18 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handlePost(req);
+  } catch (err: any) {
+    console.error("Moderation route unhandled error:", err?.message || err);
+    return NextResponse.json(
+      { error: "Internal server error", approved: false, reason: "Moderation service encountered an unexpected error. Please try again." },
+      { status: 500 }
+    );
+  }
+}
+
+async function handlePost(req: NextRequest) {
   if (!await hasValidToken(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

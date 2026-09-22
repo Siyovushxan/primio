@@ -12,13 +12,17 @@ function getAdminApp(): App {
     return initializeApp({ projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || "primio-e6f11" });
   }
 
-  return initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: privateKey.replace(/\\n/g, "\n"),
-    }),
-  });
+  try {
+    return initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: privateKey.replace(/\\n/g, "\n"),
+      }),
+    });
+  } catch {
+    return initializeApp({ projectId: process.env.FIREBASE_ADMIN_PROJECT_ID || "primio-e6f11" });
+  }
 }
 
 export const adminDb   = getFirestore(getAdminApp());
