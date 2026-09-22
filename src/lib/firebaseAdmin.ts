@@ -59,7 +59,7 @@ export const adminDb: Firestore = new Proxy({} as Firestore, {
   get(_, prop: string) {
     initAdmin();
     if (!_db) throw new Error(`Firebase Admin DB unavailable: ${_initError}`);
-    const val = (_db as Record<string, unknown>)[prop];
+    const val = (_db as unknown as Record<string, unknown>)[prop];
     return typeof val === "function" ? (val as Function).bind(_db) : val;
   },
 });
@@ -69,7 +69,7 @@ export const adminAuth: Auth = new Proxy({} as Auth, {
     initAdmin();
     if (!_auth)
       throw new Error(`Firebase Admin Auth unavailable: ${_initError}`);
-    const val = (_auth as Record<string, unknown>)[prop];
+    const val = (_auth as unknown as Record<string, unknown>)[prop];
     return typeof val === "function" ? (val as Function).bind(_auth) : val;
   },
 });
