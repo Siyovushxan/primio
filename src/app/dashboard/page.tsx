@@ -263,7 +263,7 @@ function AppHeader({
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
-      <div style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+      <div className="dash-header-outer" style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
             <rect width="100" height="100" rx="24" fill="#7C3AED"/>
@@ -273,8 +273,8 @@ function AppHeader({
           <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
           <span className="dash-header-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
-          <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
+        <div className="dash-header-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
+          <div className="dash-header-lang" style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
             {LANGS.map((l) => (
               <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
             ))}
@@ -287,7 +287,7 @@ function AppHeader({
             <span style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
             <span className="dash-header-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
-          <button onClick={onGoCreate} style={{ padding: "8px 13px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".8rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>+&nbsp;{t.ctaCreate}</button>
+          <button className="dash-header-cta" onClick={onGoCreate} style={{ padding: "8px 13px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".8rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>+&nbsp;{t.ctaCreate}</button>
           {/* Hamburger — mobile only */}
           <button
             className="dash-hamburger"

@@ -136,11 +136,14 @@ input, select, textarea { font-family: inherit; }
   }
   .cats-list::-webkit-scrollbar { display: none; }
 
-  /* Dashboard header: hide DASHBOARD badge + name, keep lang + spent compact */
+  /* Dashboard header: single row on mobile */
   .dash-header-badge { display: none !important; }
+  .dash-header-lang  { display: none !important; }
+  .dash-header-cta   { display: none !important; }
   .dash-header-name  { display: none !important; }
   .dash-header-spent { padding: 5px 9px !important; }
   .dash-header-spent .spent-label { display: none !important; }
+  .dash-header-outer { padding: 10px 16px !important; flex-wrap: nowrap !important; gap: 10px !important; }
 
   /* Sidebar → drawer mode: hide sidebar, show hamburger in header */
   .dash-sidebar { display: none !important; }
