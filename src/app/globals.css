@@ -165,6 +165,8 @@ input, select, textarea { font-family: inherit; }
   .create-inner { padding: 20px 0 100px !important; }
   /* Create page right sticky col: unstick on mobile to avoid overlay */
   .create-right-col { position: static !important; }
+  /* Duration grid: 2×2 on mobile instead of 1×4 */
+  .create-dur-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
 /* ── CSS custom properties ──────────────────────────────────────────────────── */

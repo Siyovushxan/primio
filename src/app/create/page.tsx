@@ -664,7 +664,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
 
               {/* Duration */}
               <label style={{ ...label, marginBottom: 10 }}>{t.durLabel} <span style={{ color: "#F87171" }}>*</span></label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+              <div className="create-dur-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
                 {([7, 14, 30] as const).map((d) => {
                   const active = !isCustomDur && duration === d;
                   const dayTotal = (bidCents * d / 100).toFixed(2);
