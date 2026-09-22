@@ -252,11 +252,12 @@ const inp: React.CSSProperties = {
 
 // ─── App Header ───────────────────────────────────────────────────────────────
 function AppHeader({
-  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet, onGoAll,
+  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet, onGoAll, onOpenDrawer,
 }: {
   lang: Lang; setLang: (l: string) => void;
   totalSpentCents: number; brandName: string; brandInitial: string;
   onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void; onGoAll: () => void;
+  onOpenDrawer: () => void;
 }) {
   const t = T[lang];
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
@@ -270,7 +271,7 @@ function AppHeader({
             <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
           </svg>
           <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
-          <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
+          <span className="dash-header-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
           <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
@@ -287,9 +288,177 @@ function AppHeader({
             <span className="dash-header-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
           <button onClick={onGoCreate} style={{ padding: "8px 13px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".8rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>+&nbsp;{t.ctaCreate}</button>
+          {/* Hamburger — mobile only */}
+          <button
+            className="dash-hamburger"
+            onClick={onOpenDrawer}
+            aria-label="Open menu"
+            style={{ alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", color: "#A78BFA", cursor: "pointer", flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="4" width="14" height="1.5" rx=".75" fill="currentColor"/>
+              <rect x="2" y="8.25" width="14" height="1.5" rx=".75" fill="currentColor"/>
+              <rect x="2" y="12.5" width="14" height="1.5" rx=".75" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
+  );
+}
+
+// ─── Mobile Dash Drawer ───────────────────────────────────────────────────────
+function MobileDashDrawer({
+  open, onClose, screen, setScreen, lang, setLang, brandName, brandInitial,
+  totalSpentCents, myAdsCount, onGoCreate, onSignOut,
+}: {
+  open: boolean; onClose: () => void;
+  screen: Screen; setScreen: (s: Screen) => void;
+  lang: Lang; setLang: (l: string) => void;
+  brandName: string; brandInitial: string;
+  totalSpentCents: number; myAdsCount: number;
+  onGoCreate: () => void; onSignOut: () => void;
+}) {
+  const t = T[lang];
+
+  // Body scroll lock
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  const NAV: { k: Screen; icon: string; label: string; badge?: number }[] = [
+    { k: "all",         icon: "🏆", label: t.navAll },
+    { k: "myads",      icon: "📋", label: t.navMyAds, badge: myAdsCount || undefined },
+    { k: "cats",       icon: "🏷",  label: t.navCats },
+    { k: "wallet",     icon: "💳", label: t.navWallet },
+    { k: "profile",    icon: "👤", label: t.navProfile },
+  ];
+
+  const go = (s: Screen) => { startTransition(() => setScreen(s)); onClose(); };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 199,
+          background: "rgba(0,0,0,.55)", backdropFilter: "blur(3px)",
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity .28s ease",
+        }}
+      />
+
+      {/* Drawer panel */}
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 200,
+        width: "min(300px, 88vw)",
+        background: "#0E0B1A",
+        borderLeft: "1px solid #2D1F50",
+        display: "flex", flexDirection: "column",
+        transform: open ? "translateX(0)" : "translateX(100%)",
+        transition: "transform .3s cubic-bezier(.4,0,.2,1)",
+        overflowY: "auto",
+      }}>
+        {/* Drawer header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2D1F50", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+              <rect width="100" height="100" rx="24" fill="#7C3AED"/>
+              <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
+              <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
+            </svg>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #2D1F50", background: "rgba(109,91,142,.12)", color: "#6D5B8E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* User info */}
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #2D1F50", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <span style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".88rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
+            <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 2 }}>
+              {t.totalSpent}: <span style={{ color: "#FCD34D", fontFamily: "'JetBrains Mono',monospace" }}>${(totalSpentCents / 100).toFixed(0)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "10px 10px" }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
+          {NAV.map((n) => {
+            const active = screen === n.k;
+            return (
+              <button
+                key={n.k}
+                onClick={() => go(n.k)}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 10,
+                  padding: "11px 12px", borderRadius: 10, border: "none", marginBottom: 2,
+                  background: active ? "rgba(124,58,237,.16)" : "transparent",
+                  color: active ? "#A855F7" : "#A78BFA",
+                  fontSize: ".88rem", fontWeight: active ? 700 : 500, cursor: "pointer", textAlign: "left",
+                }}
+              >
+                <span style={{ width: 20, textAlign: "center" }}>{n.icon}</span>
+                <span style={{ flex: 1 }}>{n.label}</span>
+                {n.badge ? (
+                  <span style={{ padding: "1px 8px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
+                ) : null}
+              </button>
+            );
+          })}
+
+          <div style={{ height: 1, background: "#2D1F50", margin: "10px 2px" }} />
+
+          <button
+            onClick={() => { window.open("/how-it-works", "_blank"); onClose(); }}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "#6D5B8E", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
+          >
+            <span style={{ width: 20, textAlign: "center" }}>📖</span>
+            <span>{t.navGuide}</span>
+          </button>
+        </nav>
+
+        {/* Lang switcher */}
+        <div style={{ padding: "12px 20px", borderTop: "1px solid #2D1F50", flexShrink: 0 }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 9 }}>Til</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {LANGS.map((l) => (
+              <button key={l.code} onClick={() => setLang(l.code as Lang)}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "#2D1F50"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "#6D5B8E", transition: "all .15s" }}
+              >{l.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ padding: "0 20px 32px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={() => { onGoCreate(); onClose(); }}
+            style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".84rem", fontWeight: 700, cursor: "pointer" }}
+          >
+            + {t.ctaCreate}
+          </button>
+          <button
+            onClick={() => { onSignOut(); onClose(); }}
+            style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid rgba(248,113,113,.3)", background: "rgba(248,113,113,.07)", color: "#F87171", fontSize: ".84rem", fontWeight: 700, cursor: "pointer" }}
+          >
+            ↩ {t.logout}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1118,6 +1287,7 @@ export default function DashboardPage() {
   const lang = (["uz","en","ru"].includes(globalLang) ? globalLang : "en") as Lang;
   const setLang = (l: string) => setGlobalLang(l as Lang);
   const [screen, setScreen] = useState<Screen>("all");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [myAds, setMyAds]   = useState<Ad[]>([]);
   const [adsLoading, setAdsLoading] = useState(true);
@@ -1182,6 +1352,15 @@ export default function DashboardPage() {
           onGoAll={() => startTransition(() => setScreen("all"))}
           onGoProfile={() => startTransition(() => setScreen("profile"))}
           onGoWallet={() => startTransition(() => setScreen("wallet"))}
+          onOpenDrawer={() => setDrawerOpen(true)}
+        />
+        <MobileDashDrawer
+          open={drawerOpen} onClose={() => setDrawerOpen(false)}
+          screen={screen} setScreen={setScreen}
+          lang={lang} setLang={setLang}
+          brandName={brand} brandInitial={initial}
+          totalSpentCents={spent} myAdsCount={myAds.length}
+          onGoCreate={handleGoCreate} onSignOut={handleSignOut}
         />
         <div className="dash-layout">
           <Sidebar

@@ -78,6 +78,7 @@ input, select, textarea { font-family: inherit; }
 /* ── Dashboard / Create layout ─────────────────────────────────────────────── */
 .dash-layout { display: flex; align-items: stretch; }
 .dash-main   { flex: 1; min-width: 0; overflow: auto; }
+.dash-hamburger { display: none; }
 
 .dash-sidebar {
   width: 236px; flex-shrink: 0;
@@ -140,66 +141,9 @@ input, select, textarea { font-family: inherit; }
   .dash-header-spent { padding: 5px 9px !important; }
   .dash-header-spent .spent-label { display: none !important; }
 
-  /* Sidebar → horizontal scrollable nav strip */
-  .dash-layout { flex-direction: column; }
-  .dash-sidebar {
-    width: 100% !important;
-    min-height: auto !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    padding: 8px 12px !important;
-    gap: 4px !important;
-    border-right: none !important;
-    border-bottom: 1px solid #2D1F50 !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .dash-sidebar::-webkit-scrollbar { display: none; }
-
-  /* Hide only: section label (MENU text div) */
-  .sidebar-section-label { display: none !important; }
-
-  /* Wallet status card: compact horizontal chip */
-  .sidebar-promo {
-    margin-top: 0 !important;
-    padding: 7px 12px !important;
-    border-radius: 100px !important;
-    flex-shrink: 0;
-    min-width: fit-content;
-    display: flex !important;
-    align-items: center;
-  }
-  .sidebar-promo > div:first-child { display: none !important; }
-  .sidebar-promo > div:nth-child(2) { display: none !important; }
-  .sidebar-promo > button {
-    padding: 0 !important;
-    background: none !important;
-    border: none !important;
-    font-size: .77rem !important;
-    color: #A855F7 !important;
-    white-space: nowrap;
-  }
-
-  /* All sidebar buttons compact */
-  .dash-sidebar > button,
-  .dash-sidebar .sidebar-guide,
-  .dash-sidebar .sidebar-signout {
-    width: auto !important;
-    margin-top: 0 !important;
-    padding: 7px 13px !important;
-    border-radius: 100px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-    font-size: .77rem !important;
-    min-width: fit-content !important;
-  }
-  /* Hide icon spans inside sidebar buttons on mobile to save space */
-  .dash-sidebar > button > span:first-child,
-  .dash-sidebar .sidebar-guide > span:first-child,
-  .dash-sidebar .sidebar-signout > span:first-child {
-    display: none !important;
-  }
+  /* Sidebar → drawer mode: hide sidebar, show hamburger in header */
+  .dash-sidebar { display: none !important; }
+  .dash-hamburger { display: flex !important; }
 
   .dash-main { padding: 0 14px 80px !important; }
   .browse-container { padding: 20px 14px 80px !important; }
