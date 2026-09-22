@@ -151,6 +151,131 @@ input, select, textarea { font-family: inherit; }
   .rg-form, .rg-auth, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
 }
 
+/* ── CSS custom properties ──────────────────────────────────────────────────── */
+:root {
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --bnav-h: 64px;
+}
+
+/* ── Scroll-reveal utility ──────────────────────────────────────────────────── */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sr { opacity: 0; }
+.sr.in { animation: revealUp .5s cubic-bezier(.22,1,.36,1) both; }
+.sr.in.d1 { animation-delay: .08s; }
+.sr.in.d2 { animation-delay: .16s; }
+.sr.in.d3 { animation-delay: .24s; }
+
+/* ── Mobile bottom navigation ───────────────────────────────────────────────── */
+@media (min-width: 768px) { .mob-bnav { display: none !important; } }
+.mob-bnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 88;
+  background: rgba(10,7,21,.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(45,31,80,.6);
+  display: flex; align-items: stretch;
+  padding-bottom: var(--safe-b);
+  min-height: var(--bnav-h);
+}
+.mob-bnav a {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  color: #4A3C6E; text-decoration: none;
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  transition: color .15s;
+  padding: 8px 4px;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.mob-bnav a:active { color: #A855F7; opacity: .85; }
+.mob-bnav a.bnav-active { color: #A855F7; }
+.mob-bnav a .bnav-icon {
+  font-size: 1.25rem; line-height: 1;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+  display: block;
+}
+.mob-bnav a.bnav-active .bnav-icon {
+  transform: scale(1.18) translateY(-2px);
+}
+.mob-bnav a.bnav-active::before {
+  content: '';
+  position: absolute; top: 0; left: 22%; right: 22%; height: 2px;
+  background: linear-gradient(90deg, #7C3AED, #A855F7);
+  border-radius: 0 0 3px 3px;
+}
+
+/* ── Bottom-nav page offset ─────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .browse-container {
+    padding-bottom: calc(var(--bnav-h) + 28px + var(--safe-b)) !important;
+  }
+  .bnav-offset {
+    padding-bottom: calc(var(--bnav-h) + 44px + var(--safe-b)) !important;
+  }
+  .dash-main {
+    padding-bottom: calc(20px + var(--safe-b)) !important;
+  }
+}
+
+/* ── Mobile CTA full-width ──────────────────────────────────────────────────── */
+@media (max-width: 460px) {
+  .mob-cta-full {
+    flex-direction: column !important;
+  }
+  .mob-cta-full a {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ── Category scroll fade hint ──────────────────────────────────────────────── */
+.cats-scroll-wrap {
+  position: relative;
+}
+.cats-scroll-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 52px;
+  background: linear-gradient(90deg, transparent, #0A0715 88%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Touch-friendly tap targets ─────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  .cats-list button { min-height: 42px; }
+  .hero-cta-primary, .hero-cta-secondary { min-height: 50px; }
+}
+
+/* ── Disable heavy 3D animations on mobile ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .float-card {
+    animation: none !important;
+    transform: none !important;
+  }
+  .landing-float-badge {
+    display: none !important;
+  }
+}
+
+/* ── Mobile stats horizontal scroll ────────────────────────────────────────── */
+@media (max-width: 639px) {
+  .stats-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+    padding-bottom: 4px;
+  }
+  .stats-scroll::-webkit-scrollbar { display: none; }
+}
+
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 bg-violet text-white font-bold px-5 py-2.5 rounded-xl transition-all duration-150;

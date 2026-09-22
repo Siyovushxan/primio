@@ -254,7 +254,7 @@ export default function BrowsePage() {
             const totalClk = ads.reduce((s, a) => s + (a.clicks || 0), 0);
             const ctr = totalImp > 0 ? `${((totalClk / totalImp) * 100).toFixed(1)}%` : "0.0%";
             return (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div className="stats-scroll" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {[
                   { label: t.browseStats[0], value: fmt(ads.length), color: "#34D399" },
                   { label: t.browseStats[1], value: fmt(totalImp), color: "#A78BFA" },
@@ -276,6 +276,7 @@ export default function BrowsePage() {
 
         {/* ── Category filters ────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 28 }}>
+          <div className="cats-scroll-wrap">
           <div className="cats-list" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button
               onClick={() => setActiveCat(null)}
@@ -296,6 +297,7 @@ export default function BrowsePage() {
                 </button>
               );
             })}
+          </div>
           </div>
         </div>
 

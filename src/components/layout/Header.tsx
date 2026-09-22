@@ -232,6 +232,33 @@ export default function Header() {
           )}
         </div>
       </div>
+
+      {/* ── Mobile Bottom Navigation ─────────────────────────────────────────── */}
+      <nav className="mob-bnav md:hidden">
+        {([
+          { href: "/",         icon: "🏠", labels: { uz: "Bosh",     en: "Home",   ru: "Главная" } },
+          { href: "/browse",   icon: "🔍", labels: { uz: "E'lonlar",  en: "Ads",    ru: "Реклама" } },
+          { href: "/create",   icon: "✏️", labels: { uz: "Joylash",  en: "Post",   ru: "Создать" } },
+          firebaseUser
+            ? { href: "/dashboard", icon: "📊", labels: { uz: "Kabinet", en: "Cabinet", ru: "Кабинет" } }
+            : { href: "/auth",      icon: "👤", labels: { uz: "Kirish",  en: "Login",   ru: "Войти"   } },
+        ] as { href: string; icon: string; labels: Record<string, string> }[]).map((item) => {
+          const isActive = item.href === "/"
+            ? pathname === "/"
+            : pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={isActive ? "bnav-active" : ""}
+              aria-label={item.labels[lang]}
+            >
+              <span className="bnav-icon">{item.icon}</span>
+              <span>{item.labels[lang]}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </>
   );
 }

@@ -5,6 +5,24 @@ import { useLang } from "@/contexts/LangContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRef, useCallback, useEffect, useState } from "react";
 
+function useReveal(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.add("sr");
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        el.classList.add("in");
+        obs.unobserve(el);
+      }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return ref;
+}
+
 // ── 3D tilt hook ─────────────────────────────────────────────────────────────
 function useTilt(max = 15) {
   const ref = useRef<HTMLDivElement>(null);
@@ -82,6 +100,9 @@ function StepCard({ num, icon, title, body, delay }: { num: string; icon: string
 export default function HomePage() {
   const { t, lang } = useLang();
   const { firebaseUser } = useAuth();
+  const ruleRef  = useReveal();
+  const stepsRef = useReveal();
+  const ctaRef   = useReveal();
 
   const MOCK_ADS = [
     { rank: 1, medal: "🥇", name: lang === "uz" ? "TechStart UZ" : lang === "ru" ? "TechStart RU" : "TechStart", bid: "$9.00", color: "#F59E0B" },
@@ -146,10 +167,21 @@ export default function HomePage() {
         .hero-cta-secondary:hover { background: rgba(124,58,237,.1) !important; border-color: rgba(124,58,237,.5) !important; transform: translateY(-2px) !important; }
         .hero-cta-primary, .hero-cta-secondary { transition: all .2s ease !important; }
         @media (max-width: 768px) {
-          .landing-hero { flex-direction: column !important; }
-          .landing-hero-right { display: none !important; }
+          .landing-hero {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 36px !important;
+            min-height: auto !important;
+            padding-top: 56px !important;
+            padding-bottom: 48px !important;
+          }
+          .landing-hero-right {
+            flex: 0 0 auto !important;
+            width: 100% !important;
+            max-width: 360px !important;
+            height: 380px !important;
+          }
           .landing-steps { grid-template-columns: 1fr !important; }
-          .landing-stats { flex-direction: column; gap: 20px !important; align-items: center !important; }
         }
       `}} />
 
@@ -165,7 +197,7 @@ export default function HomePage() {
         </div>
 
         {/* ── HERO SECTION ────────────────────────────────────────────────── */}
-        <section style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "80px 24px 100px", display: "flex", alignItems: "center", gap: 60, minHeight: "88vh" }}>
+        <section className="landing-hero" style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "80px 24px 100px", display: "flex", alignItems: "center", gap: 60, minHeight: "88vh" }}>
 
           {/* Left: text */}
           <div style={{ flex: 1, minWidth: 0, animation: "slideUp .7s both" }}>
@@ -186,7 +218,7 @@ export default function HomePage() {
             <p style={{ margin: "0 0 36px", fontSize: "clamp(.9rem, 2vw, 1.05rem)", color: "#7C6E9E", lineHeight: 1.7, maxWidth: 480 }}>{t.heroSub}</p>
 
             {/* CTAs */}
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <div className="mob-cta-full" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <Link href="/create" className="hero-cta-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 26px", borderRadius: 13, background: "#7C3AED", color: "#fff", fontSize: ".9rem", fontWeight: 700, textDecoration: "none", boxShadow: "0 4px 20px rgba(124,58,237,.3)" }}>
                 {t.heroCta1} →
               </Link>
@@ -215,7 +247,7 @@ export default function HomePage() {
             <div style={{ position: "absolute", inset: 0, borderRadius: 30, background: "radial-gradient(ellipse at center, rgba(124,58,237,.25) 0%, transparent 70%)", animation: "glow-pulse 3s ease-in-out infinite" }} />
 
             {/* 3D Leaderboard card */}
-            <div style={{ width: 340, animation: "float3d 6s ease-in-out infinite", transformStyle: "preserve-3d" }}>
+            <div className="float-card" style={{ width: 340, animation: "float3d 6s ease-in-out infinite", transformStyle: "preserve-3d" }}>
               <div style={{
                 background: "linear-gradient(160deg, rgba(45,31,80,.95) 0%, rgba(14,11,26,.98) 100%)",
                 border: "1px solid rgba(124,58,237,.4)",
@@ -273,17 +305,17 @@ export default function HomePage() {
             </div>
 
             {/* Floating badges behind card */}
-            <div style={{ position: "absolute", top: "15%", right: "2%", background: "rgba(245,158,11,.1)", border: "1px solid rgba(245,158,11,.3)", borderRadius: 10, padding: "7px 12px", fontSize: ".7rem", fontWeight: 700, color: "#F59E0B", animation: "float3d-sm 5s ease-in-out infinite" }}>
+            <div className="landing-float-badge" style={{ position: "absolute", top: "15%", right: "2%", background: "rgba(245,158,11,.1)", border: "1px solid rgba(245,158,11,.3)", borderRadius: 10, padding: "7px 12px", fontSize: ".7rem", fontWeight: 700, color: "#F59E0B", animation: "float3d-sm 5s ease-in-out infinite" }}>
               🏆 #1
             </div>
-            <div style={{ position: "absolute", bottom: "18%", left: "0%", background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.3)", borderRadius: 10, padding: "7px 12px", fontSize: ".7rem", fontWeight: 700, color: "#A78BFA", animation: "float3d-sm 7s ease-in-out infinite reverse" }}>
+            <div className="landing-float-badge" style={{ position: "absolute", bottom: "18%", left: "0%", background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.3)", borderRadius: 10, padding: "7px 12px", fontSize: ".7rem", fontWeight: 700, color: "#A78BFA", animation: "float3d-sm 7s ease-in-out infinite reverse" }}>
               ⚡ LIVE
             </div>
           </div>
         </section>
 
         {/* ── RULE SECTION ────────────────────────────────────────────────── */}
-        <section style={{ position: "relative", zIndex: 1, background: "linear-gradient(180deg, transparent 0%, rgba(22,15,42,.8) 30%, rgba(22,15,42,.8) 70%, transparent 100%)", padding: "80px 24px" }}>
+        <section ref={ruleRef} style={{ position: "relative", zIndex: 1, background: "linear-gradient(180deg, transparent 0%, rgba(22,15,42,.8) 30%, rgba(22,15,42,.8) 70%, transparent 100%)", padding: "80px 24px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
             <div style={{ display: "inline-block", fontSize: ".65rem", letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: "#7C3AED", padding: "6px 14px", borderRadius: 100, border: "1px solid rgba(124,58,237,.3)", marginBottom: 20 }}>{t.ruleLabel}</div>
             <h2 style={{ margin: "0 0 14px", fontFamily: "'Unbounded', sans-serif", fontSize: "clamp(1.6rem, 4vw, 2.5rem)", fontWeight: 800, color: "#EDE9FE", lineHeight: 1.2 }}>{t.ruleTitle}</h2>
@@ -301,7 +333,7 @@ export default function HomePage() {
         </section>
 
         {/* ── HOW IT WORKS ────────────────────────────────────────────────── */}
-        <section style={{ position: "relative", zIndex: 1, padding: "80px 24px" }}>
+        <section ref={stepsRef} style={{ position: "relative", zIndex: 1, padding: "80px 24px" }}>
           <div style={{ maxWidth: 1000, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 52 }}>
               <div style={{ display: "inline-block", fontSize: ".65rem", letterSpacing: ".16em", textTransform: "uppercase", fontWeight: 700, color: "#7C3AED", padding: "6px 14px", borderRadius: 100, border: "1px solid rgba(124,58,237,.3)", marginBottom: 16 }}>{t.howLabel}</div>
@@ -318,7 +350,7 @@ export default function HomePage() {
         </section>
 
         {/* ── CTA SECTION ─────────────────────────────────────────────────── */}
-        <section style={{ position: "relative", zIndex: 1, padding: "80px 24px 120px" }}>
+        <section ref={ctaRef} className="bnav-offset" style={{ position: "relative", zIndex: 1, padding: "80px 24px 120px" }}>
           <div style={{
             maxWidth: 760, margin: "0 auto",
             background: "linear-gradient(135deg, rgba(124,58,237,.15) 0%, rgba(45,31,80,.4) 50%, rgba(124,58,237,.08) 100%)",
@@ -339,7 +371,7 @@ export default function HomePage() {
               <p style={{ color: "#7C6E9E", fontSize: ".9rem", lineHeight: 1.7, marginBottom: 32, maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
                 {lang === "uz" ? "Ro'yxatdan o'ting va daqiqalar ichida birinchi reklamangizni joylang." : lang === "ru" ? "Зарегистрируйтесь и разместите первое объявление за несколько минут." : "Sign up and post your first ad in minutes."}
               </p>
-              <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <div className="mob-cta-full" style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                 <Link href={firebaseUser ? "/create" : "/auth"} className="hero-cta-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "14px 28px", borderRadius: 13, background: "#7C3AED", color: "#fff", fontSize: ".9rem", fontWeight: 700, textDecoration: "none", boxShadow: "0 4px 20px rgba(124,58,237,.35)" }}>
                   {firebaseUser ? t.heroCta1 : t.navSignIn} →
                 </Link>
