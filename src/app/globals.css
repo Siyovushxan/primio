@@ -91,6 +91,7 @@ input, select, textarea { font-family: inherit; }
 
 /* ── Create page inner 2-col grid ─────────────────────────────────────────── */
 .create-inner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.create-title-url-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 /* ── Tablet: 640–1023px ────────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
@@ -149,6 +150,17 @@ input, select, textarea { font-family: inherit; }
   .browse-container { padding: 20px 14px 80px !important; }
   .hero-top { padding: 32px 0 24px !important; }
   .rg-form, .rg-auth, .rg-wallet, .rg-profile { grid-template-columns: 1fr !important; }
+
+  /* Create page header: collapse to single row on mobile */
+  .create-hdr-badge  { display: none !important; }
+  .create-hdr-name   { display: none !important; }
+  .create-hdr-spent  { display: none !important; }
+  .create-hdr-cta    { display: none !important; }
+  .create-hdr-outer  { padding: 10px 16px !important; flex-wrap: nowrap !important; }
+  .create-hdr-right  { flex-wrap: nowrap !important; gap: 6px !important; }
+
+  /* Create page title+URL grid: stack on mobile */
+  .create-title-url-grid { grid-template-columns: 1fr !important; }
 }
 
 /* ── CSS custom properties ──────────────────────────────────────────────────── */
