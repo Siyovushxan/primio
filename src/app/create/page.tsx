@@ -237,11 +237,11 @@ const label: React.CSSProperties = {
 
 // ─── App Header ───────────────────────────────────────────────────────────────
 function AppHeader({
-  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet,
+  lang, setLang, totalSpentCents, brandName, brandInitial, onGoCreate, onGoProfile, onGoWallet, onOpenDrawer,
 }: {
   lang: Lang; setLang: (l: string) => void;
   totalSpentCents: number; brandName: string; brandInitial: string;
-  onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void;
+  onGoCreate: () => void; onGoProfile: () => void; onGoWallet: () => void; onOpenDrawer: () => void;
 }) {
   const t = T[lang];
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
@@ -272,6 +272,18 @@ function AppHeader({
             <span className="create-hdr-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
           <button className="create-hdr-cta" onClick={onGoCreate} style={{ padding: "9px 16px", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".82rem", fontWeight: 700, cursor: "pointer" }}>+ {t.ctaCreate}</button>
+          <button
+            className="dash-hamburger"
+            onClick={onOpenDrawer}
+            aria-label="Open menu"
+            style={{ alignItems: "center", justifyContent: "center", width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(124,58,237,.35)", background: "rgba(124,58,237,.12)", color: "#A78BFA", cursor: "pointer", flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="4" width="14" height="1.5" rx=".75" fill="currentColor"/>
+              <rect x="2" y="8.25" width="14" height="1.5" rx=".75" fill="currentColor"/>
+              <rect x="2" y="12.5" width="14" height="1.5" rx=".75" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
@@ -326,6 +338,210 @@ function Sidebar({ lang, myAdsCount, onSignOut, onDashNav }: {
         <span style={{ width: 20, textAlign: "center" }}>↩</span><span>{t.logout}</span>
       </button>
     </aside>
+  );
+}
+
+// ─── Mobile Create Drawer ─────────────────────────────────────────────────────
+function MobileCreateDrawer({
+  open, onClose, lang, setLang, brandName, brandInitial,
+  totalSpentCents, router, onSignOut,
+}: {
+  open: boolean; onClose: () => void;
+  lang: Lang; setLang: (l: string) => void;
+  brandName: string; brandInitial: string;
+  totalSpentCents: number;
+  router: ReturnType<typeof useRouter>;
+  onSignOut: () => void;
+}) {
+  const t = T[lang];
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  const NAV = [
+    { k: "all",     icon: "🏆", label: t.navAll },
+    { k: "myads",   icon: "📋", label: t.navMyAds },
+    { k: "cats",    icon: "🏷",  label: t.navCats },
+    { k: "wallet",  icon: "💳", label: t.navWallet },
+    { k: "profile", icon: "👤", label: t.navProfile },
+  ];
+
+  const go = (screen: string) => { router.push(`/dashboard?screen=${screen}`); onClose(); };
+
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 199,
+          background: "rgba(0,0,0,.55)", backdropFilter: "blur(3px)",
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity .28s ease",
+        }}
+      />
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 200,
+        width: "min(300px, 88vw)",
+        background: "#0E0B1A",
+        borderLeft: "1px solid #2D1F50",
+        display: "flex", flexDirection: "column",
+        transform: open ? "translateX(0)" : "translateX(100%)",
+        transition: "transform .3s cubic-bezier(.4,0,.2,1)",
+        overflowY: "auto",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2D1F50", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
+              <rect width="100" height="100" rx="24" fill="#7C3AED"/>
+              <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
+              <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
+            </svg>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #2D1F50", background: "rgba(109,91,142,.12)", color: "#6D5B8E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid #2D1F50", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <span style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".88rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
+            <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 2 }}>
+              {t.totalSpent}: <span style={{ color: "#FCD34D", fontFamily: "'JetBrains Mono',monospace" }}>${(totalSpentCents / 100).toFixed(0)}</span>
+            </div>
+          </div>
+        </div>
+
+        <nav style={{ flex: 1, padding: "10px 10px" }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
+          {NAV.map((n) => (
+            <button
+              key={n.k}
+              onClick={() => go(n.k)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 10,
+                padding: "11px 12px", borderRadius: 10, border: "none", marginBottom: 2,
+                background: "transparent", color: "#A78BFA",
+                fontSize: ".88rem", fontWeight: 500, cursor: "pointer", textAlign: "left",
+              }}
+            >
+              <span style={{ width: 20, textAlign: "center" }}>{n.icon}</span>
+              <span style={{ flex: 1 }}>{n.label}</span>
+            </button>
+          ))}
+          <div style={{ height: 1, background: "#2D1F50", margin: "10px 2px" }} />
+          <button
+            onClick={() => { window.open("/how-it-works", "_blank"); onClose(); }}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "#6D5B8E", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
+          >
+            <span style={{ width: 20, textAlign: "center" }}>📖</span>
+            <span>{t.navGuide}</span>
+          </button>
+        </nav>
+
+        <div style={{ padding: "12px 20px", borderTop: "1px solid #2D1F50", flexShrink: 0 }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 9 }}>Til</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {LANGS.map((l) => (
+              <button key={l.code} onClick={() => setLang(l.code as Lang)}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "#2D1F50"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "#6D5B8E", transition: "all .15s" }}
+              >{l.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ padding: "0 20px 32px", display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={onClose}
+            style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "none", background: "#7C3AED", color: "#fff", fontSize: ".84rem", fontWeight: 700, cursor: "pointer" }}
+          >
+            + {t.ctaCreate}
+          </button>
+          <button
+            onClick={() => { onSignOut(); onClose(); }}
+            style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1px solid rgba(248,113,113,.3)", background: "rgba(248,113,113,.07)", color: "#F87171", fontSize: ".84rem", fontWeight: 700, cursor: "pointer" }}
+          >
+            ↩ {t.logout}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Create page bottom nav ───────────────────────────────────────────────────
+function CreateBottomNav({ lang, router }: { lang: Lang; router: ReturnType<typeof useRouter> }) {
+  const t = T[lang];
+  const tabs: { k: string | null; icon: React.ReactNode; label: Record<Lang, string>; cls?: string }[] = [
+    {
+      k: "all", cls: "",
+      label: { uz: "Reyting", en: "Ranking", ru: "Рейтинг" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+      ),
+    },
+    {
+      k: "myads", cls: "",
+      label: { uz: "Reklamam", en: "My Ads", ru: "Мои" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      ),
+    },
+    {
+      k: null, cls: "dbnav-create dbnav-active",
+      label: { uz: "Yangi", en: "New", ru: "Создать" },
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      ),
+    },
+    {
+      k: "wallet", cls: "",
+      label: { uz: "To'lov", en: "Wallet", ru: "Оплата" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      ),
+    },
+    {
+      k: "profile", cls: "",
+      label: { uz: "Profil", en: "Profile", ru: "Профиль" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <nav className="dash-bnav">
+      {tabs.map((tab, i) => (
+        <button
+          key={i}
+          className={tab.cls || ""}
+          onClick={() => tab.k !== null ? router.push(`/dashboard?screen=${tab.k}`) : undefined}
+        >
+          <span className="dbnav-icon">{tab.icon}</span>
+          <span>{tab.label[lang]}</span>
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -870,6 +1086,7 @@ function CreatePageInner() {
   const { lang: globalLang, setLang: setGlobalLang } = useLang();
   const lang = (["uz","en","ru"].includes(globalLang) ? globalLang : "en") as Lang;
   const setLang = (l: string) => setGlobalLang(l as Lang);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !firebaseUser) router.replace("/auth");
@@ -877,7 +1094,7 @@ function CreatePageInner() {
 
   const handleSignOut = () => { signOut(); router.push("/"); };
   const handleDashNav = (screen = "all") => { router.push(`/dashboard?screen=${screen}`); };
-  const handleGoCreate = () => {}; // already here
+  const handleGoCreate = () => {};
 
   if (loading || !firebaseUser) {
     return (
@@ -906,6 +1123,7 @@ function CreatePageInner() {
         onGoCreate={handleGoCreate}
         onGoProfile={() => handleDashNav("profile")}
         onGoWallet={() => handleDashNav("wallet")}
+        onOpenDrawer={() => setDrawerOpen(true)}
       />
 
       <div className="dash-layout">
@@ -924,6 +1142,19 @@ function CreatePageInner() {
           />
         </main>
       </div>
+
+      <MobileCreateDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        lang={lang}
+        setLang={setLang}
+        brandName={brandName}
+        brandInitial={brandInitial}
+        totalSpentCents={userProfile?.totalSpentCents || 0}
+        router={router}
+        onSignOut={handleSignOut}
+      />
+      <CreateBottomNav lang={lang} router={router} />
     </div>
   );
 }
