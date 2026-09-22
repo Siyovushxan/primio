@@ -239,7 +239,7 @@ export default function Header() {
         {([
           { href: "/",       icon: <Home size={20} strokeWidth={2} />,           labels: { uz: "Bosh",     en: "Home",    ru: "Главная" } },
           { href: "/browse", icon: <Search size={20} strokeWidth={2} />,         labels: { uz: "E'lonlar", en: "Ads",     ru: "Реклама" } },
-          { href: firebaseUser ? "/create" : "/auth", icon: <PenLine size={20} strokeWidth={2} />, labels: { uz: "Joylash", en: "Post", ru: "Создать" } },
+          { href: firebaseUser ? "/create" : "/how-it-works", icon: <PenLine size={20} strokeWidth={2} />, labels: { uz: "Joylash", en: "Post", ru: "Создать" } },
           firebaseUser
             ? { href: "/dashboard", icon: <LayoutDashboard size={20} strokeWidth={2} />, labels: { uz: "Kabinet", en: "Cabinet", ru: "Кабинет" } }
             : { href: "/auth",      icon: <LogIn size={20} strokeWidth={2} />,            labels: { uz: "Kirish",  en: "Login",   ru: "Войти"   } },
