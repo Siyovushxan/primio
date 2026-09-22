@@ -195,9 +195,9 @@ input, select, textarea { font-family: inherit; }
 .mob-bnav a:active { color: #A855F7; opacity: .85; }
 .mob-bnav a.bnav-active { color: #A855F7; }
 .mob-bnav a .bnav-icon {
-  font-size: 1.25rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
   transition: transform .22s cubic-bezier(.34,1.56,.64,1);
-  display: block;
 }
 .mob-bnav a.bnav-active .bnav-icon {
   transform: scale(1.18) translateY(-2px);
@@ -217,9 +217,63 @@ input, select, textarea { font-family: inherit; }
   .bnav-offset {
     padding-bottom: calc(var(--bnav-h) + 44px + var(--safe-b)) !important;
   }
+}
+@media (max-width: 639px) {
   .dash-main {
-    padding-bottom: calc(20px + var(--safe-b)) !important;
+    padding-bottom: calc(var(--bnav-h) + 28px + var(--safe-b)) !important;
   }
+}
+
+/* ── Dashboard mobile bottom tab bar ───────────────────────────────────────── */
+@media (min-width: 640px) { .dash-bnav { display: none !important; } }
+.dash-bnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 88;
+  background: rgba(10,7,21,.97);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(45,31,80,.6);
+  display: flex; align-items: stretch;
+  padding-bottom: var(--safe-b);
+  min-height: var(--bnav-h);
+}
+.dash-bnav button {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  background: none; border: none; cursor: pointer;
+  color: #4A3C6E;
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  padding: 8px 2px; position: relative;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transition: color .15s;
+}
+.dash-bnav button.dbnav-active { color: #A855F7; }
+.dash-bnav button .dbnav-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.dash-bnav button.dbnav-active .dbnav-icon { transform: scale(1.18) translateY(-2px); }
+.dash-bnav button.dbnav-active::before {
+  content: ''; position: absolute; top: 0; left: 20%; right: 20%; height: 2px;
+  background: linear-gradient(90deg, #7C3AED, #A855F7);
+  border-radius: 0 0 3px 3px;
+}
+/* Center create button */
+.dash-bnav .dbnav-create {
+  color: #fff !important;
+}
+.dash-bnav .dbnav-create .dbnav-icon {
+  width: 40px; height: 40px; border-radius: 13px;
+  background: linear-gradient(135deg, #7C3AED, #6D28D9);
+  box-shadow: 0 4px 16px rgba(124,58,237,.45);
+  margin-bottom: 1px;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
+}
+.dash-bnav .dbnav-create:active .dbnav-icon {
+  transform: scale(.92);
+  box-shadow: 0 2px 8px rgba(124,58,237,.3);
 }
 
 /* ── Mobile CTA full-width ──────────────────────────────────────────────────── */

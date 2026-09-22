@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, startTransition } from "react";
+import React, { useState, useEffect, useCallback, useMemo, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -516,6 +516,78 @@ function Sidebar({
         <span style={{ width: 20, textAlign: "center" }}>🚪</span><span>{t.logout}</span>
       </button>
     </aside>
+  );
+}
+
+// ─── Dashboard mobile bottom nav ─────────────────────────────────────────────
+function DashBottomNav({ screen, setScreen, lang, onGoCreate }: {
+  screen: Screen; setScreen: (s: Screen) => void; lang: Lang; onGoCreate: () => void;
+}) {
+  const t = T[lang];
+  const tabs: { k: Screen | null; icon: React.ReactNode; label: Record<Lang, string>; cls?: string }[] = [
+    {
+      k: "all", cls: "",
+      label: { uz: "Reyting", en: "Ranking", ru: "Рейтинг" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+      ),
+    },
+    {
+      k: "myads", cls: "",
+      label: { uz: "Reklamam", en: "My Ads", ru: "Мои" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      ),
+    },
+    {
+      k: null, cls: "dbnav-create",
+      label: { uz: "Yangi", en: "New", ru: "Создать" },
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      ),
+    },
+    {
+      k: "wallet", cls: "",
+      label: { uz: "To'lov", en: "Wallet", ru: "Оплата" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      ),
+    },
+    {
+      k: "profile", cls: "",
+      label: { uz: "Profil", en: "Profile", ru: "Профиль" },
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <nav className="dash-bnav">
+      {tabs.map((tab, i) => {
+        const isActive = tab.k !== null && screen === tab.k;
+        return (
+          <button
+            key={i}
+            className={`${tab.cls || ""} ${isActive ? "dbnav-active" : ""}`}
+            onClick={() => tab.k === null ? onGoCreate() : startTransition(() => setScreen(tab.k!))}
+          >
+            <span className="dbnav-icon">{tab.icon}</span>
+            <span>{tab.label[lang]}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -1376,6 +1448,7 @@ export default function DashboardPage() {
             {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} totalSpentCents={spent} />}
           </main>
         </div>
+        <DashBottomNav screen={screen} setScreen={setScreen} lang={lang} onGoCreate={handleGoCreate} />
       </div>
     </>
   );

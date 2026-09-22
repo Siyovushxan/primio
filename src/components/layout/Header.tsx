@@ -1,11 +1,12 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LANGS } from "@/lib/i18n";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Home, Search, PenLine, LayoutDashboard, LogIn } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function Header() {
@@ -236,19 +237,19 @@ export default function Header() {
       {/* ── Mobile Bottom Navigation ─────────────────────────────────────────── */}
       <nav className="mob-bnav md:hidden">
         {([
-          { href: "/",         icon: "🏠", labels: { uz: "Bosh",     en: "Home",   ru: "Главная" } },
-          { href: "/browse",   icon: "🔍", labels: { uz: "E'lonlar",  en: "Ads",    ru: "Реклама" } },
-          { href: "/create",   icon: "✏️", labels: { uz: "Joylash",  en: "Post",   ru: "Создать" } },
+          { href: "/",       icon: <Home size={20} strokeWidth={2} />,           labels: { uz: "Bosh",     en: "Home",    ru: "Главная" } },
+          { href: "/browse", icon: <Search size={20} strokeWidth={2} />,         labels: { uz: "E'lonlar", en: "Ads",     ru: "Реклама" } },
+          { href: firebaseUser ? "/create" : "/auth", icon: <PenLine size={20} strokeWidth={2} />, labels: { uz: "Joylash", en: "Post", ru: "Создать" } },
           firebaseUser
-            ? { href: "/dashboard", icon: "📊", labels: { uz: "Kabinet", en: "Cabinet", ru: "Кабинет" } }
-            : { href: "/auth",      icon: "👤", labels: { uz: "Kirish",  en: "Login",   ru: "Войти"   } },
-        ] as { href: string; icon: string; labels: Record<string, string> }[]).map((item) => {
+            ? { href: "/dashboard", icon: <LayoutDashboard size={20} strokeWidth={2} />, labels: { uz: "Kabinet", en: "Cabinet", ru: "Кабинет" } }
+            : { href: "/auth",      icon: <LogIn size={20} strokeWidth={2} />,            labels: { uz: "Kirish",  en: "Login",   ru: "Войти"   } },
+        ] as { href: string; icon: React.ReactNode; labels: Record<string, string> }[]).map((item, i) => {
           const isActive = item.href === "/"
             ? pathname === "/"
             : pathname.startsWith(item.href);
           return (
             <Link
-              key={item.href}
+              key={i}
               href={item.href}
               className={isActive ? "bnav-active" : ""}
               aria-label={item.labels[lang]}
