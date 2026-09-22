@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebaseAdmin";
+import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -164,12 +164,7 @@ REJECTED: [reason in English, one sentence]`;
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function hasValidToken(req: NextRequest): Promise<boolean> {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return false;
-  try {
-    await adminAuth.verifyIdToken(token);
-    return true;
-  } catch { return false; }
+  return (await verifyFirebaseToken(req)) !== null;
 }
 
 async function xaiCall(

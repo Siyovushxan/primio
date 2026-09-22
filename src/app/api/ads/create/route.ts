@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebaseAdmin";
+import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  let callerUid: string;
-  try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    callerUid = decoded.uid;
-  } catch {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const uid = await verifyFirebaseToken(req);
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const {
@@ -22,13 +14,16 @@ export async function POST(req: NextRequest) {
       destinationURL, category, dailyBidCents, durationDays,
     } = await req.json();
 
-    if (callerUid !== advertiserUID) {
+    if (uid !== advertiserUID) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (!title || !destinationURL || !category || !dailyBidCents || !durationDays) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { FieldValue } = require("firebase-admin/firestore");
 
     const adRef = await adminDb.collection("ads").add({
       advertiserUID,
@@ -52,8 +47,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ adId: adRef.id });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Create ad error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
 }
