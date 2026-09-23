@@ -164,7 +164,12 @@ REJECTED: [reason in English, one sentence]`;
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function hasValidToken(req: NextRequest): Promise<boolean> {
-  return (await verifyFirebaseToken(req)) !== null;
+  const uid = await verifyFirebaseToken(req);
+  if (!uid) {
+    const token = req.headers.get("Authorization")?.replace("Bearer ", "").trim();
+    console.error("Auth failed — token present:", !!token, "token length:", token?.length ?? 0);
+  }
+  return uid !== null;
 }
 
 async function xaiCall(
