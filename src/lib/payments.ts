@@ -60,9 +60,7 @@ export async function applyPayment(payment: ProviderPayment) {
         (order.providerTotal && order.providerTotal !== payment.total_amount)) throw new Error("Payment amount or currency mismatch.");
     const adRef = adminDb.doc(`ads/${order.adId}`);
     const userRef = adminDb.doc(`users/${order.uid}`);
-    const [adSnap, userSnap] = await Promise.all([tx.get(adRef), tx.get(userRef)]);
-    const ad = adSnap.data();
-    const user = userSnap.data();
+    const ad = (await tx.get(adRef)).data();
     const now = new Date();
     const conflict = !ad || ad.advertiserUID !== order.uid || order.status === "cancelled" ||
       (ad.contentVersion ?? 0) !== order.contentVersion ||
@@ -78,12 +76,9 @@ export async function applyPayment(payment: ProviderPayment) {
       if (ad.pendingOrderId === orderId) { update.pendingOrderId = FieldValue.delete(); update.pendingPaymentId = FieldValue.delete(); }
       if (conflict) update.paymentReviewRequired = true;
       else if (order.type === "bid_upgrade") update.dailyBidCents = order.dailyBidCents;
-      else {
-        const needsVerification = user?.isNewAccount !== false;
-        Object.assign(update, { dailyBidCents: order.dailyBidCents, durationDays: order.durationDays,
-          status: needsVerification ? "pending_verification" : "active",
-          startsAt: needsVerification ? null : now, expiresAt: needsVerification ? null : new Date(now.getTime() + order.durationDays * DAY_MS) });
-      }
+      // AI-moderated and paid ads go live immediately — there is no manual verification step
+      else Object.assign(update, { dailyBidCents: order.dailyBidCents, durationDays: order.durationDays,
+        status: "active", startsAt: now, expiresAt: new Date(now.getTime() + order.durationDays * DAY_MS) });
       tx.update(adRef, update);
     }
     return { paid: true, type: order.type, adId: order.adId, needsReview: conflict };

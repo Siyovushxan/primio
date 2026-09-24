@@ -2,7 +2,7 @@
 import {useEffect,useState,type ReactNode} from "react";
 import {useParams,usePathname,useRouter} from "next/navigation";
 import {doc,onSnapshot} from "firebase/firestore";
-import {ArrowLeft,ArrowUpRight,ShieldCheck,Clock,CheckCircle2} from "lucide-react";
+import {ArrowLeft,ArrowUpRight,Clock,CheckCircle2} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {db} from "@/lib/firebase";
@@ -35,7 +35,7 @@ export function AdPreview({ad}:{ad:Pick<Ad,"title"|"description"|"imageURL"|"cat
  return <article className="p-browse-card">{ad.imageURL&&<div className="p-browse-image"><Image src={ad.imageURL} alt={ad.title} fill unoptimized sizes="(max-width:639px) 100vw, 400px"/></div>}<div className="p-browse-card-body"><span>{categoryName(ad.category,lang)}</span><h2>{ad.title||pick(lang,"Reklama sarlavhasi","Ad title","Заголовок объявления")}</h2><p>{ad.description}</p><b>{money(ad.dailyBidCents)} / {pick(lang,"kun","day","день")}</b></div></article>;
 }
 function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
- const {lang}=useLang();const {userProfile}=useAuth();
+ const {lang}=useLang();
  const [bid,setBid]=useState(((ad.dailyBidCents+100)/100).toFixed(2));const [days,setDays]=useState(ad.durationDays);const [agreed,setAgreed]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [now,setNow]=useState(()=>Date.now());
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(id);},[]);
  let quote:ReturnType<typeof quotePayment>|undefined;let invalid="";
@@ -47,7 +47,6 @@ function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
  <div className="p-price-total"><div><span>{pick(lang,"Joylashuv narxi","Placement price","Стоимость размещения")}</span><small>{type==="bid_upgrade"?pick(lang,"Stavkalar farqi × qolgan kunlar; to‘liq bo‘lmagan kun yuqoriga yaxlitlanadi.","Bid difference × days remaining, rounded up to whole days.","Разница ставок × оставшиеся дни с округлением вверх."):pick(lang,"Kunlik taklif × muddat","Daily bid × duration","Дневная ставка × срок")}</small></div><strong>{quote?money(quote.amountCents):"—"}</strong></div>
  {quote&&<p className="p-flow-note">{type==="bid_upgrade"?money(quote.dailyBidCents-ad.dailyBidCents):money(quote.dailyBidCents)} × {quote.durationDays} {pick(lang,"kun","days","дней")}</p>}
  <p className="p-flow-note">{pick(lang,"Soliqlar va yakuniy summa to‘lov oynasida ko‘rsatiladi.","Taxes and the final charge are shown at checkout.","Налоги и итоговая сумма отображаются при оплате.")}</p>
- {userProfile?.isNewAccount&&<p className="p-flow-note"><ShieldCheck size={17}/> {pick(lang,"Yangi hisob: to‘lovdan keyin administrator tekshiruvi kerak. Pullik muddat tasdiqlangandan keyin boshlanadi.","New account: administrator review follows payment. Your paid period starts after approval.","Новый аккаунт: после оплаты нужна проверка администратора. Оплаченный срок начнётся после одобрения.")}</p>}
  {(invalid||error)&&<div className="p-error" role="alert">{error||invalid}</div>}
  {ad.pendingOrderId&&<div className="p-flow-notice"><p>{pick(lang,"Oldingi to‘lov oynasi mavjud. Davom etish avvalgi buyurtmani ochadi. Parametrlarni o‘zgartirish uchun oldin uni bekor qiling.","An existing checkout will be resumed. Cancel it first to change your order.","Продолжение откроет предыдущий заказ. Отмените его, чтобы изменить параметры.")}</p><button type="button" className="p-text-link" disabled={busy} onClick={cancel}>{pick(lang,"Oldingi buyurtmani bekor qilish","Cancel previous checkout","Отменить предыдущий заказ")}</button><small>{pick(lang,"Bu amalga oshgan to‘lovni qaytarmaydi. Bekor qilingan oynada boshqa to‘lov qilmang.","This does not refund a completed payment. Do not pay through the cancelled checkout.","Это не возвращает совершённый платёж. Не оплачивайте отменённый заказ.")}</small></div>}
  <label className="p-consent"><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)}/><span><Link href="/terms" target="_blank">{pick(lang,"Xizmat shartlari","Service terms","Условия сервиса")}</Link>{pick(lang,"ni o‘qidim va qabul qilaman.",": I have read and accept them.",": я прочитал и принимаю их.")}</span></label>

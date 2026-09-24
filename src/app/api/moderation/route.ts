@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
+import { adminDb } from "@/lib/firebaseAdmin";
+import { publicWebsite } from "@/lib/auction";
+import { imageHash, issueReview, ownedImageMatches, uploadMatches } from "@/lib/moderation-receipt";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -163,14 +166,17 @@ REJECTED: [reason in English, one sentence]`;
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function hasValidToken(req: NextRequest): Promise<boolean> {
+async function authenticatedUid(req: NextRequest): Promise<string | null> {
   const uid = await verifyFirebaseToken(req);
   if (!uid) {
     const token = req.headers.get("Authorization")?.replace("Bearer ", "").trim();
     console.error("Auth failed — token present:", !!token, "token length:", token?.length ?? 0);
   }
-  return uid !== null;
+  return uid;
 }
+
+const DOC_ID = /^[\w-]{1,128}$/;
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 async function xaiCall(
   model: string,
@@ -401,13 +407,14 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePost(req: NextRequest) {
-  if (!await hasValidToken(req)) {
+  const uid = await authenticatedUid(req);
+  if (!uid) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: {
-    title?: string; description?: string; destinationURL?: string;
-    imageBase64?: string; mimeType?: string;
+    title?: unknown; description?: unknown; destinationURL?: unknown; imageURL?: unknown;
+    uploadId?: unknown; existingAdId?: unknown; imageBase64?: unknown; mimeType?: unknown;
   };
   try {
     body = await req.json();
@@ -415,9 +422,38 @@ async function handlePost(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { title, description, destinationURL, imageBase64, mimeType } = body;
-  if (!title || !destinationURL) {
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const description = typeof body.description === "string" ? body.description.trim() : "";
+  const imageBase64 = typeof body.imageBase64 === "string" && body.imageBase64 ? body.imageBase64 : undefined;
+  const mimeType = typeof body.mimeType === "string" ? body.mimeType : "";
+  if (!title || title.length > 60 || description.length > 200 || !body.destinationURL || !body.imageURL) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  let destinationURL: string, imageURL: string;
+  try {
+    destinationURL = publicWebsite(body.destinationURL);
+    imageURL = publicWebsite(body.imageURL);
+  } catch {
+    return NextResponse.json({ error: "Enter a public HTTPS website." }, { status: 400 });
+  }
+
+  // ── STEP 0: The image must be the one this review inspects ───────────────
+  // Either fresh bytes matching the user's upload, or the unchanged image of their own ad.
+  if (imageBase64) {
+    if (!IMAGE_TYPES.includes(mimeType)) {
+      return NextResponse.json({ error: "JPG, PNG or WebP image required." }, { status: 400 });
+    }
+    const upload = typeof body.uploadId === "string" && DOC_ID.test(body.uploadId)
+      ? (await adminDb.doc(`uploads/${body.uploadId}`).get()).data() : undefined;
+    if (!uploadMatches(upload, uid, imageURL, imageHash(imageBase64))) {
+      return NextResponse.json({ error: "The image does not match the upload. Please choose the image again." }, { status: 400 });
+    }
+  } else {
+    const ad = typeof body.existingAdId === "string" && DOC_ID.test(body.existingAdId)
+      ? (await adminDb.doc(`ads/${body.existingAdId}`).get()).data() : undefined;
+    if (!ownedImageMatches(ad, uid, imageURL)) {
+      return NextResponse.json({ error: "Please choose an image." }, { status: 400 });
+    }
   }
 
   // ── STEP 1: Keyword pre-filter ────────────────────────────────────────────
@@ -466,7 +502,7 @@ async function handlePost(req: NextRequest) {
   }
 
   // ── STEP 5: Image moderation ──────────────────────────────────────────────
-  if (imageBase64 && mimeType) {
+  if (imageBase64) {
     // Run all 3 image checks in parallel
     const [visionResult, hfExplicitScore, hfSexyData] = await Promise.all([
       grokCheckImage(imageBase64, mimeType, title),
@@ -535,6 +571,8 @@ async function handlePost(req: NextRequest) {
     }
   }
 
-  // All checks passed
-  return NextResponse.json({ approved: true });
+  // All checks passed — issue a one-hour receipt bound to this user and exact content.
+  // /api/ads/create and /api/ads/[adId]/update accept the ad only with a matching receipt.
+  const reviewId = await issueReview(uid, { title, description, destinationURL, imageURL });
+  return NextResponse.json({ approved: true, reviewId });
 }

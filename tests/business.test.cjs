@@ -90,9 +90,9 @@ test("paid renewal starts the full selected period",async()=>{
  const {db,applyPayment,payment}=fixture({type:"renewal"});await applyPayment(payment);const ad=db.data.get("ads/ad1");
  assert.equal(ad.durationDays,30);assert.equal(ad.status,"active");assert.equal(ad.expiresAt-ad.startsAt,30*DAY_MS);
 });
-test("new-account payment waits for admin; paid clock has not started",async()=>{
+test("new-account payment goes live immediately without manual verification",async()=>{
  const {db,applyPayment,payment}=fixture({newAccount:true});await applyPayment(payment);const ad=db.data.get("ads/ad1");
- assert.equal(ad.status,"pending_verification");assert.equal(ad.startsAt,null);assert.equal(ad.expiresAt,null);assert.equal(db.data.get("users/u1").isNewAccount,true);
+ assert.equal(ad.status,"active");assert.equal(ad.expiresAt.getTime()-ad.startsAt.getTime(),ad.durationDays*DAY_MS);
 });
 test("changed content and late cancelled-checkout payments are recorded for review",async()=>{
  for(const options of [{adChange:{contentVersion:2}},{orderChange:{status:"cancelled"}}]){
@@ -127,4 +127,18 @@ test("duplicate partial and full refunds reduce totals exactly once and stop a f
  assert.equal(db.data.get("ads/ad1").status,"expired");
  assert.equal(db.data.get("ads/ad1").paymentReviewRequired,true);
  await assert.rejects(()=>applyRefund({...partial,refund_id:"ref3",amount:1}));
+});
+test("moderation receipts bind only the inspected image and match the ad saved later",()=>{
+ const {uploadMatches,ownedImageMatches,contentHash}=loadSource("src/lib/moderation-receipt.ts",{"node:crypto":require("node:crypto"),"./firebaseAdmin":{adminDb:{}},"./auction":auction});
+ const url="https://i.ibb.co/abc/ad.jpg";const upload={uid:"u1",url,imageHash:"h1"};
+ assert.equal(uploadMatches(upload,"u1",url,"h1"),true);
+ for(const [uid,imageURL,hash] of [["u2",url,"h1"],["u1",url,"h2"],["u1","https://i.ibb.co/other.jpg","h1"]])assert.equal(uploadMatches(upload,uid,imageURL,hash),false);
+ assert.equal(uploadMatches(undefined,"u1",url,"h1"),false);
+ assert.equal(ownedImageMatches({advertiserUID:"u1",imageURL:url},"u1",url),true);
+ assert.equal(ownedImageMatches({advertiserUID:"u2",imageURL:url},"u1",url),false);
+ assert.equal(ownedImageMatches(undefined,"u1",url),false);
+ const reviewed={title:"Primio",description:"Ad",destinationURL:"https://primio.com.uz/",imageURL:url};
+ const saved=auction.validateAdInput({title:" Primio ",description:"Ad ",destinationURL:"https://primio.com.uz",imageURL:url,category:"technology",dailyBidCents:100,durationDays:1});
+ assert.equal(contentHash(reviewed),contentHash(saved));
+ assert.notEqual(contentHash(reviewed),contentHash({...saved,title:"Other"}));
 });

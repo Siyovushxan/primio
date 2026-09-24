@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
+import { adminDb } from "@/lib/firebaseAdmin";
+import { publicWebsite } from "@/lib/auction";
+import { imageHash } from "@/lib/moderation-receipt";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  if (!await verifyFirebaseToken(req)) {
+  const uid = await verifyFirebaseToken(req);
+  if (!uid) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -15,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { imageBase64 } = await req.json();
-    if (!imageBase64) {
+    if (typeof imageBase64 !== "string" || !imageBase64) {
       return NextResponse.json({ error: "Missing image" }, { status: 400 });
     }
 
@@ -33,7 +37,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Rasm yuklanmadi" }, { status: 500 });
     }
 
-    return NextResponse.json({ url: data.data.url });
+    // Record who uploaded which bytes, so moderation can bind its receipt to this exact image
+    const url = publicWebsite(data.data.url);
+    const upload = await adminDb.collection("uploads").add({ uid, url, imageHash: imageHash(imageBase64), createdAt: new Date() });
+    return NextResponse.json({ url, uploadId: upload.id });
   } catch (err: any) {
     console.error("Image upload error:", err?.message);
     return NextResponse.json({ error: "Rasm yuklanmadi. Qayta urinib ko'ring." }, { status: 500 });
