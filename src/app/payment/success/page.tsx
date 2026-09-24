@@ -63,7 +63,7 @@ function PaymentSuccessInner() {
   const spent = userProfile?.totalSpentCents || 0;
 
   const card: React.CSSProperties = {
-    background: "linear-gradient(135deg, #1A1230 0%, #120D24 100%)",
+    background: "linear-gradient(135deg, var(--surface) 0%, var(--surface) 100%)",
     border: "1px solid rgba(124,58,237,0.25)",
     borderRadius: 24, padding: "40px 36px", maxWidth: 440, width: "100%",
     boxShadow: "0 0 60px rgba(124,58,237,0.12), 0 24px 48px rgba(0,0,0,0.4)",
@@ -87,11 +87,11 @@ function PaymentSuccessInner() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "system-ui,sans-serif" }}>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* Dashboard-style header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(11,11,15,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid var(--border)" }}>
         <div style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
@@ -99,15 +99,15 @@ function PaymentSuccessInner() {
               <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
-            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
-            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.paymentLabel}</span>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
+            <span style={{ padding: "2px 9px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)" }}>{t.paymentLabel}</span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.paymentTotalSpent}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700 }}>{t.paymentTotalSpent}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
             </div>
-            <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
+            <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none" }}>
               <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
               <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
             </Link>
@@ -177,7 +177,7 @@ function PaymentSuccessInner() {
 
 export default function PaymentSuccessPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0E0B1A" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
       <PaymentSuccessInner />
     </Suspense>
   );

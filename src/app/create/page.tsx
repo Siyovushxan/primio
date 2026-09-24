@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LANGS } from "@/lib/i18n";
 import { CATEGORIES, Category } from "@/types";
+import { MIN_DAILY_BID_CENTS, isValidCategory, isValidDailyBid, isValidDuration } from "@/lib/adRules";
 import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -224,15 +225,15 @@ const T = {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const card: React.CSSProperties = {
-  background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 18,
+  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
 };
 const inp: React.CSSProperties = {
   width: "100%", padding: "12px 14px", borderRadius: 11,
-  background: "#160F2A", border: "1px solid #2D1F50",
-  color: "#EDE9FE", fontSize: ".9rem", outline: "none", boxSizing: "border-box",
+  background: "var(--surface-2)", border: "1px solid var(--border)",
+  color: "var(--text)", fontSize: ".9rem", outline: "none", boxSizing: "border-box",
 };
 const label: React.CSSProperties = {
-  display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8,
+  display: "block", fontSize: ".77rem", fontWeight: 700, color: "var(--text)", marginBottom: 8,
 };
 
 // ─── App Header ───────────────────────────────────────────────────────────────
@@ -246,7 +247,7 @@ function AppHeader({
   const t = T[lang];
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(11,11,15,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid var(--border)" }}>
       <div className="create-hdr-outer" style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
@@ -254,20 +255,20 @@ function AppHeader({
             <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
             <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
           </svg>
-          <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
-          <span className="create-hdr-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
+          <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
+          <span className="create-hdr-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)" }}>{t.dashLabel}</span>
         </div>
         <div className="create-hdr-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
+          <div style={{ display: "flex", padding: 2, borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
             {LANGS.map((l) => (
-              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
+              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "var(--border)" : "transparent", color: lang === l.code ? "var(--text)" : "var(--muted)" }}>{l.label}</button>
             ))}
           </div>
-          <button className="create-hdr-spent" onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
-            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
+          <button className="create-hdr-spent" onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer" }}>
+            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700 }}>{t.totalSpent}</span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(totalSpentCents / 100).toFixed(0)}</span>
           </button>
-          <button onClick={onGoProfile} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
+          <button onClick={onGoProfile} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer" }}>
             <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{brandInitial}</span>
             <span className="create-hdr-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
@@ -311,30 +312,30 @@ function Sidebar({ lang, myAdsCount, onSignOut, onDashNav }: {
   });
   return (
     <aside className="dash-sidebar">
-      <div style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
+      <div style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
       {NAV.map((n) => (
         <button key={n.k} onClick={() => onDashNav(n.k)} style={btnStyle(false)}>
           <span style={{ width: 20, textAlign: "center", fontSize: ".85rem" }}>{n.icon}</span>
           <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
           {n.badge ? (
-            <span style={{ padding: "1px 8px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
+            <span style={{ padding: "1px 8px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
           ) : null}
         </button>
       ))}
 
       {/* Create CTA in sidebar — highlighted since we're on create page */}
       <div style={{ marginTop: 20, padding: 14, borderRadius: 13, background: "rgba(124,58,237,.1)", border: "1px solid #7C3AED" }}>
-        <div style={{ fontSize: ".74rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 5 }}>{t.navMyAds}</div>
-        <div style={{ fontSize: ".75rem", color: "#6D5B8E", lineHeight: 1.55, marginBottom: 10 }}>{t.noAdsBody}</div>
+        <div style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text)", marginBottom: 5 }}>{t.navMyAds}</div>
+        <div style={{ fontSize: ".75rem", color: "var(--muted)", lineHeight: 1.55, marginBottom: 10 }}>{t.noAdsBody}</div>
         <button onClick={() => onDashNav("myads")} style={{ width: "100%", padding: 9, borderRadius: 10, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".77rem", fontWeight: 700, cursor: "pointer" }}>
           {t.navMyAds}
         </button>
       </div>
 
-      <button onClick={() => window.open("/how-it-works", "_blank")} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "#6D5B8E", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
+      <button onClick={() => window.open("/how-it-works", "_blank")} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "var(--muted)", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
         <span style={{ width: 20, textAlign: "center" }}>❔</span><span>{t.navGuide}</span>
       </button>
-      <button onClick={onSignOut} style={{ display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "#6D5B8E", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
+      <button onClick={onSignOut} style={{ display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "var(--muted)", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
         <span style={{ width: 20, textAlign: "center" }}>↩</span><span>{t.logout}</span>
       </button>
     </aside>
@@ -385,25 +386,25 @@ function MobileCreateDrawer({
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 200,
         width: "min(300px, 88vw)",
-        background: "#0E0B1A",
-        borderLeft: "1px solid #2D1F50",
+        background: "var(--bg)",
+        borderLeft: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
         transform: open ? "translateX(0)" : "translateX(100%)",
         transition: "transform .3s cubic-bezier(.4,0,.2,1)",
         overflowY: "auto",
       }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2D1F50", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
               <rect width="100" height="100" rx="24" fill="#7C3AED"/>
               <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
-            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #2D1F50", background: "rgba(109,91,142,.12)", color: "#6D5B8E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "rgba(163,161,180,.12)", color: "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -411,18 +412,18 @@ function MobileCreateDrawer({
           </button>
         </div>
 
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #2D1F50", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <span style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".88rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
-            <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 2 }}>
+            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
+            <div style={{ fontSize: ".71rem", color: "var(--muted)", marginTop: 2 }}>
               {t.totalSpent}: <span style={{ color: "#FCD34D", fontFamily: "'JetBrains Mono',monospace" }}>${(totalSpentCents / 100).toFixed(0)}</span>
             </div>
           </div>
         </div>
 
         <nav style={{ flex: 1, padding: "10px 10px" }}>
-          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
           {NAV.map((n) => (
             <button
               key={n.k}
@@ -438,22 +439,22 @@ function MobileCreateDrawer({
               <span style={{ flex: 1 }}>{n.label}</span>
             </button>
           ))}
-          <div style={{ height: 1, background: "#2D1F50", margin: "10px 2px" }} />
+          <div style={{ height: 1, background: "var(--border)", margin: "10px 2px" }} />
           <button
             onClick={() => { window.open("/how-it-works", "_blank"); onClose(); }}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "#6D5B8E", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "var(--muted)", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
           >
             <span style={{ width: 20, textAlign: "center" }}>📖</span>
             <span>{t.navGuide}</span>
           </button>
         </nav>
 
-        <div style={{ padding: "12px 20px", borderTop: "1px solid #2D1F50", flexShrink: 0 }}>
-          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 9 }}>Til</div>
+        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, marginBottom: 9 }}>Til</div>
           <div style={{ display: "flex", gap: 6 }}>
             {LANGS.map((l) => (
               <button key={l.code} onClick={() => setLang(l.code as Lang)}
-                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "#2D1F50"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "#6D5B8E", transition: "all .15s" }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "var(--border)"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "var(--muted)", transition: "all .15s" }}
               >{l.label}</button>
             ))}
           </div>
@@ -556,15 +557,20 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchParams = useSearchParams();
 
-  const defaultCat = (searchParams.get("cat") as Category) || null;
-  const defaultBidCents = parseInt(searchParams.get("minBid") || "100");
+  // ?cat=<category>&minBid=<cents> — prefilled from the landing calculator and ranking "outbid" links
+  const catParam = searchParams.get("cat") || searchParams.get("category");
+  const defaultCat = isValidCategory(catParam) ? catParam : null;
+  const bidParam = parseInt(searchParams.get("minBid") || "", 10);
+  const defaultBidCents = isValidDailyBid(bidParam) ? bidParam : MIN_DAILY_BID_CENTS;
 
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [bidCents, setBidCents] = useState(Math.max(100, defaultBidCents));
-  const [duration, setDuration] = useState<number>(7);
-  const [isCustomDur, setIsCustomDur] = useState(false);
-  const [customDays, setCustomDays] = useState("");
+  const daysParam = parseInt(searchParams.get("days") || "", 10);
+  const presetDays = isValidDuration(daysParam) ? daysParam : null;
+  const [duration, setDuration] = useState<number>(presetDays ?? 7);
+  const [isCustomDur, setIsCustomDur] = useState(presetDays !== null && ![7, 14, 30].includes(presetDays));
+  const [customDays, setCustomDays] = useState(presetDays !== null && ![7, 14, 30].includes(presetDays) ? String(presetDays) : "");
   const [category, setCategory] = useState<Category>(defaultCat || "technology");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -718,7 +724,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
         <div style={{ fontSize: ".7rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 6 }}>
           📢 {t.newCampaignLabel}
         </div>
-        <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-.03em", color: "#EDE9FE", lineHeight: 1.15 }}>
+        <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-.03em", color: "var(--text)", lineHeight: 1.15 }}>
           {t.createTitle}
         </h1>
       </div>
@@ -750,7 +756,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     required
                   />
                   <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
-                    <span style={{ fontSize: ".71rem", color: title.length > 50 ? "#F59E0B" : "#6D5B8E" }}>{title.length}/60</span>
+                    <span style={{ fontSize: ".71rem", color: title.length > 50 ? "#F59E0B" : "var(--muted)" }}>{title.length}/60</span>
                   </div>
                 </div>
                 <div>
@@ -763,7 +769,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     style={inp}
                     required
                   />
-                  <div style={{ marginTop: 4, fontSize: ".71rem", color: "#6D5B8E" }}>{t.urlNote}</div>
+                  <div style={{ marginTop: 4, fontSize: ".71rem", color: "var(--muted)" }}>{t.urlNote}</div>
                 </div>
               </div>
             </div>
@@ -782,10 +788,10 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: ".78rem", color: "#EDE9FE", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: ".78rem", color: "var(--text)", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {imageFile?.name || "rasm.jpg"}
                         </div>
-                        <div style={{ fontSize: ".68rem", color: "#6D5B8E" }}>
+                        <div style={{ fontSize: ".68rem", color: "var(--muted)" }}>
                           {imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ""}
                         </div>
                       </div>
@@ -803,14 +809,14 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={handleDrop}
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "24px 12px", borderRadius: 12, border: "1.5px dashed #2D1F50", background: "#160F2A", cursor: "pointer", transition: "border-color .15s", minHeight: 120 }}
+                    style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, padding: "24px 12px", borderRadius: 12, border: "1.5px dashed var(--border)", background: "var(--surface-2)", cursor: "pointer", transition: "border-color .15s", minHeight: 120 }}
                     onMouseEnter={e => (e.currentTarget.style.borderColor = "#7C3AED")}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = "#2D1F50")}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
                   >
                     <span style={{ fontSize: "1.8rem" }}>🖼</span>
                     <div style={{ textAlign: "center" }}>
                       <div style={{ fontSize: ".78rem", color: "#A78BFA", fontWeight: 600 }}>{t.imageClick}</div>
-                      <div style={{ fontSize: ".67rem", color: "#6D5B8E", marginTop: 2 }}>{t.imageNote}</div>
+                      <div style={{ fontSize: ".67rem", color: "var(--muted)", marginTop: 2 }}>{t.imageNote}</div>
                     </div>
                     <span style={{ padding: "6px 14px", borderRadius: 9, background: "rgba(124,58,237,.15)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".75rem", fontWeight: 700 }}>
                       {t.browseLabel}
@@ -833,8 +839,8 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                         type="button"
                         onClick={() => setCategory(cat)}
                         style={{
-                          padding: "8px 7px", borderRadius: 9, border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`,
-                          background: active ? "rgba(124,58,237,.18)" : "#160F2A",
+                          padding: "8px 7px", borderRadius: 9, border: `1px solid ${active ? "#7C3AED" : "var(--border)"}`,
+                          background: active ? "rgba(124,58,237,.18)" : "var(--surface-2)",
                           color: active ? "#A855F7" : "#A78BFA",
                           cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 6,
                           fontSize: ".72rem", fontWeight: active ? 700 : 500, transition: "all .15s",
@@ -868,7 +874,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                   onChange={(e) => setBidCents(parseInt(e.target.value))}
                   style={{ width: "100%", accentColor: "#7C3AED", cursor: "pointer" }}
                 />
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: ".7rem", color: "#6D5B8E" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: ".7rem", color: "var(--muted)" }}>
                   <span>$1.00</span>
                   <span style={{ color: "#A78BFA" }}>{t.bidNote}</span>
                   <span>$30.00</span>
@@ -876,7 +882,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
               </div>
 
               {/* Divider */}
-              <div style={{ borderTop: "1px solid #2D1F50", marginBottom: 14 }} />
+              <div style={{ borderTop: "1px solid var(--border)", marginBottom: 14 }} />
 
               {/* Duration */}
               <label style={{ ...label, marginBottom: 10 }}>{t.durLabel} <span style={{ color: "#F87171" }}>*</span></label>
@@ -891,8 +897,8 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                       onClick={() => { setDuration(d); setIsCustomDur(false); setCustomDays(""); }}
                       style={{
                         padding: "11px 6px", borderRadius: 10,
-                        border: `1px solid ${active ? "#7C3AED" : "#2D1F50"}`,
-                        background: active ? "rgba(124,58,237,.12)" : "#160F2A",
+                        border: `1px solid ${active ? "#7C3AED" : "var(--border)"}`,
+                        background: active ? "rgba(124,58,237,.12)" : "var(--surface-2)",
                         color: active ? "#A855F7" : "#A78BFA",
                         cursor: "pointer", textAlign: "center", transition: "all .15s", position: "relative",
                       }}
@@ -903,8 +909,8 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                         </span>
                       )}
                       <div style={{ fontSize: "1rem", fontWeight: 700, fontFamily: "'Unbounded',sans-serif" }}>{d}</div>
-                      <div style={{ fontSize: ".65rem", color: active ? "#A855F7" : "#6D5B8E", marginTop: 1 }}>{t.dayLabel}</div>
-                      <div style={{ fontSize: ".72rem", fontWeight: 600, color: active ? "#EDE9FE" : "#6D5B8E", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
+                      <div style={{ fontSize: ".65rem", color: active ? "#A855F7" : "var(--muted)", marginTop: 1 }}>{t.dayLabel}</div>
+                      <div style={{ fontSize: ".72rem", fontWeight: 600, color: active ? "var(--text)" : "var(--muted)", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
                         ${dayTotal}
                       </div>
                     </button>
@@ -915,15 +921,15 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                   onClick={() => { setIsCustomDur(true); setCustomDays(""); }}
                   style={{
                     padding: "11px 6px", borderRadius: 10,
-                    border: `1px solid ${isCustomDur ? "#7C3AED" : "#2D1F50"}`,
-                    background: isCustomDur ? "rgba(124,58,237,.12)" : "#160F2A",
+                    border: `1px solid ${isCustomDur ? "#7C3AED" : "var(--border)"}`,
+                    background: isCustomDur ? "rgba(124,58,237,.12)" : "var(--surface-2)",
                     color: isCustomDur ? "#A855F7" : "#A78BFA",
                     cursor: "pointer", textAlign: "center", transition: "all .15s",
                   }}
                 >
                   <div style={{ fontSize: ".85rem", fontWeight: 700 }}>{t.customLabel}</div>
-                  <div style={{ fontSize: ".65rem", color: isCustomDur ? "#A855F7" : "#6D5B8E", marginTop: 1 }}>{t.customDurLabel}</div>
-                  <div style={{ fontSize: ".72rem", fontWeight: 600, color: isCustomDur && customDays ? "#EDE9FE" : "#6D5B8E", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
+                  <div style={{ fontSize: ".65rem", color: isCustomDur ? "#A855F7" : "var(--muted)", marginTop: 1 }}>{t.customDurLabel}</div>
+                  <div style={{ fontSize: ".72rem", fontWeight: 600, color: isCustomDur && customDays ? "var(--text)" : "var(--muted)", marginTop: 4, fontFamily: "'JetBrains Mono',monospace" }}>
                     {isCustomDur && customDays ? `$${(bidCents * parseInt(customDays) / 100).toFixed(2)}` : "?"}
                   </div>
                 </button>
@@ -944,7 +950,7 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                     placeholder={`${t.dayLabel} (1–365)`}
                     style={{ ...inp, flex: 1 }}
                   />
-                  <span style={{ fontSize: ".83rem", color: "#6D5B8E", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: ".83rem", color: "var(--muted)", whiteSpace: "nowrap" }}>
                     {t.dayLabel}
                   </span>
                 </div>
@@ -954,15 +960,15 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
             {/* ── 6. Jami to'lov + Submit ───────────────────────────── */}
             <div style={{ ...card, padding: "16px 22px", display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
               <div style={{ flex: "0 0 auto" }}>
-                <div style={{ fontSize: ".67rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 2 }}>{t.totalLabel}</div>
+                <div style={{ fontSize: ".67rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 2 }}>{t.totalLabel}</div>
                 <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalDollars}</div>
-                <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 3 }}>
+                <div style={{ fontSize: ".71rem", color: "var(--muted)", marginTop: 3 }}>
                   ${bidDollars} × {duration} {t.dayLabel}
                   {displayCat ? ` · ${displayCat.emoji} ${displayCat.label}` : ""}
                 </div>
               </div>
               <div style={{ flex: 1, minWidth: 180 }}>
-                <div style={{ fontSize: ".7rem", color: "#6D5B8E", marginBottom: 8 }}>{t.totalNote}</div>
+                <div style={{ fontSize: ".7rem", color: "var(--muted)", marginBottom: 8 }}>{t.totalNote}</div>
                 {/* Terms agreement checkbox */}
                 <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 12 }}>
                   <input
@@ -1001,14 +1007,14 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
 
             {/* Ad preview card */}
             <div style={{ ...card, padding: 20 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.previewTitle}</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 14 }}>{t.previewTitle}</div>
 
               {/* Image preview */}
-              <div style={{ borderRadius: 11, overflow: "hidden", background: "#160F2A", aspectRatio: "16/9", marginBottom: 14, position: "relative" }}>
+              <div style={{ borderRadius: 11, overflow: "hidden", background: "var(--surface-2)", aspectRatio: "16/9", marginBottom: 14, position: "relative" }}>
                 {imagePreview ? (
                   <Image src={imagePreview} alt="preview" fill style={{ objectFit: "cover" }} />
                 ) : (
-                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#4A3C6E", fontSize: ".8rem" }}>
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--dim)", fontSize: ".8rem" }}>
                     {t.imageClick}
                   </div>
                 )}
@@ -1023,11 +1029,11 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                   {brandInitial}
                 </div>
                 <div>
-                  <div style={{ fontSize: ".87rem", fontWeight: 700, color: "#EDE9FE" }}>{title || t.titlePh}</div>
-                  <div style={{ fontSize: ".74rem", color: "#6D5B8E" }}>{brandName}</div>
+                  <div style={{ fontSize: ".87rem", fontWeight: 700, color: "var(--text)" }}>{title || t.titlePh}</div>
+                  <div style={{ fontSize: ".74rem", color: "var(--muted)" }}>{brandName}</div>
                 </div>
                 {displayCat && (
-                  <span style={{ marginLeft: "auto", padding: "2px 8px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".67rem", color: "#6D5B8E" }}>
+                  <span style={{ marginLeft: "auto", padding: "2px 8px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".67rem", color: "var(--muted)" }}>
                     {displayCat.emoji} {displayCat.label}
                   </span>
                 )}
@@ -1040,34 +1046,34 @@ function CreateView({ lang, userProfile, firebaseUser, router }: {
                 </span>
               </div>
 
-              <div style={{ marginTop: 12, fontSize: ".73rem", color: "#6D5B8E", textAlign: "center" }}>{t.previewNote}</div>
+              <div style={{ marginTop: 12, fontSize: ".73rem", color: "var(--muted)", textAlign: "center" }}>{t.previewNote}</div>
             </div>
 
             {/* Cost breakdown */}
             <div style={{ ...card, padding: 20 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.costTitle}</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 14 }}>{t.costTitle}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[
                   { k: t.perDay, v: `$${bidDollars}` },
                   { k: t.days, v: `${duration} ${t.dayLabel}` },
                   { k: t.total, v: `$${totalDollars}`, highlight: true },
                 ].map((row) => (
-                  <div key={row.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: row.highlight ? 0 : 10, borderBottom: row.highlight ? "none" : "1px solid #2D1F50" }}>
-                    <span style={{ fontSize: ".82rem", color: "#6D5B8E" }}>{row.k}</span>
-                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: row.highlight ? "1.05rem" : ".88rem", fontWeight: row.highlight ? 700 : 600, color: row.highlight ? "#34D399" : "#EDE9FE" }}>{row.v}</span>
+                  <div key={row.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: row.highlight ? 0 : 10, borderBottom: row.highlight ? "none" : "1px solid var(--border)" }}>
+                    <span style={{ fontSize: ".82rem", color: "var(--muted)" }}>{row.k}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: row.highlight ? "1.05rem" : ".88rem", fontWeight: row.highlight ? 700 : 600, color: row.highlight ? "#34D399" : "var(--text)" }}>{row.v}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Rules card */}
-            <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 18, padding: 20 }}>
-              <div style={{ fontSize: ".73rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 12 }}>{t.rulesTitle}</div>
+            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 18, padding: 20 }}>
+              <div style={{ fontSize: ".73rem", fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>{t.rulesTitle}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {[t.rule1, t.rule2, t.rule3, t.rule4].map((r, i) => (
                   <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                    <span style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(124,58,237,.16)", border: "1px solid #2D1F50", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".62rem", fontWeight: 700, color: "#6D5B8E", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
-                    <span style={{ fontSize: ".79rem", color: "#6D5B8E", lineHeight: 1.5 }}>{r}</span>
+                    <span style={{ width: 18, height: 18, borderRadius: "50%", background: "rgba(124,58,237,.16)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".62rem", fontWeight: 700, color: "var(--muted)", flexShrink: 0, marginTop: 1 }}>{i + 1}</span>
+                    <span style={{ fontSize: ".79rem", color: "var(--muted)", lineHeight: 1.5 }}>{r}</span>
                   </div>
                 ))}
               </div>
@@ -1098,8 +1104,8 @@ function CreatePageInner() {
 
   if (loading || !firebaseUser) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0E0B1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#6D5B8E", fontSize: ".9rem" }}>{T[lang].loadingLabel}</span>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "var(--muted)", fontSize: ".9rem" }}>{T[lang].loadingLabel}</span>
       </div>
     );
   }
@@ -1108,7 +1114,7 @@ function CreatePageInner() {
   const brandInitial = brandName.charAt(0).toUpperCase();
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "system-ui,sans-serif" }}>
       <style>{`
         @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
         * { box-sizing: border-box; }
@@ -1163,8 +1169,8 @@ function CreatePageInner() {
 export default function CreatePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: "100vh", background: "#0E0B1A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "#6D5B8E" }}>Loading...</span>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ color: "var(--muted)" }}>Loading...</span>
       </div>
     }>
       <CreatePageInner />

@@ -130,10 +130,10 @@ export default function PaymentPage() {
   const totalUSD = ad ? (ad.dailyBidCents * ad.durationDays) / 100 : 0;
   const catMeta = ad ? CATEGORIES[ad.category] : null;
 
-  const cardStyle: React.CSSProperties = { background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 18 };
+  const cardStyle: React.CSSProperties = { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18 };
 
   const DashHeader = () => (
-    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(11,11,15,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid var(--border)" }}>
       <div style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
@@ -142,18 +142,18 @@ export default function PaymentPage() {
               <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
-            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
           </Link>
-          <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "#6D5B8E" }}>
+          <span style={{ padding: "2px 9px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "var(--muted)" }}>
             {t.pageLabel}
           </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+            <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--muted)", fontWeight: 700 }}>{t.totalSpent}</span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
           </div>
-          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
+          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none" }}>
             <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
             <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </Link>
@@ -165,10 +165,10 @@ export default function PaymentPage() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
         <DashHeader />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-          <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
+          <span style={{ color: "var(--muted)" }}>{t.loading}</span>
         </div>
       </div>
     );
@@ -176,7 +176,7 @@ export default function PaymentPage() {
 
   if (!ad || !catMeta) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
         <DashHeader />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
           <span style={{ color: "#F87171" }}>{t.notFound}</span>
@@ -186,19 +186,19 @@ export default function PaymentPage() {
   }
 
   const payRows = [
-    { k: t.category,   v: `${catMeta.emoji} ${catMeta.label}`, color: "#EDE9FE" },
-    { k: t.title,      v: ad.title,                             color: "#EDE9FE" },
+    { k: t.category,   v: `${catMeta.emoji} ${catMeta.label}`, color: "var(--text)" },
+    { k: t.title,      v: ad.title,                             color: "var(--text)" },
     { k: t.dailyPrice, v: `$${(ad.dailyBidCents / 100).toFixed(2)}/${t.dayLabel}`, color: "#FCD34D" },
-    { k: t.duration,   v: `${ad.durationDays} ${t.dayLabel}`,  color: "#EDE9FE" },
+    { k: t.duration,   v: `${ad.durationDays} ${t.dayLabel}`,  color: "var(--text)" },
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "system-ui,sans-serif" }}>
       <style>{`@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}*{box-sizing:border-box}`}</style>
       <DashHeader />
 
       <div style={{ maxWidth: 940, margin: "0 auto", padding: "38px 26px 60px", animation: "fade .35s ease both" }}>
-        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 16 }}>
+        <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--muted)", fontSize: ".82rem", textDecoration: "none", marginBottom: 16 }}>
           {t.back}
         </Link>
 
@@ -225,18 +225,18 @@ export default function PaymentPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {/* Order */}
             <div style={{ ...cardStyle, padding: 22 }}>
-              <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.orderDetails}</div>
+              <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 14 }}>{t.orderDetails}</div>
               {payRows.map((r) => (
-                <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "11px 0", borderBottom: "1px solid #2D1F50", fontSize: ".85rem" }}>
+                <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 14, padding: "11px 0", borderBottom: "1px solid var(--border)", fontSize: ".85rem" }}>
                   <span style={{ color: "#A78BFA" }}>{r.k}</span>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 600, color: r.color, textAlign: "right", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.v}</span>
                 </div>
               ))}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 14, paddingTop: 16 }}>
-                <span style={{ fontSize: ".9rem", fontWeight: 700, color: "#EDE9FE" }}>{t.totalPayment}</span>
+                <span style={{ fontSize: ".9rem", fontWeight: 700, color: "var(--text)" }}>{t.totalPayment}</span>
                 <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.9rem", fontWeight: 700, color: "#34D399", lineHeight: 1 }}>${totalUSD.toFixed(2)}</span>
               </div>
-              <div style={{ fontSize: ".78rem", color: "#6D5B8E", marginTop: 6, textAlign: "right" }}>
+              <div style={{ fontSize: ".78rem", color: "var(--muted)", marginTop: 6, textAlign: "right" }}>
                 ${(ad.dailyBidCents / 100).toFixed(2)}/{t.dayLabel} x {ad.durationDays} {t.dayLabel}
               </div>
             </div>
@@ -279,18 +279,18 @@ export default function PaymentPage() {
           {/* RIGHT */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ ...cardStyle, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{t.yourAd}</div>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 12 }}>{t.yourAd}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".9rem", color: "#fff", flexShrink: 0 }}>
                   {catMeta.emoji}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: ".87rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
-                  <div style={{ fontSize: ".74rem", color: "#6D5B8E" }}>{catMeta.label} · {ad.durationDays} {t.dayLabel}</div>
+                  <div style={{ fontSize: ".87rem", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
+                  <div style={{ fontSize: ".74rem", color: "var(--muted)" }}>{catMeta.label} · {ad.durationDays} {t.dayLabel}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid #2D1F50", borderBottom: "1px solid #2D1F50", fontSize: ".82rem" }}>
-                <span style={{ color: "#6D5B8E" }}>{t.dailyPrice}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", fontSize: ".82rem" }}>
+                <span style={{ color: "var(--muted)" }}>{t.dailyPrice}</span>
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${(ad.dailyBidCents / 100).toFixed(2)}/{t.dayLabel}</span>
               </div>
               <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 11, background: "rgba(52,211,153,.08)", border: "1px solid rgba(52,211,153,.2)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -299,23 +299,23 @@ export default function PaymentPage() {
               </div>
             </div>
 
-            <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{t.nextSteps}</div>
+            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 13 }}>{t.nextSteps}</div>
               {[
                 { icon: "✅", text: t.step1, done: true, active: false },
                 { icon: "💳", text: t.step2, done: false, active: true },
                 { icon: "🚀", text: t.step3, done: false, active: false },
                 { icon: "📊", text: t.step4, done: false, active: false },
               ].map((step, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: i < 3 ? 12 : 0, marginBottom: i < 3 ? 12 : 0, borderBottom: i < 3 ? "1px dashed #2D1F50" : "none" }}>
-                  <span style={{ width: 24, height: 24, borderRadius: "50%", background: step.done ? "rgba(52,211,153,.15)" : step.active ? "rgba(124,58,237,.2)" : "#1A1230", border: `1px solid ${step.done ? "#10B981" : step.active ? "#7C3AED" : "#2D1F50"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", flexShrink: 0 }}>{step.icon}</span>
-                  <span style={{ fontSize: ".82rem", color: step.done ? "#34D399" : step.active ? "#A855F7" : "#6D5B8E", fontWeight: step.active ? 700 : 400 }}>{step.text}</span>
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, paddingBottom: i < 3 ? 12 : 0, marginBottom: i < 3 ? 12 : 0, borderBottom: i < 3 ? "1px dashed var(--border)" : "none" }}>
+                  <span style={{ width: 24, height: 24, borderRadius: "50%", background: step.done ? "rgba(52,211,153,.15)" : step.active ? "rgba(124,58,237,.2)" : "var(--surface)", border: `1px solid ${step.done ? "#10B981" : step.active ? "#7C3AED" : "var(--border)"}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", flexShrink: 0 }}>{step.icon}</span>
+                  <span style={{ fontSize: ".82rem", color: step.done ? "#34D399" : step.active ? "#A855F7" : "var(--muted)", fontWeight: step.active ? 700 : 400 }}>{step.text}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 10 }}>{t.guarantee}</div>
+            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+              <div style={{ fontSize: ".68rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 10 }}>{t.guarantee}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: ".79rem", color: "#A78BFA", lineHeight: 1.5 }}>
                 <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> {t.g1}</div>
                 <div style={{ display: "flex", gap: 8 }}><span style={{ color: "#34D399" }}>&#10003;</span> {t.g2}</div>

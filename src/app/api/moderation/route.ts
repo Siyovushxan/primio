@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
+import { DESCRIPTION_MAX, TITLE_MAX, isValidHttpsUrl, normalizeAdContent } from "@/lib/adRules";
+import { issueModerationToken } from "@/lib/moderationToken";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -163,13 +165,43 @@ REJECTED: [reason in English, one sentence]`;
 // HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function hasValidToken(req: NextRequest): Promise<boolean> {
+async function authenticatedUid(req: NextRequest): Promise<string | null> {
   const uid = await verifyFirebaseToken(req);
   if (!uid) {
     const token = req.headers.get("Authorization")?.replace("Bearer ", "").trim();
     console.error("Auth failed — token present:", !!token, "token length:", token?.length ?? 0);
   }
-  return uid !== null;
+  return uid;
+}
+
+// Images are moderated from where they are actually stored, never from client-sent bytes,
+// so the approved image is exactly the one the ad will display.
+const IMAGE_HOSTS = ["i.ibb.co", "firebasestorage.googleapis.com"];
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+
+function isAllowedImageHost(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && IMAGE_HOSTS.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchStoredImage(url: string): Promise<{ base64: string; mimeType: string } | null> {
+  if (!isAllowedImageHost(url)) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000), redirect: "follow" });
+    if (!res.ok || !isAllowedImageHost(res.url || url)) return null;
+    const mimeType = (res.headers.get("content-type") || "").split(";")[0].trim();
+    if (!mimeType.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length === 0 || buf.length > MAX_IMAGE_BYTES) return null;
+    return { base64: buf.toString("base64"), mimeType };
+  } catch (e: unknown) {
+    console.warn("Image fetch error:", (e as Error)?.message?.slice(0, 100));
+    return null;
+  }
 }
 
 async function xaiCall(
@@ -324,7 +356,13 @@ async function grokCheckImage(
 // ROUTES
 // ══════════════════════════════════════════════════════════════════════════════
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Diagnostics call paid AI APIs — admin only
+  const adminSecret = process.env.ADMIN_SECRET;
+  if (!adminSecret || req.headers.get("x-admin-secret") !== adminSecret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   let xaiTextStatus = "not_tested";
   let xaiVisionStatus = "not_tested";
   let xaiError = "";
@@ -401,23 +439,29 @@ export async function POST(req: NextRequest) {
 }
 
 async function handlePost(req: NextRequest) {
-  if (!await hasValidToken(req)) {
+  const uid = await authenticatedUid(req);
+  if (!uid) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: {
-    title?: string; description?: string; destinationURL?: string;
-    imageBase64?: string; mimeType?: string;
-  };
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { title, description, destinationURL, imageBase64, mimeType } = body;
+  // Client-sent imageBase64 is ignored: the stored image at imageURL is what gets checked.
+  const content = normalizeAdContent(body);
+  const { title, description, destinationURL, imageURL } = content;
   if (!title || !destinationURL) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  if (title.length > TITLE_MAX || description.length > DESCRIPTION_MAX) {
+    return NextResponse.json({ approved: false, reason: "The title or description is too long." });
+  }
+  if (!isValidHttpsUrl(destinationURL)) {
+    return NextResponse.json({ approved: false, reason: "The URL must start with https://" });
   }
 
   // ── STEP 1: Keyword pre-filter ────────────────────────────────────────────
@@ -466,7 +510,16 @@ async function handlePost(req: NextRequest) {
   }
 
   // ── STEP 5: Image moderation ──────────────────────────────────────────────
-  if (imageBase64 && mimeType) {
+  if (imageURL) {
+    const stored = await fetchStoredImage(imageURL);
+    if (!stored) {
+      return NextResponse.json({
+        approved: false,
+        reason: "The image could not be loaded for review. Please upload it again.",
+      });
+    }
+    const { base64: imageBase64, mimeType } = stored;
+
     // Run all 3 image checks in parallel
     const [visionResult, hfExplicitScore, hfSexyData] = await Promise.all([
       grokCheckImage(imageBase64, mimeType, title),
@@ -535,6 +588,7 @@ async function handlePost(req: NextRequest) {
     }
   }
 
-  // All checks passed
-  return NextResponse.json({ approved: true });
+  // All checks passed — issue a one-time approval bound to exactly this content
+  const moderationId = await issueModerationToken(uid, content);
+  return NextResponse.json({ approved: true, moderationId });
 }

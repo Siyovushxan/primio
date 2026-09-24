@@ -2,38 +2,50 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users — authenticated users read all, write only own profile (server-managed fields are immutable)
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Users — each user reads and writes only their own profile; spend is server-managed
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null
+      allow read: if signedIn() && request.auth.uid == userId;
+      // Create: resource is null here, so spend is checked on the new document itself
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && (!("totalSpentCents" in request.resource.data) || request.resource.data.totalSpentCents == 0);
+      allow update: if signedIn()
         && request.auth.uid == userId
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
              "totalSpentCents", "isNewAccount"
            ]);
+      allow delete: if false;
     }
 
-    // Ads — anyone can read active ads, owner can create/update/delete own ads
+    // Ads — the public sees only running ads; owners see all of theirs.
+    // Create and edit go through /api/ads/* (AI moderation is enforced there),
+    // status/payment fields only through the payment routes, so no client writes.
     match /ads/{adId} {
-      allow read: if true;
-      // Create: authenticated user, must set own UID, start as pending, zero paid, not pre-approved
-      allow create: if request.auth != null
-        && request.resource.data.advertiserUID == request.auth.uid
-        && request.resource.data.status == "pending"
-        && request.resource.data.totalPaidCents == 0
-        && request.resource.data.moderationPassed == false;
-      // Update: owner only, server-controlled fields are immutable from client
-      allow update: if request.auth != null
+      // resource == null: reading a deleted/missing ad just returns "not found"
+      allow read: if resource == null
+        || resource.data.status == "active"
+        || (signedIn() && request.auth.uid == resource.data.advertiserUID);
+      allow create, update: if false;
+      // Only unpaid ads can be deleted (same as the dashboard offers)
+      allow delete: if signedIn()
         && request.auth.uid == resource.data.advertiserUID
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-             "status", "expiresAt", "startsAt",
-             "totalPaidCents", "dailyBidCents",
-             "moderationPassed", "advertiserUID",
-             "impressions", "clicks",
-             "pendingPaymentId", "externalTxId", "paymentMethod"
-           ]);
-      // Delete: owner only
-      allow delete: if request.auth != null
-        && request.auth.uid == resource.data.advertiserUID;
+        && resource.data.status in ["pending", "rejected"];
+
+      // Per-day view/click counters for the dashboard chart — owner reads, server writes
+      match /daily/{day} {
+        allow read: if signedIn()
+          && get(/databases/$(database)/documents/ads/$(adId)).data.advertiserUID == request.auth.uid;
+        allow write: if false;
+      }
+    }
+
+    // Moderation approvals — server only
+    match /moderations/{id} {
+      allow read, write: if false;
     }
 
     // Transactions — owner can read own, no client writes
@@ -43,10 +55,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Waitlist — authenticated user can write own entry only
+    // Waitlist — authenticated user can write own entry only (doc id is their e-mail)
     match /waitlist/{email} {
       allow read: if false;
-      allow create, update: if request.auth != null;
+      allow create, update: if signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == email.lower();
       allow delete: if false;
     }
 

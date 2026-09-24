@@ -215,7 +215,7 @@ export default function TermsPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0E0B1A",
+      background: "var(--bg)",
       color: "#E9D5FF",
       fontFamily: "system-ui, -apple-system, sans-serif",
       padding: "40px 16px 80px",
@@ -236,10 +236,10 @@ export default function TermsPage() {
             }}>📋</div>
             <div>
               <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff", margin: 0 }}>{c.title}</h1>
-              <p style={{ fontSize: 13, color: "#6D5B8E", margin: "4px 0 0" }}>{c.subtitle}</p>
+              <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>{c.subtitle}</p>
             </div>
           </div>
-          <p style={{ fontSize: 12, color: "#4A3C6E" }}>{c.updated}</p>
+          <p style={{ fontSize: 12, color: "var(--dim)" }}>{c.updated}</p>
         </div>
 
         {/* Intro */}

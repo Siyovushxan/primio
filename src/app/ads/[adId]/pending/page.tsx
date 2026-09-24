@@ -79,7 +79,7 @@ export default function AdPendingPage() {
   }, [adId, router]);
 
   const cardStyle: React.CSSProperties = {
-    background: "linear-gradient(135deg, #1A1230 0%, #120D24 100%)",
+    background: "linear-gradient(135deg, var(--surface) 0%, var(--surface) 100%)",
     border: "1px solid rgba(124,58,237,0.25)",
     borderRadius: 24,
     padding: "40px 36px",

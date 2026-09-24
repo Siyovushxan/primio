@@ -131,7 +131,7 @@ export default function ScanningPage() {
       }
 
       const { title, description, url, category, bidCents, duration,
-              imageBase64, imageBase64Mod, imageMimeTypeMod, idToken, uid } = data;
+              imageBase64, idToken, uid } = data;
 
       setStep("keyword", "running");
       await new Promise((r) => setTimeout(r, 400));
@@ -197,12 +197,8 @@ export default function ScanningPage() {
         const aiRes = await fetch("/api/moderation", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({
-            title, description, destinationURL: url,
-            imageURL,
-            imageBase64: imageBase64Mod,
-            mimeType: imageMimeTypeMod,
-          }),
+          // The server reviews the uploaded image at imageURL itself
+          body: JSON.stringify({ title, description, destinationURL: url, imageURL }),
         });
         try { aiData = await aiRes.json(); }
         catch { throw new Error(t.errAiNoResponse); }
@@ -235,6 +231,7 @@ export default function ScanningPage() {
             category,
             dailyBidCents: bidCents,
             durationDays: duration,
+            moderationId: aiData.moderationId,
           }),
         });
         const saveData = await saveRes.json();
@@ -269,7 +266,7 @@ export default function ScanningPage() {
     if (s === "running") return (
       <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2.5px solid #7C3AED", borderTopColor: "transparent", animation: "spin 0.7s linear infinite" }} />
     );
-    return <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid #2D1F50" }} />;
+    return <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2px solid var(--border)" }} />;
   };
 
   const allDone = Object.values(stepStatuses).every((s) => s === "done");
@@ -279,7 +276,7 @@ export default function ScanningPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "#0E0B1A",
+      background: "var(--bg)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -302,13 +299,13 @@ export default function ScanningPage() {
           <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
           <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
         </svg>
-        <span style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#EDE9FE", letterSpacing: ".05em" }}>PRIMIO</span>
+        <span style={{ fontFamily: "'Unbounded', sans-serif", fontSize: "1rem", fontWeight: 700, color: "var(--text)", letterSpacing: ".05em" }}>PRIMIO</span>
       </div>
 
       {/* Card */}
       <div style={{
         width: "100%", maxWidth: 480,
-        background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 24,
+        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 24,
         padding: "36px 32px",
         animation: "fadeUp .5s ease .1s both",
         ...(anyFailed ? {} : { animation: "fadeUp .5s ease .1s both, glow 2.5s ease infinite" }),
@@ -345,10 +342,10 @@ export default function ScanningPage() {
         )}
 
         {/* Heading */}
-        <h1 style={{ margin: "0 0 6px", fontSize: "1.2rem", fontWeight: 700, color: "#EDE9FE", textAlign: "center" }}>
+        <h1 style={{ margin: "0 0 6px", fontSize: "1.2rem", fontWeight: 700, color: "var(--text)", textAlign: "center" }}>
           {allDone ? t.headingDone : anyFailed ? t.headingFailed : t.headingRunning}
         </h1>
-        <p style={{ margin: "0 0 28px", fontSize: ".83rem", color: "#6D5B8E", textAlign: "center", minHeight: 18 }}>
+        <p style={{ margin: "0 0 28px", fontSize: ".83rem", color: "var(--muted)", textAlign: "center", minHeight: 18 }}>
           {allDone
             ? t.subDone
             : anyFailed
@@ -367,12 +364,12 @@ export default function ScanningPage() {
                 display: "flex", alignItems: "center", gap: 13,
                 padding: "12px 14px", borderRadius: 12,
                 background: s === "running" ? "rgba(124,58,237,.1)" : s === "done" ? "rgba(16,185,129,.07)" : s === "failed" ? "rgba(239,68,68,.07)" : "rgba(255,255,255,.02)",
-                border: `1px solid ${s === "running" ? "#7C3AED" : s === "done" ? "#10B98130" : s === "failed" ? "#EF444430" : "#2D1F50"}`,
+                border: `1px solid ${s === "running" ? "#7C3AED" : s === "done" ? "#10B98130" : s === "failed" ? "#EF444430" : "var(--border)"}`,
                 transition: "all .3s ease",
               }}>
                 {statusIcon(s)}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: ".83rem", fontWeight: 600, color: s === "failed" ? "#F87171" : s === "done" ? "#6EE7B7" : s === "running" ? "#EDE9FE" : "#6D5B8E" }}>
+                  <div style={{ fontSize: ".83rem", fontWeight: 600, color: s === "failed" ? "#F87171" : s === "done" ? "#6EE7B7" : s === "running" ? "var(--text)" : "var(--muted)" }}>
                     {step.label}
                   </div>
                   {s === "running" && (
@@ -400,7 +397,7 @@ export default function ScanningPage() {
             onClick={() => router.push("/create?restore=1")}
             style={{
               marginTop: 20, width: "100%", padding: "13px 0", borderRadius: 12,
-              border: "1px solid #2D1F50", background: "rgba(124,58,237,.12)",
+              border: "1px solid var(--border)", background: "rgba(124,58,237,.12)",
               color: "#A855F7", fontSize: ".88rem", fontWeight: 700, cursor: "pointer",
             }}
           >
@@ -411,7 +408,7 @@ export default function ScanningPage() {
 
       {/* Bottom note */}
       {!anyFailed && !allDone && (
-        <p style={{ marginTop: 20, fontSize: ".75rem", color: "#4A3C6E", textAlign: "center", animation: "fadeUp .5s ease .3s both" }}>
+        <p style={{ marginTop: 20, fontSize: ".75rem", color: "var(--dim)", textAlign: "center", animation: "fadeUp .5s ease .3s both" }}>
           {t.dontClose}
         </p>
       )}

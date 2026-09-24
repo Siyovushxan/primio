@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
-import { adminDb } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
+import { applyPayment, notifyOutranked } from "@/lib/payments";
 
 export const dynamic = "force-dynamic";
+
+// Reject deliveries whose signed timestamp is too far from now (replay protection)
+const TIMESTAMP_TOLERANCE_SEC = 5 * 60;
 
 function verifyDodoWebhook(
   body: string,
@@ -13,6 +15,9 @@ function verifyDodoWebhook(
   secret: string,
 ): boolean {
   try {
+    const ts = Number(webhookTimestamp);
+    if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > TIMESTAMP_TOLERANCE_SEC) return false;
+
     // Standard Webhooks: secret is "whsec_<base64>"
     const rawSecret = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
     const signedContent = `${webhookId}.${webhookTimestamp}.${body}`;
@@ -59,118 +64,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  if (event.type === "payment.succeeded") {
-    const payload = event.data?.payload ?? event.data ?? {};
-    const paymentId = payload.payment_id;
-    const metadata = payload.metadata || {};
-    const adId = metadata.adId;
-    const advertiserUID = metadata.advertiserUID;
-    const type = metadata.type || "purchase";
-    const newDailyBidCents = parseInt(metadata.newDailyBidCents || "0");
-    const amountTotal = payload.total_amount || 0;
+  if (event.type !== "payment.succeeded") return NextResponse.json({ received: true });
 
-    if (!adId || !advertiserUID) {
-      console.error("Webhook missing metadata:", metadata);
-      return NextResponse.json({ received: true });
+  const payload = event.data?.payload ?? event.data ?? {};
+  const metadata = payload.metadata || {};
+  if (!payload.payment_id || !metadata.adId || !metadata.advertiserUID) {
+    console.error("Webhook missing payment id or metadata:", payload.payment_id, metadata);
+    return NextResponse.json({ received: true });
+  }
+
+  try {
+    const result = await applyPayment({
+      paymentId: String(payload.payment_id),
+      metadata,
+      amountCents: Number(payload.total_amount) || 0,
+      source: "webhook",
+    });
+    console.log(`Webhook ${payload.payment_id}: ${result.type} → ${result.outcome}`);
+
+    if (result.bidUpgrade) {
+      const upgrade = result.bidUpgrade;
+      after(() => notifyOutranked(result.adId, upgrade).catch((err) => console.error("Outbid notify error:", err)));
     }
-
-    try {
-      const adRef = adminDb.doc(`ads/${adId}`);
-      const adSnap = await adRef.get();
-
-      // Idempotency: check transactions collection first (works even if ad deleted)
-      const existingTx = await adminDb
-        .collection("transactions")
-        .where("externalTxId", "==", paymentId)
-        .limit(1)
-        .get();
-      if (!existingTx.empty) {
-        console.log("Webhook already processed (idempotency):", paymentId);
-        return NextResponse.json({ received: true });
-      }
-
-      if (!adSnap.exists) {
-        // Ad was deleted after payment — still record the transaction for audit/refund purposes
-        console.warn(`Ad not found (deleted?): ${adId} — recording orphan transaction`);
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "orphan_" + type, // e.g. "orphan_purchase"
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          note: "Ad was deleted before webhook processed",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        await adminDb.doc(`users/${advertiserUID}`).update({
-          totalSpentCents: FieldValue.increment(amountTotal),
-        });
-        return NextResponse.json({ received: true });
-      }
-
-      const ad = adSnap.data()!;
-
-      if (type === "bid_upgrade") {
-        await adRef.update({
-          dailyBidCents: newDailyBidCents,
-          externalTxId: paymentId,
-          pendingPaymentId: FieldValue.delete(),
-        });
-
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "bid_upgrade",
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-
-        await adminDb.doc(`users/${advertiserUID}`).update({
-          totalSpentCents: FieldValue.increment(amountTotal),
-        });
-      } else {
-        const userSnap = await adminDb.doc(`users/${advertiserUID}`).get();
-        const isNewAccount = userSnap.exists ? userSnap.data()!.isNewAccount : false;
-        const newStatus = isNewAccount ? "pending_verification" : "active";
-
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + (ad.durationDays || 7) * 24 * 60 * 60 * 1000);
-
-        await adRef.update({
-          status: newStatus,
-          startsAt: isNewAccount ? null : FieldValue.serverTimestamp(),
-          expiresAt: isNewAccount ? null : expiresAt,
-          totalPaidCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          pendingPaymentId: FieldValue.delete(),
-        });
-
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "purchase",
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-
-        if (userSnap.exists) {
-          await adminDb.doc(`users/${advertiserUID}`).update({
-            totalSpentCents: FieldValue.increment(amountTotal),
-            isNewAccount: false,
-          });
-        }
-
-        console.log(`Ad ${adId} activated via webhook. Status: ${newStatus}`);
-      }
-    } catch (err) {
-      console.error("Webhook processing error:", err);
-      return NextResponse.json({ error: "Processing failed" }, { status: 500 });
-    }
+  } catch (err) {
+    console.error("Webhook processing error:", err);
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

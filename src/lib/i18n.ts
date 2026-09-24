@@ -282,7 +282,6 @@ const translations = {
     dashWarnRows: [
       { color: "#F59E0B", title: "Prepayment required", body: "Ads only start after payment is confirmed." },
       { color: "#34D399", title: "No refunds", body: "Approved and running ads are non-refundable." },
-      { color: "#A855F7", title: "New accounts", body: "First payment may go through a 24h review period." },
     ],
     dashRefundRows: [
       { k: "Failed moderation", v: "Full refund", color: "#34D399" },
@@ -339,8 +338,8 @@ const translations = {
     paymentSuccessLive: "Your ad is now live.",
     paymentSuccessRanking: "✓ Ad is visible in the ranking",
     paymentPending: "Payment received",
-    paymentPendingSub: "Your ad will be reviewed within 24 hours.",
-    paymentPendingNote: "⏳ Ad goes live after approval.",
+    paymentPendingSub: "We are confirming your payment with the bank.",
+    paymentPendingNote: "⏳ Your ad goes live as soon as the payment is confirmed — usually within a minute.",
     paymentBidUpgrade: "Bid successfully raised!",
     paymentBidSub: "Your ad has moved up in the ranking with the new bid.",
     paymentBidNote: "✓ New bid activated",
@@ -650,7 +649,6 @@ const translations = {
     dashWarnRows: [
       { color: "#F59E0B", title: "Oldindan to'lov", body: "Reklama faqat to'lovdan keyin boshlanadi." },
       { color: "#34D399", title: "Qaytarish yo'q", body: "Tasdiqlangan va ishga tushgan reklama uchun pul qaytarilmaydi." },
-      { color: "#A855F7", title: "Yangi akkaunt", body: "Birinchi to'lovdan keyin 24 soatlik tekshiruv bo'lishi mumkin." },
     ],
     dashRefundRows: [
       { k: "Moderatsiyadan o'tmagan", v: "To'liq qaytarish", color: "#34D399" },
@@ -707,8 +705,8 @@ const translations = {
     paymentSuccessLive: "Reklamangiz hozir jonli.",
     paymentSuccessRanking: "✓ Reklama reytingda ko'rinmoqda",
     paymentPending: "To'lov qabul qilindi",
-    paymentPendingSub: "Reklamangiz 24 soat ichida tekshiriladi.",
-    paymentPendingNote: "⏳ Tasdiqlangandan keyin reklama jonli bo'ladi.",
+    paymentPendingSub: "To'lovingiz bank bilan tasdiqlanmoqda.",
+    paymentPendingNote: "⏳ To'lov tasdiqlanishi bilan reklama jonli bo'ladi — odatda bir daqiqa ichida.",
     paymentBidUpgrade: "Bid muvaffaqiyatli oshirildi!",
     paymentBidSub: "Reklamangiz yangi bid bilan reytingda yuqoriga ko'tarildi.",
     paymentBidNote: "✓ Yangi bid faollashtirildi",
@@ -1018,7 +1016,6 @@ const translations = {
     dashWarnRows: [
       { color: "#F59E0B", title: "Предоплата", body: "Объявления начинаются только после подтверждения оплаты." },
       { color: "#34D399", title: "Нет возвратов", body: "Одобренная и запущенная реклама не подлежит возврату." },
-      { color: "#A855F7", title: "Новые аккаунты", body: "Первый платёж может пройти 24-часовую проверку." },
     ],
     dashRefundRows: [
       { k: "Не прошло модерацию", v: "Полный возврат", color: "#34D399" },
@@ -1075,8 +1072,8 @@ const translations = {
     paymentSuccessLive: "Ваша реклама сейчас в эфире.",
     paymentSuccessRanking: "✓ Реклама видна в рейтинге",
     paymentPending: "Платёж принят",
-    paymentPendingSub: "Ваша реклама будет проверена в течение 24 часов.",
-    paymentPendingNote: "⏳ Реклама выйдет в эфир после одобрения.",
+    paymentPendingSub: "Мы подтверждаем ваш платёж в банке.",
+    paymentPendingNote: "⏳ Реклама выйдет в эфир сразу после подтверждения платежа — обычно в течение минуты.",
     paymentBidUpgrade: "Ставка успешно повышена!",
     paymentBidSub: "Ваша реклама поднялась в рейтинге с новой ставкой.",
     paymentBidNote: "✓ Новая ставка активирована",

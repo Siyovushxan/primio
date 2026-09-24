@@ -10,7 +10,7 @@ export default function HowItWorksPage() {
   const { t } = useLang();
 
   return (
-    <div style={{ minHeight: "calc(100vh - 64px)", background: "#0A0715", position: "relative", overflow: "hidden" }}>
+    <div style={{ minHeight: "calc(100vh - 64px)", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
 
       {/* ── Background ─────────────────────────────────────────────────────── */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -22,7 +22,7 @@ export default function HowItWorksPage() {
       <div style={{ position: "relative", zIndex: 1 }}>
 
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
-        <div style={{ padding: "72px 24px 60px", borderBottom: "1px solid rgba(45,31,80,.6)" }}>
+        <div style={{ padding: "72px 24px 60px", borderBottom: "1px solid rgba(42,42,53,.6)" }}>
           <div style={{ maxWidth: W, margin: "0 auto", display: "flex", alignItems: "center", gap: 48, flexWrap: "wrap" }}>
 
             {/* Left text */}
@@ -34,13 +34,13 @@ export default function HowItWorksPage() {
               <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.8rem,4vw,3rem)", fontWeight: 800, letterSpacing: "-.035em", lineHeight: 1.1, marginBottom: 16, maxWidth: "18ch" }}>
                 {t.howPageTitle}
               </h1>
-              <p style={{ fontSize: "1rem", color: "#7C6E9E", maxWidth: "48ch", lineHeight: 1.7, marginBottom: 28 }}>
+              <p style={{ fontSize: "1rem", color: "var(--muted)", maxWidth: "48ch", lineHeight: 1.7, marginBottom: 28 }}>
                 {t.howPageSub}
               </p>
 
               {/* Core rule card */}
               <div style={{ display: "inline-block", padding: "18px 24px", borderRadius: 18, background: "linear-gradient(135deg,rgba(124,58,237,.18),rgba(245,158,11,.08))", border: "1px solid rgba(124,58,237,.4)", animation: "glow-pulse 3s ease-in-out infinite" }}>
-                <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#EDE9FE" }}>
+                <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--text)" }}>
                   {t.howPageRule} <span style={{ color: "#F59E0B", animation: "rank-glow 2.5s ease-in-out infinite" }}>{t.howPageRuleHighlight}</span>
                 </span>
                 <div style={{ fontSize: ".8rem", color: "#A78BFA", marginTop: 6 }}>{t.howPageRuleSub}</div>
@@ -54,7 +54,7 @@ export default function HowItWorksPage() {
                   const icons = ["✏️","💰","🏆","📈","⚡","🛡️"];
                   return (
                     <div key={n} style={{
-                      background: "rgba(45,31,80,.5)", border: "1px solid rgba(124,58,237,.2)", borderRadius: 14, padding: "14px 16px",
+                      background: "rgba(42,42,53,.5)", border: "1px solid rgba(124,58,237,.2)", borderRadius: 14, padding: "14px 16px",
                       display: "flex", alignItems: "center", gap: 10,
                       animation: `slideUp .5s both ${i * 60}ms`,
                     }}>
@@ -69,7 +69,7 @@ export default function HowItWorksPage() {
         </div>
 
         {/* ── STEPS GRID ───────────────────────────────────────────────────── */}
-        <div style={{ borderBottom: "1px solid rgba(45,31,80,.6)" }}>
+        <div style={{ borderBottom: "1px solid rgba(42,42,53,.6)" }}>
           <div style={{ maxWidth: W, margin: "0 auto", padding: "56px 24px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 14 }}>
               {t.howSteps.map((s, i) => (
@@ -80,12 +80,12 @@ export default function HowItWorksPage() {
         </div>
 
         {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-        <div style={{ borderBottom: "1px solid rgba(45,31,80,.6)" }}>
+        <div style={{ borderBottom: "1px solid rgba(42,42,53,.6)" }}>
           <div style={{ maxWidth: W, margin: "0 auto", padding: "56px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32, flexWrap: "wrap" }}>
               <div>
                 <div style={{ fontSize: ".65rem", letterSpacing: ".16em", textTransform: "uppercase", color: "#7C3AED", fontWeight: 700, marginBottom: 8 }}>{t.howFaqLabel}</div>
-                <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.4rem,3vw,1.9rem)", fontWeight: 700, letterSpacing: "-.02em", color: "#EDE9FE", margin: 0 }}>
+                <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.4rem,3vw,1.9rem)", fontWeight: 700, letterSpacing: "-.02em", color: "var(--text)", margin: 0 }}>
                   {t.howFaqTitle}
                 </h2>
               </div>
@@ -102,7 +102,7 @@ export default function HowItWorksPage() {
         <div style={{ maxWidth: W, margin: "0 auto", padding: "56px 24px 80px" }}>
           <div style={{
             padding: "52px 40px", borderRadius: 26,
-            background: "linear-gradient(135deg, rgba(124,58,237,.15) 0%, rgba(45,31,80,.4) 50%, rgba(124,58,237,.08) 100%)",
+            background: "linear-gradient(135deg, rgba(124,58,237,.15) 0%, rgba(42,42,53,.4) 50%, rgba(124,58,237,.08) 100%)",
             border: "1px solid rgba(124,58,237,.35)", textAlign: "center",
             position: "relative", overflow: "hidden",
             animation: "glow-pulse 4s ease-in-out infinite",
@@ -110,10 +110,10 @@ export default function HowItWorksPage() {
             <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(124,58,237,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,.04) 1px, transparent 1px)", backgroundSize: "30px 30px", pointerEvents: "none" }} />
             <div style={{ position: "relative" }}>
               <div style={{ fontSize: "2.8rem", marginBottom: 14, animation: "float-sm 3s ease-in-out infinite" }}>🚀</div>
-              <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.4rem,3.5vw,2rem)", fontWeight: 700, letterSpacing: "-.02em", lineHeight: 1.2, marginBottom: 10, color: "#EDE9FE" }}>
+              <h2 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.4rem,3.5vw,2rem)", fontWeight: 700, letterSpacing: "-.02em", lineHeight: 1.2, marginBottom: 10, color: "var(--text)" }}>
                 {t.howCtaTitle}
               </h2>
-              <p style={{ fontSize: ".92rem", color: "#7C6E9E", maxWidth: "46ch", margin: "0 auto 28px", lineHeight: 1.7 }}>
+              <p style={{ fontSize: ".92rem", color: "var(--muted)", maxWidth: "46ch", margin: "0 auto 28px", lineHeight: 1.7 }}>
                 {t.howCtaSub}
               </p>
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -155,7 +155,7 @@ function StepCard({ s, delay }: { s: { num: string; icon: string; title: string;
   const onLeave = () => {
     const el = ref.current; if (!el) return;
     el.style.transform = "";
-    el.style.borderColor = isTop3 ? "rgba(124,58,237,.3)" : "rgba(45,31,80,.7)";
+    el.style.borderColor = isTop3 ? "rgba(124,58,237,.3)" : "rgba(42,42,53,.7)";
     el.style.boxShadow = isTop3 ? "0 0 20px rgba(124,58,237,.08)" : "";
   };
 
@@ -165,8 +165,8 @@ function StepCard({ s, delay }: { s: { num: string; icon: string; title: string;
       onMouseMove={onMove}
       onMouseLeave={onLeave}
       style={{
-        background: "linear-gradient(135deg, rgba(45,31,80,.6) 0%, rgba(22,15,42,.9) 100%)",
-        border: `1px solid ${isTop3 ? "rgba(124,58,237,.3)" : "rgba(45,31,80,.7)"}`,
+        background: "linear-gradient(135deg, rgba(42,42,53,.6) 0%, rgba(21,21,27,.9) 100%)",
+        border: `1px solid ${isTop3 ? "rgba(124,58,237,.3)" : "rgba(42,42,53,.7)"}`,
         borderRadius: 18,
         padding: "22px 20px",
         cursor: "default",
@@ -185,8 +185,8 @@ function StepCard({ s, delay }: { s: { num: string; icon: string; title: string;
         <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.1rem", fontWeight: 700, color: isTop3 ? "rgba(124,58,237,.5)" : "#3D2E5A" }}>{s.num}</span>
         <span style={{ fontSize: "1.3rem" }}>{s.icon}</span>
       </div>
-      <div style={{ fontSize: ".93rem", fontWeight: 700, marginBottom: 7, color: "#EDE9FE", lineHeight: 1.35 }}>{s.title}</div>
-      <div style={{ fontSize: ".81rem", color: "#7C6E9E", lineHeight: 1.65 }}>{s.body}</div>
+      <div style={{ fontSize: ".93rem", fontWeight: 700, marginBottom: 7, color: "var(--text)", lineHeight: 1.35 }}>{s.title}</div>
+      <div style={{ fontSize: ".81rem", color: "var(--muted)", lineHeight: 1.65 }}>{s.body}</div>
     </div>
   );
 }
@@ -196,16 +196,16 @@ function FaqCard({ f, delay }: { f: { q: string; a: string }; delay: number }) {
   return (
     <div
       ref={ref}
-      onMouseEnter={() => { if (ref.current) { ref.current.style.borderColor = "rgba(124,58,237,.4)"; ref.current.style.background = "rgba(45,31,80,.5)"; } }}
-      onMouseLeave={() => { if (ref.current) { ref.current.style.borderColor = "rgba(45,31,80,.6)"; ref.current.style.background = "rgba(22,15,42,.7)"; } }}
+      onMouseEnter={() => { if (ref.current) { ref.current.style.borderColor = "rgba(124,58,237,.4)"; ref.current.style.background = "rgba(42,42,53,.5)"; } }}
+      onMouseLeave={() => { if (ref.current) { ref.current.style.borderColor = "rgba(42,42,53,.6)"; ref.current.style.background = "rgba(21,21,27,.7)"; } }}
       style={{
-        background: "rgba(22,15,42,.7)", border: "1px solid rgba(45,31,80,.6)", borderRadius: 16, padding: 20,
+        background: "rgba(21,21,27,.7)", border: "1px solid rgba(42,42,53,.6)", borderRadius: 16, padding: 20,
         transition: "border-color .2s, background .2s",
         animation: `slideUp .5s both ${delay}ms`,
       }}
     >
-      <div style={{ fontSize: ".88rem", fontWeight: 700, marginBottom: 8, lineHeight: 1.45, color: "#EDE9FE" }}>{f.q}</div>
-      <div style={{ fontSize: ".82rem", color: "#7C6E9E", lineHeight: 1.7 }}>{f.a}</div>
+      <div style={{ fontSize: ".88rem", fontWeight: 700, marginBottom: 8, lineHeight: 1.45, color: "var(--text)" }}>{f.q}</div>
+      <div style={{ fontSize: ".82rem", color: "var(--muted)", lineHeight: 1.7 }}>{f.a}</div>
     </div>
   );
 }

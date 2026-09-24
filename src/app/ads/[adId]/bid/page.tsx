@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ad, CATEGORIES } from "@/types";
+import { MIN_BID_INCREMENT_CENTS } from "@/lib/adRules";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import Link from "next/link";
@@ -87,16 +88,19 @@ export default function BidUpgradePage() {
         router.push("/dashboard"); return;
       }
       setAd(data);
-      setNewBid(Math.floor(data.dailyBidCents / 100) + 1);
+      // ?to=<cents> comes from the dashboard: the bid needed to move up one place
+      const to = parseInt(new URLSearchParams(window.location.search).get("to") || "", 10);
+      const minCents = data.dailyBidCents + MIN_BID_INCREMENT_CENTS;
+      setNewBid(Number.isInteger(to) && to >= minCents ? to / 100 : Math.floor(data.dailyBidCents / 100) + 1);
       setLoading(false);
     });
   }, [adId, firebaseUser, authLoading, router]);
 
   const handlePay = async () => {
     if (!ad) return;
-    const currentBidUSD = ad.dailyBidCents / 100;
-    if (newBid <= currentBidUSD) {
-      setError(`${t.newBidLabel}: > $${currentBidUSD}${t.dayLabel}`);
+    const minBidUSD = (ad.dailyBidCents + MIN_BID_INCREMENT_CENTS) / 100;
+    if (newBid < minBidUSD) {
+      setError(`${t.newBidLabel}: ≥ $${minBidUSD.toFixed(2)}${t.dayLabel}`);
       return;
     }
     setError("");
@@ -135,17 +139,17 @@ export default function BidUpgradePage() {
   const catMeta = ad ? CATEGORIES[ad.category] : null;
 
   const card: React.CSSProperties = {
-    background: "#1A1230",
-    border: "1px solid #2D1F50",
+    background: "var(--surface)",
+    border: "1px solid var(--border)",
     borderRadius: 18,
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE", fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "system-ui,sans-serif" }}>
       <style>{`@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}*{box-sizing:border-box}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:1}`}</style>
 
       {/* Dashboard header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(11,11,15,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid var(--border)" }}>
         <div style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
@@ -153,17 +157,17 @@ export default function BidUpgradePage() {
               <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
-            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
-            <span style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "#6D5B8E" }}>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
+            <span style={{ padding: "2px 9px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" as const, color: "var(--muted)" }}>
               {t.pageLabel}
             </span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 9 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50" }}>
-              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 13px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <span style={{ fontSize: ".68rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--muted)", fontWeight: 700 }}>{t.totalSpent}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".86rem", fontWeight: 600, color: "#FCD34D" }}>${(spent / 100).toFixed(0)}</span>
             </div>
-            <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", textDecoration: "none" }}>
+            <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 11px 5px 5px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", textDecoration: "none" }}>
               <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".7rem", fontWeight: 700, color: "#fff" }}>{initials}</span>
               <span style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
             </Link>
@@ -174,7 +178,7 @@ export default function BidUpgradePage() {
 
       {loading || !ad || !catMeta ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
-          <span style={{ color: "#6D5B8E" }}>{t.loading}</span>
+          <span style={{ color: "var(--muted)" }}>{t.loading}</span>
         </div>
       ) : daysRemaining === 0 ? (
         /* ── Expired state: redirect user to renew or create new ad ── */
@@ -197,7 +201,7 @@ export default function BidUpgradePage() {
             </button>
             <button
               onClick={() => router.push("/create")}
-              style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "1px solid #2D1F50", background: "transparent", color: "#A78BFA", fontWeight: 600, fontSize: ".9rem", cursor: "pointer" }}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 14, border: "1px solid var(--border)", background: "transparent", color: "#A78BFA", fontWeight: 600, fontSize: ".9rem", cursor: "pointer" }}
             >
               ✚ {t.newAdBtn}
             </button>
@@ -211,7 +215,7 @@ export default function BidUpgradePage() {
         </div>
       ) : (
         <div style={{ maxWidth: 560, margin: "0 auto", padding: "38px 24px 60px", animation: "fade .35s ease both" }}>
-          <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6D5B8E", fontSize: ".82rem", textDecoration: "none", marginBottom: 20 }}>
+          <Link href="/dashboard" style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--muted)", fontSize: ".82rem", textDecoration: "none", marginBottom: 20 }}>
             ← Dashboard
           </Link>
 
@@ -223,7 +227,7 @@ export default function BidUpgradePage() {
               </div>
               <div>
                 <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.4rem", fontWeight: 700, letterSpacing: "-.02em" }}>{t.title}</h1>
-                <p style={{ fontSize: ".8rem", color: "#6D5B8E", marginTop: 2 }}>{catMeta.emoji} {catMeta.label} · {ad.title}</p>
+                <p style={{ fontSize: ".8rem", color: "var(--muted)", marginTop: 2 }}>{catMeta.emoji} {catMeta.label} · {ad.title}</p>
               </div>
             </div>
           </div>
@@ -243,13 +247,13 @@ export default function BidUpgradePage() {
 
           {/* Ranking preview */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
-            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.rankChange}</div>
+            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "var(--muted)", fontWeight: 700, marginBottom: 14 }}>{t.rankChange}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               {/* Before */}
-              <div style={{ flex: 1, background: "#160F2A", borderRadius: 12, padding: "14px 16px", border: "1px solid #2D1F50", textAlign: "center" }}>
-                <div style={{ fontSize: ".68rem", color: "#6D5B8E", marginBottom: 6 }}>{t.currently}</div>
+              <div style={{ flex: 1, background: "var(--surface-2)", borderRadius: 12, padding: "14px 16px", border: "1px solid var(--border)", textAlign: "center" }}>
+                <div style={{ fontSize: ".68rem", color: "var(--muted)", marginBottom: 6 }}>{t.currently}</div>
                 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.4rem", fontWeight: 700, color: "#FCD34D" }}>${currentBidUSD.toFixed(0)}</div>
-                <div style={{ fontSize: ".72rem", color: "#6D5B8E" }}>{t.dayLabel}</div>
+                <div style={{ fontSize: ".72rem", color: "var(--muted)" }}>{t.dayLabel}</div>
               </div>
               <ArrowUp size={20} color="#7C3AED" style={{ flexShrink: 0 }} />
               {/* After */}
@@ -266,36 +270,36 @@ export default function BidUpgradePage() {
 
           {/* Current status */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
-            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, marginBottom: 14 }}>{t.currentStatus}</div>
+            <div style={{ fontSize: ".66rem", letterSpacing: ".12em", textTransform: "uppercase" as const, color: "var(--muted)", fontWeight: 700, marginBottom: 14 }}>{t.currentStatus}</div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".85rem", marginBottom: 10 }}>
               <span style={{ color: "#A78BFA" }}>{t.currentBid}</span>
               <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#FCD34D" }}>${currentBidUSD.toFixed(2)}{t.dayLabel}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".85rem" }}>
               <span style={{ color: "#A78BFA" }}>{t.daysLeft}</span>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#EDE9FE" }}>{daysRemaining} {t.daysLabel}</span>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "var(--text)" }}>{daysRemaining} {t.daysLabel}</span>
             </div>
           </div>
 
           {/* New bid input */}
           <div style={{ ...card, padding: 20, marginBottom: 14 }}>
-            <label style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "#6D5B8E", fontWeight: 700, display: "block", marginBottom: 12 }}>
+            <label style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase" as const, color: "var(--muted)", fontWeight: 700, display: "block", marginBottom: 12 }}>
               {t.newBidLabel}
             </label>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: "1.4rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace" }}>$</span>
+              <span style={{ fontSize: "1.4rem", color: "var(--muted)", fontFamily: "'JetBrains Mono',monospace" }}>$</span>
               <input
                 type="number"
                 value={newBid}
-                onChange={(e) => setNewBid(Math.max(currentBidUSD + 0.5, parseFloat(e.target.value) || currentBidUSD + 1))}
-                min={currentBidUSD + 0.5}
+                onChange={(e) => setNewBid(Math.max(currentBidUSD + MIN_BID_INCREMENT_CENTS / 100, parseFloat(e.target.value) || currentBidUSD + 1))}
+                min={currentBidUSD + MIN_BID_INCREMENT_CENTS / 100}
                 step={0.5}
-                style={{ flex: 1, background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 10, padding: "12px 14px", fontSize: "1.4rem", fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "#EDE9FE", outline: "none" }}
+                style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", fontSize: "1.4rem", fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: "var(--text)", outline: "none" }}
               />
-              <span style={{ fontSize: ".9rem", color: "#6D5B8E" }}>{t.dayLabel}</span>
+              <span style={{ fontSize: ".9rem", color: "var(--muted)" }}>{t.dayLabel}</span>
             </div>
-            <div style={{ marginTop: 8, fontSize: ".76rem", color: "#6D5B8E" }}>
-              {t.minLabel} ${(currentBidUSD + 0.5).toFixed(2)}{t.dayLabel}
+            <div style={{ marginTop: 8, fontSize: ".76rem", color: "var(--muted)" }}>
+              {t.minLabel} ${(currentBidUSD + MIN_BID_INCREMENT_CENTS / 100).toFixed(2)}{t.dayLabel}
             </div>
           </div>
 
@@ -308,11 +312,11 @@ export default function BidUpgradePage() {
               </div>
               <div style={{ fontSize: ".85rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <span style={{ color: "#6D5B8E" }}>{t.diffLabel} (${newBid.toFixed(2)} − ${currentBidUSD.toFixed(2)}){t.dayLabel}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "#EDE9FE" }}>${diffPerDay.toFixed(2)}{t.dayLabel}</span>
+                  <span style={{ color: "var(--muted)" }}>{t.diffLabel} (${newBid.toFixed(2)} − ${currentBidUSD.toFixed(2)}){t.dayLabel}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", color: "var(--text)" }}>${diffPerDay.toFixed(2)}{t.dayLabel}</span>
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid #2D1F50" }}>
-                  <span style={{ color: "#6D5B8E" }}>× {daysRemaining} {t.daysLabel}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+                  <span style={{ color: "var(--muted)" }}>× {daysRemaining} {t.daysLabel}</span>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.1rem", fontWeight: 700, color: "#34D399" }}>= ${extraToPay.toFixed(2)}</span>
                 </div>
               </div>
@@ -323,7 +327,7 @@ export default function BidUpgradePage() {
           <button
             onClick={handlePay}
             disabled={paying || diffPerDay <= 0 || daysRemaining === 0}
-            style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: (paying || diffPerDay <= 0 || daysRemaining === 0) ? "#4C1D95" : "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#1A1230", fontSize: "1rem", fontWeight: 800, cursor: (paying || diffPerDay <= 0) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, boxShadow: (diffPerDay > 0 && !paying) ? "0 4px 20px rgba(245,158,11,.35)" : "none" }}
+            style={{ width: "100%", padding: "16px 0", borderRadius: 14, border: "none", background: (paying || diffPerDay <= 0 || daysRemaining === 0) ? "#4C1D95" : "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "var(--surface)", fontSize: "1rem", fontWeight: 800, cursor: (paying || diffPerDay <= 0) ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12, boxShadow: (diffPerDay > 0 && !paying) ? "0 4px 20px rgba(245,158,11,.35)" : "none" }}
           >
             <ArrowUp size={18} />
             {paying ? t.redirecting : `$${extraToPay.toFixed(2)} ${t.payBtn}`}
@@ -331,7 +335,7 @@ export default function BidUpgradePage() {
 
           <button
             onClick={() => router.back()}
-            style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "1px solid #2D1F50", background: "transparent", color: "#6D5B8E", fontSize: ".85rem", cursor: "pointer" }}
+            style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)", fontSize: ".85rem", cursor: "pointer" }}
           >
             {t.cancelBtn}
           </button>

@@ -11,11 +11,22 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LangContext";
 import { LANGS } from "@/lib/i18n";
+import { MIN_BID_INCREMENT_CENTS, rankAds } from "@/lib/adRules";
+import { buildInsights } from "@/lib/adInsights";
 import { Ad, CATEGORIES, Category } from "@/types";
 import Link from "next/link";
+import OverviewView from "@/components/dashboard/OverviewView";
+import { OVERVIEW_COPY } from "@/components/dashboard/overviewCopy";
+import { STATUS_COLOR, fmtDate, primaryAction } from "@/components/dashboard/adActions";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type Screen = "all" | "myads" | "cats" | "wallet" | "profile";
+type Screen = "overview" | "myads" | "ranking" | "wallet" | "profile";
+const SCREENS: Screen[] = ["overview", "myads", "ranking", "wallet", "profile"];
+// Older links use ?screen=all / ?screen=cats for the ranking
+function screenFromParam(v: string | null): Screen {
+  if (v === "all" || v === "cats") return "ranking";
+  return SCREENS.includes(v as Screen) ? (v as Screen) : "overview";
+}
 type Lang = "uz" | "en" | "ru";
 
 // ─── Translations ─────────────────────────────────────────────────────────────
@@ -80,7 +91,6 @@ const T = {
     warnRows: [
       { color: "#F59E0B", title: "Oldindan toʻlov", body: "Reklama faqat toʻlovdan keyin boshlanadi." },
       { color: "#34D399", title: "Qaytarish yoʻq", body: "Tasdiqlangan va ishga tushgan reklama uchun pul qaytarilmaydi." },
-      { color: "#A855F7", title: "Yangi akkaunt", body: "Birinchi toʻlovdan keyin 24 soatlik tekshiruv boʻlishi mumkin." },
     ],
     refundRows: [
       { k: "Moderatsiyadan oʻtmagan", v: "Toʻliq qaytarish", color: "#34D399" },
@@ -149,7 +159,6 @@ const T = {
     warnRows: [
       { color: "#F59E0B", title: "Prepayment required", body: "Ads only start after payment is confirmed." },
       { color: "#34D399", title: "No refunds", body: "Approved and running ads are non-refundable." },
-      { color: "#A855F7", title: "New accounts", body: "First payment may go through a 24h review period." },
     ],
     refundRows: [
       { k: "Failed moderation", v: "Full refund", color: "#34D399" },
@@ -218,7 +227,6 @@ const T = {
     warnRows: [
       { color: "#F59E0B", title: "Предоплата", body: "Объявления начинаются только после подтверждения оплаты." },
       { color: "#34D399", title: "Нет возвратов", body: "Одобренная и запущенная реклама не подлежит возврату." },
-      { color: "#A855F7", title: "Новые аккаунты", body: "Первый платёж может пройти 24-часовую проверку." },
     ],
     refundRows: [
       { k: "Не прошло модерацию", v: "Полный возврат", color: "#34D399" },
@@ -240,14 +248,26 @@ function fmtBid(cents: number) {
 const CAT_KEYS = Object.keys(CATEGORIES) as Category[];
 const MEDAL = ["🥇", "🥈", "🥉"];
 
+// Menu: Overview, My ads, Ranking, Payments, Settings — same order on every screen size
+function navItems(lang: Lang, myAdsCount: number): { k: Screen; icon: string; label: string; badge?: number }[] {
+  const n = OVERVIEW_COPY[lang].nav;
+  return [
+    { k: "overview", icon: "📊", label: n.overview },
+    { k: "myads",    icon: "📋", label: n.myads, badge: myAdsCount || undefined },
+    { k: "ranking",  icon: "🏆", label: n.ranking },
+    { k: "wallet",   icon: "💳", label: n.wallet },
+    { k: "profile",  icon: "⚙️", label: n.profile },
+  ];
+}
+
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const card: React.CSSProperties = {
-  background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 18,
+  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
 };
 const inp: React.CSSProperties = {
   width: "100%", padding: "12px 14px", borderRadius: 11,
-  background: "#160F2A", border: "1px solid #2D1F50",
-  color: "#EDE9FE", fontSize: ".9rem", outline: "none", boxSizing: "border-box",
+  background: "var(--surface-2)", border: "1px solid var(--border)",
+  color: "var(--text)", fontSize: ".9rem", outline: "none", boxSizing: "border-box",
 };
 
 // ─── App Header ───────────────────────────────────────────────────────────────
@@ -262,7 +282,7 @@ function AppHeader({
   const t = T[lang];
   const btnBase: React.CSSProperties = { padding: "4px 9px", borderRadius: 7, border: "none", fontSize: ".71rem", fontWeight: 700, cursor: "pointer" };
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(14,11,26,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid #2D1F50" }}>
+    <header style={{ position: "sticky", top: 0, zIndex: 80, background: "rgba(11,11,15,.94)", backdropFilter: "blur(18px)", borderBottom: "1px solid var(--border)" }}>
       <div className="dash-header-outer" style={{ padding: "11px 26px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
@@ -270,20 +290,20 @@ function AppHeader({
             <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
             <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
           </svg>
-          <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
-          <span className="dash-header-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E" }}>{t.dashLabel}</span>
+          <button onClick={onGoAll} style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>PRIMIO</button>
+          <span className="dash-header-badge" style={{ padding: "2px 9px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: ".66rem", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)" }}>{t.dashLabel}</span>
         </div>
         <div className="dash-header-right" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
-          <div className="dash-header-lang" style={{ display: "flex", padding: 2, borderRadius: 9, background: "#160F2A", border: "1px solid #2D1F50" }}>
+          <div className="dash-header-lang" style={{ display: "flex", padding: 2, borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
             {LANGS.map((l) => (
-              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "#2D1F50" : "transparent", color: lang === l.code ? "#EDE9FE" : "#6D5B8E" }}>{l.label}</button>
+              <button key={l.code} onClick={() => setLang(l.code as Lang)} style={{ ...btnBase, background: lang === l.code ? "var(--border)" : "transparent", color: lang === l.code ? "var(--text)" : "var(--muted)" }}>{l.label}</button>
             ))}
           </div>
-          <button className="dash-header-spent" onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
-            <span className="spent-label" style={{ fontSize: ".66rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{t.totalSpent}</span>
+          <button className="dash-header-spent" onClick={onGoWallet} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 11px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer" }}>
+            <span className="spent-label" style={{ fontSize: ".66rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700 }}>{t.totalSpent}</span>
             <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".84rem", fontWeight: 600, color: "#FCD34D" }}>${(totalSpentCents / 100).toFixed(0)}</span>
           </button>
-          <button onClick={onGoProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 4px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#EDE9FE", cursor: "pointer" }}>
+          <button onClick={onGoProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px 4px 4px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer" }}>
             <span style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".72rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
             <span className="dash-header-name" style={{ fontSize: ".78rem", fontWeight: 600 }}>{brandName}</span>
           </button>
@@ -327,13 +347,7 @@ function MobileDashDrawer({
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  const NAV: { k: Screen; icon: string; label: string; badge?: number }[] = [
-    { k: "all",         icon: "🏆", label: t.navAll },
-    { k: "myads",      icon: "📋", label: t.navMyAds, badge: myAdsCount || undefined },
-    { k: "cats",       icon: "🏷",  label: t.navCats },
-    { k: "wallet",     icon: "💳", label: t.navWallet },
-    { k: "profile",    icon: "👤", label: t.navProfile },
-  ];
+  const NAV = navItems(lang, myAdsCount);
 
   const go = (s: Screen) => { startTransition(() => setScreen(s)); onClose(); };
 
@@ -355,26 +369,26 @@ function MobileDashDrawer({
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, zIndex: 200,
         width: "min(300px, 88vw)",
-        background: "#0E0B1A",
-        borderLeft: "1px solid #2D1F50",
+        background: "var(--bg)",
+        borderLeft: "1px solid var(--border)",
         display: "flex", flexDirection: "column",
         transform: open ? "translateX(0)" : "translateX(100%)",
         transition: "transform .3s cubic-bezier(.4,0,.2,1)",
         overflowY: "auto",
       }}>
         {/* Drawer header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #2D1F50", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <svg width="24" height="24" viewBox="0 0 100 100" fill="none">
               <rect width="100" height="100" rx="24" fill="#7C3AED"/>
               <path d="M24 78L24 24L54 24Q74 24 74 45Q74 64 54 64L40 64L40 78Z" fill="none" stroke="#fff" strokeWidth="9" strokeLinejoin="round" strokeLinecap="round"/>
               <circle cx="74" cy="24" r="7" fill="#F59E0B"/>
             </svg>
-            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "#EDE9FE" }}>PRIMIO</span>
+            <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, color: "var(--text)" }}>PRIMIO</span>
           </div>
           <button
             onClick={onClose}
-            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #2D1F50", background: "rgba(109,91,142,.12)", color: "#6D5B8E", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid var(--border)", background: "rgba(163,161,180,.12)", color: "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -383,11 +397,11 @@ function MobileDashDrawer({
         </div>
 
         {/* User info */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid #2D1F50", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
           <span style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".88rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{brandInitial}</span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
-            <div style={{ fontSize: ".71rem", color: "#6D5B8E", marginTop: 2 }}>
+            <div style={{ fontSize: ".84rem", fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{brandName}</div>
+            <div style={{ fontSize: ".71rem", color: "var(--muted)", marginTop: 2 }}>
               {t.totalSpent}: <span style={{ color: "#FCD34D", fontFamily: "'JetBrains Mono',monospace" }}>${(totalSpentCents / 100).toFixed(0)}</span>
             </div>
           </div>
@@ -395,7 +409,7 @@ function MobileDashDrawer({
 
         {/* Nav */}
         <nav style={{ flex: 1, padding: "10px 10px" }}>
-          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".13em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, padding: "6px 10px 8px" }}>{t.sideMain}</div>
           {NAV.map((n) => {
             const active = screen === n.k;
             return (
@@ -413,17 +427,17 @@ function MobileDashDrawer({
                 <span style={{ width: 20, textAlign: "center" }}>{n.icon}</span>
                 <span style={{ flex: 1 }}>{n.label}</span>
                 {n.badge ? (
-                  <span style={{ padding: "1px 8px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
+                  <span style={{ padding: "1px 8px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
                 ) : null}
               </button>
             );
           })}
 
-          <div style={{ height: 1, background: "#2D1F50", margin: "10px 2px" }} />
+          <div style={{ height: 1, background: "var(--border)", margin: "10px 2px" }} />
 
           <button
             onClick={() => { window.open("/how-it-works", "_blank"); onClose(); }}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "#6D5B8E", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "11px 12px", borderRadius: 10, border: "none", background: "transparent", color: "var(--muted)", fontSize: ".84rem", fontWeight: 500, cursor: "pointer" }}
           >
             <span style={{ width: 20, textAlign: "center" }}>📖</span>
             <span>{t.navGuide}</span>
@@ -431,12 +445,12 @@ function MobileDashDrawer({
         </nav>
 
         {/* Lang switcher */}
-        <div style={{ padding: "12px 20px", borderTop: "1px solid #2D1F50", flexShrink: 0 }}>
-          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, marginBottom: 9 }}>Til</div>
+        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ fontSize: ".6rem", letterSpacing: ".12em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, marginBottom: 9 }}>Til</div>
           <div style={{ display: "flex", gap: 6 }}>
             {LANGS.map((l) => (
               <button key={l.code} onClick={() => setLang(l.code as Lang)}
-                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "#2D1F50"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "#6D5B8E", transition: "all .15s" }}
+                style={{ flex: 1, padding: "8px 0", borderRadius: 9, border: `1px solid ${lang === l.code ? "#7C3AED" : "var(--border)"}`, cursor: "pointer", fontSize: ".8rem", fontWeight: 700, letterSpacing: ".05em", background: lang === l.code ? "rgba(124,58,237,.2)" : "transparent", color: lang === l.code ? "#A855F7" : "var(--muted)", transition: "all .15s" }}
               >{l.label}</button>
             ))}
           </div>
@@ -470,13 +484,7 @@ function Sidebar({
   myAdsCount: number; onSignOut: () => void; onGoCreate: () => void;
 }) {
   const t = T[lang];
-  const NAV: { k: Screen; icon: string; label: string; badge?: number | string }[] = [
-    { k: "all",     icon: "🏆", label: t.navAll },
-    { k: "myads",  icon: "📋", label: t.navMyAds, badge: myAdsCount || undefined },
-    { k: "cats",   icon: "🏷",  label: t.navCats },
-    { k: "wallet", icon: "💳", label: t.navWallet },
-    { k: "profile",icon: "👤", label: t.navProfile },
-  ];
+  const NAV = navItems(lang, myAdsCount);
   const btnStyle = (on: boolean): React.CSSProperties => ({
     width: "100%", display: "flex", alignItems: "center", gap: 10,
     padding: "10px 11px", borderRadius: 10, border: "none",
@@ -486,33 +494,33 @@ function Sidebar({
   });
   return (
     <aside className="dash-sidebar">
-      <div className="sidebar-section-label" style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "#4A3C6E", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
+      <div className="sidebar-section-label" style={{ fontSize: ".62rem", letterSpacing: ".13em", textTransform: "uppercase", color: "var(--dim)", fontWeight: 700, padding: "0 10px 9px" }}>{t.sideMain}</div>
       {NAV.map((n) => (
         <button key={n.k} onClick={() => startTransition(() => setScreen(n.k))} style={btnStyle(screen === n.k)}>
           <span style={{ width: 20, textAlign: "center", fontSize: ".85rem" }}>{n.icon}</span>
           <span style={{ flex: 1, textAlign: "left" }}>{n.label}</span>
           {n.badge ? (
-            <span style={{ padding: "1px 8px", borderRadius: 100, background: "#160F2A", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
+            <span style={{ padding: "1px 8px", borderRadius: 100, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted)", fontSize: ".68rem", fontWeight: 700, fontFamily: "'JetBrains Mono',monospace" }}>{n.badge}</span>
           ) : null}
         </button>
       ))}
 
-      <div className="sidebar-promo" style={{ marginTop: 20, padding: 14, borderRadius: 13, background: "#160F2A", border: "1px solid #2D1F50" }}>
-        <div style={{ fontSize: ".74rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 5 }}>
+      <div className="sidebar-promo" style={{ marginTop: 20, padding: 14, borderRadius: 13, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+        <div style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text)", marginBottom: 5 }}>
           {myAdsCount === 0 ? t.sideNoAdsTitle : t.sideOkTitle}
         </div>
-        <div style={{ fontSize: ".75rem", color: "#6D5B8E", lineHeight: 1.55, marginBottom: 10 }}>
+        <div style={{ fontSize: ".75rem", color: "var(--muted)", lineHeight: 1.55, marginBottom: 10 }}>
           {myAdsCount === 0 ? t.sideNoAdsBody : t.sideOkBody}
         </div>
-        <button onClick={myAdsCount === 0 ? onGoCreate : () => setScreen("all")} style={{ width: "100%", padding: 9, borderRadius: 10, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".77rem", fontWeight: 700, cursor: "pointer" }}>
-          {myAdsCount === 0 ? t.sideCta : t.navAll}
+        <button onClick={myAdsCount === 0 ? onGoCreate : () => setScreen("ranking")} style={{ width: "100%", padding: 9, borderRadius: 10, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".77rem", fontWeight: 700, cursor: "pointer" }}>
+          {myAdsCount === 0 ? t.sideCta : OVERVIEW_COPY[lang].nav.ranking}
         </button>
       </div>
 
-      <button className="sidebar-guide" onClick={() => window.open("/how-it-works", "_blank")} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "#6D5B8E", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
+      <button className="sidebar-guide" onClick={() => window.open("/how-it-works", "_blank")} style={{ marginTop: "auto", display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "var(--muted)", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
         <span style={{ width: 20, textAlign: "center" }}>📖</span><span>{t.navGuide}</span>
       </button>
-      <button className="sidebar-signout" onClick={onSignOut} style={{ display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "#6D5B8E", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
+      <button className="sidebar-signout" onClick={onSignOut} style={{ display: "flex", alignItems: "center", gap: 9, padding: 10, borderRadius: 10, background: "transparent", border: "none", color: "var(--muted)", fontSize: ".78rem", fontWeight: 500, cursor: "pointer" }}>
         <span style={{ width: 20, textAlign: "center" }}>🚪</span><span>{t.logout}</span>
       </button>
     </aside>
@@ -523,20 +531,21 @@ function Sidebar({
 function DashBottomNav({ screen, setScreen, lang, onGoCreate }: {
   screen: Screen; setScreen: (s: Screen) => void; lang: Lang; onGoCreate: () => void;
 }) {
-  const t = T[lang];
-  const tabs: { k: Screen | null; icon: React.ReactNode; label: Record<Lang, string>; cls?: string }[] = [
+  const short = OVERVIEW_COPY[lang].navShort;
+  // Settings stay one tap away through the avatar in the header
+  const tabs: { k: Screen | null; icon: React.ReactNode; label: string; cls?: string }[] = [
     {
-      k: "all", cls: "",
-      label: { uz: "Reyting", en: "Ranking", ru: "Рейтинг" },
+      k: "overview", cls: "",
+      label: short.overview,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          <rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
         </svg>
       ),
     },
     {
       k: "myads", cls: "",
-      label: { uz: "Reklamam", en: "My Ads", ru: "Мои" },
+      label: short.myads,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
@@ -545,7 +554,7 @@ function DashBottomNav({ screen, setScreen, lang, onGoCreate }: {
     },
     {
       k: null, cls: "dbnav-create",
-      label: { uz: "Yangi", en: "New", ru: "Создать" },
+      label: short.create,
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -553,20 +562,20 @@ function DashBottomNav({ screen, setScreen, lang, onGoCreate }: {
       ),
     },
     {
-      k: "wallet", cls: "",
-      label: { uz: "To'lov", en: "Wallet", ru: "Оплата" },
+      k: "ranking", cls: "",
+      label: short.ranking,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
         </svg>
       ),
     },
     {
-      k: "profile", cls: "",
-      label: { uz: "Profil", en: "Profile", ru: "Профиль" },
+      k: "wallet", cls: "",
+      label: short.wallet,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
         </svg>
       ),
     },
@@ -583,7 +592,7 @@ function DashBottomNav({ screen, setScreen, lang, onGoCreate }: {
             onClick={() => tab.k === null ? onGoCreate() : startTransition(() => setScreen(tab.k!))}
           >
             <span className="dbnav-icon">{tab.icon}</span>
-            <span>{tab.label[lang]}</span>
+            <span>{tab.label}</span>
           </button>
         );
       })}
@@ -611,14 +620,35 @@ function fmtN(n: number) {
   return n.toString();
 }
 
+// ─── Ranking: leaderboard + category overview ─────────────────────────────────
+function RankingView({ allAds, myUID, lang }: { allAds: Ad[]; myUID: string | null; lang: Lang }) {
+  const tabs = OVERVIEW_COPY[lang].rankingTabs;
+  const [tab, setTab] = useState<"list" | "cats">("list");
+  const [cat, setCat] = useState<Category | "any">("any");
+  const tabBtn = (on: boolean): React.CSSProperties => ({
+    minHeight: 36, padding: "0 16px", borderRadius: 9, border: "none", fontSize: ".86rem", fontWeight: 700,
+    background: on ? "var(--violet)" : "transparent", color: on ? "#fff" : "var(--muted)",
+  });
+  return (
+    <div>
+      <div role="group" aria-label={tabs.list} style={{ display: "inline-flex", gap: 2, padding: 3, marginTop: 24, borderRadius: 12, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+        <button type="button" aria-pressed={tab === "list"} style={tabBtn(tab === "list")} onClick={() => setTab("list")}>{tabs.list}</button>
+        <button type="button" aria-pressed={tab === "cats"} style={tabBtn(tab === "cats")} onClick={() => setTab("cats")}>{tabs.cats}</button>
+      </div>
+      {tab === "list"
+        ? <AllView key={cat} allAds={allAds} myUID={myUID} lang={lang} initialCat={cat} />
+        : <CatsView allAds={allAds} lang={lang} onSelectCat={(k) => { setCat(k); setTab("list"); }} />}
+    </div>
+  );
+}
+
 // ─── All (Leaderboard) view ───────────────────────────────────────────────────
-function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string | null; lang: Lang; onRaise: (id: string, bid: number) => void }) {
+function AllView({ allAds, myUID, lang, initialCat = "any" }: { allAds: Ad[]; myUID: string | null; lang: Lang; initialCat?: Category | "any" }) {
   const t = T[lang];
-  const [catFilter, setCatFilter] = useState<Category | "any">("any");
+  const [catFilter, setCatFilter] = useState<Category | "any">(initialCat);
 
   const active = allAds.filter((a) => a.status === "active");
-  const scoped = (catFilter === "any" ? active : active.filter((a) => a.category === catFilter))
-    .slice().sort((a, b) => b.dailyBidCents - a.dailyBidCents || (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+  const scoped = rankAds(catFilter === "any" ? active : active.filter((a) => a.category === catFilter));
 
   const topBid = scoped[0]?.dailyBidCents || 0;
   const podium = scoped.slice(0, 3);
@@ -632,22 +662,22 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
   ].filter((g) => g.rows.length > 0);
 
   const podiumCardStyle = (pos: number, isMine: boolean): React.CSSProperties => ({
-    background: isMine ? "rgba(124,58,237,.12)" : "#1A1230",
-    border: `1px solid ${isMine ? "#7C3AED" : pos === 0 ? "#F59E0B" : "#2D1F50"}`,
+    background: isMine ? "rgba(124,58,237,.12)" : "var(--surface)",
+    border: `1px solid ${isMine ? "#7C3AED" : pos === 0 ? "#F59E0B" : "var(--border)"}`,
     borderRadius: 16, padding: 18,
   });
-  const bidColor = (pos: number) => pos === 0 ? "#FCD34D" : pos === 1 ? "#EDE9FE" : "#A78BFA";
+  const bidColor = (pos: number) => pos === 0 ? "#FCD34D" : pos === 1 ? "var(--text)" : "#A78BFA";
   const thumbColor = (i: string) => `hsl(${i.charCodeAt(0) * 37 % 360},55%,38%)`;
 
   const rowStyle = (isMine: boolean): React.CSSProperties => ({
     display: "flex", alignItems: "center", gap: 12,
     padding: "13px 16px", borderRadius: 12,
-    background: isMine ? "rgba(124,58,237,.09)" : "#1A1230",
-    border: `1px solid ${isMine ? "#7C3AED" : "#2D1F50"}`,
+    background: isMine ? "rgba(124,58,237,.09)" : "var(--surface)",
+    border: `1px solid ${isMine ? "#7C3AED" : "var(--border)"}`,
   });
 
   return (
-    <div style={{ animation: "fade .35s ease both", padding: "38px 0 0" }}>
+    <div style={{ animation: "fade .35s ease both", padding: "20px 0 0" }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 18, flexWrap: "wrap", marginBottom: 16 }}>
         <div>
@@ -659,16 +689,16 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
             </span>
           </div>
           <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.85rem", fontWeight: 700, letterSpacing: "-.03em", lineHeight: 1.1 }}>{t.allTitle}</h1>
-          <p style={{ fontSize: ".87rem", color: "#6D5B8E", marginTop: 6, maxWidth: "52ch", lineHeight: 1.55 }}>{t.allSub}</p>
+          <p style={{ fontSize: ".87rem", color: "var(--muted)", marginTop: 6, maxWidth: "52ch", lineHeight: 1.55 }}>{t.allSub}</p>
         </div>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           {[
-            { k: t.reklama, v: String(active.length), color: "#EDE9FE" },
+            { k: t.reklama, v: String(active.length), color: "var(--text)" },
             { k: t.firstPos, v: topBid ? fmtBid(topBid) : "$—", color: "#FCD34D" },
             { k: t.minBid,  v: "$1.00", color: "#34D399" },
           ].map((x) => (
             <div key={x.k}>
-              <div style={{ fontSize: ".65rem", letterSpacing: ".09em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 4 }}>{x.k}</div>
+              <div style={{ fontSize: ".65rem", letterSpacing: ".09em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 4 }}>{x.k}</div>
               <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.2rem", fontWeight: 700, color: x.color, lineHeight: 1 }}>{x.v}</div>
             </div>
           ))}
@@ -678,9 +708,9 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
       {/* Category filter */}
       <div style={{ marginBottom: 24 }}>
         <div className="cats-list" style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-          <button onClick={() => setCatFilter("any")} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === "any" ? "#7C3AED" : "#2D1F50"}`, background: catFilter === "any" ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === "any" ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: catFilter === "any" ? 700 : 500, cursor: "pointer" }}>{t.catAll}</button>
+          <button onClick={() => setCatFilter("any")} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === "any" ? "#7C3AED" : "var(--border)"}`, background: catFilter === "any" ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === "any" ? "#A855F7" : "var(--muted)", fontSize: ".79rem", fontWeight: catFilter === "any" ? 700 : 500, cursor: "pointer" }}>{t.catAll}</button>
           {CAT_KEYS.map((k) => (
-            <button key={k} onClick={() => setCatFilter(k)} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === k ? "#7C3AED" : "#2D1F50"}`, background: catFilter === k ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === k ? "#A855F7" : "#6D5B8E", fontSize: ".79rem", fontWeight: catFilter === k ? 700 : 500, cursor: "pointer" }}>
+            <button key={k} onClick={() => setCatFilter(k)} style={{ padding: "6px 13px", borderRadius: 100, border: `1px solid ${catFilter === k ? "#7C3AED" : "var(--border)"}`, background: catFilter === k ? "rgba(124,58,237,.16)" : "transparent", color: catFilter === k ? "#A855F7" : "var(--muted)", fontSize: ".79rem", fontWeight: catFilter === k ? 700 : 500, cursor: "pointer" }}>
               {`${CATEGORIES[k].emoji} ${T[lang].catNames[k]}`}
             </button>
           ))}
@@ -688,7 +718,7 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
       </div>
 
       {scoped.length === 0 && (
-        <div style={{ padding: 44, textAlign: "center", borderRadius: 16, border: "1px dashed #2D1F50", background: "#160F2A", color: "#6D5B8E", fontSize: ".88rem" }}>
+        <div style={{ padding: 44, textAlign: "center", borderRadius: 16, border: "1px dashed var(--border)", background: "var(--surface-2)", color: "var(--muted)", fontSize: ".88rem" }}>
           Bu toifada hozircha reklama yo&apos;q.
         </div>
       )}
@@ -698,8 +728,8 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
         <div style={{ marginBottom: 30 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 13 }}>
             <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".85rem", fontWeight: 700, letterSpacing: ".02em" }}>🏆 {t.tierTop3}</span>
-            <span style={{ flex: 1, height: 1, background: "#2D1F50" }}/>
-            <span style={{ fontSize: ".73rem", color: "#6D5B8E" }}>{t.tierTop3Note}</span>
+            <span style={{ flex: 1, height: 1, background: "var(--border)" }}/>
+            <span style={{ fontSize: ".73rem", color: "var(--muted)" }}>{t.tierTop3Note}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(290px,1fr))", gap: 20 }}>
             {podium.map((ad, i) => {
@@ -709,8 +739,8 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
               const medal = ["🥇","🥈","🥉"][i];
               return (
                 <div key={ad.id} style={{
-                  background: "#1A1230",
-                  border: `1px solid ${isMine ? "#7C3AED" : i === 0 ? "rgba(124,58,237,.4)" : "#2D1F50"}`,
+                  background: "var(--surface)",
+                  border: `1px solid ${isMine ? "#7C3AED" : i === 0 ? "rgba(124,58,237,.4)" : "var(--border)"}`,
                   borderRadius: 20,
                   overflow: "hidden",
                   boxShadow: i === 0 ? "0 0 24px rgba(124,58,237,.1)" : "none",
@@ -725,7 +755,7 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                   (e.currentTarget as HTMLElement).style.boxShadow = i === 0 ? "0 0 24px rgba(124,58,237,.1)" : "none";
                 }}>
                   {/* Image 16:9 */}
-                  <div style={{ position: "relative", aspectRatio: "16/9", background: "#160F2A", overflow: "hidden" }}>
+                  <div style={{ position: "relative", aspectRatio: "16/9", background: "var(--surface-2)", overflow: "hidden" }}>
                     {ad.imageURL ? (
                       <img src={ad.imageURL} alt={ad.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
@@ -742,15 +772,15 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                     </div>
                     {/* Mine badge */}
                     {isMine && (
-                      <div style={{ position: "absolute", bottom: 10, left: 10, padding: "3px 10px", borderRadius: 100, background: "rgba(124,58,237,.9)", border: "1px solid #A855F7", color: "#EDE9FE", fontSize: ".68rem", fontWeight: 700 }}>{t.yourAd}</div>
+                      <div style={{ position: "absolute", bottom: 10, left: 10, padding: "3px 10px", borderRadius: 100, background: "rgba(124,58,237,.9)", border: "1px solid #A855F7", color: "var(--text)", fontSize: ".68rem", fontWeight: 700 }}>{t.yourAd}</div>
                     )}
                   </div>
                   {/* Content */}
                   <div style={{ padding: 16 }}>
                     {/* Title & URL */}
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: ".95rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
-                      <div style={{ fontSize: ".76rem", color: "#6D5B8E", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.destinationURL}</div>
+                      <div style={{ fontSize: ".95rem", fontWeight: 700, color: "var(--text)", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
+                      <div style={{ fontSize: ".76rem", color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.destinationURL}</div>
                     </div>
                     {/* Stats row — single line */}
                     <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "nowrap", overflow: "hidden" }}>
@@ -760,7 +790,7 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                         { icon: "🖱", val: fmtN(ad.clicks||0), color: "#34D399" },
                         { icon: "📊", val: `${ctr}%`, color: "#F59E0B" },
                       ].map((s) => (
-                        <div key={s.icon} style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 7, background: "#160F2A", border: "1px solid #2D1F50", flexShrink: 0 }}>
+                        <div key={s.icon} style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 7, background: "var(--surface-2)", border: "1px solid var(--border)", flexShrink: 0 }}>
                           <span style={{ fontSize: ".66rem" }}>{s.icon}</span>
                           <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".68rem", fontWeight: 700, color: s.color }}>{s.val}</span>
                         </div>
@@ -768,8 +798,8 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                     </div>
                     {/* Time */}
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 12 }}>
-                      <span style={{ fontSize: ".7rem", color: "#4B3B6E" }}>🕐</span>
-                      <span style={{ fontSize: ".72rem", color: "#4B3B6E" }}>{timeAgo(ad.startsAt || ad.createdAt)}</span>
+                      <span style={{ fontSize: ".7rem", color: "var(--dim)" }}>🕐</span>
+                      <span style={{ fontSize: ".72rem", color: "var(--dim)" }}>{timeAgo(ad.startsAt || ad.createdAt)}</span>
                     </div>
                     {/* Buttons */}
                     <a href={ad.destinationURL} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", padding: "10px 0", borderRadius: 11, background: "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#fff", fontSize: ".84rem", fontWeight: 700, textDecoration: "none", marginBottom: 8 }}>
@@ -778,7 +808,7 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                     {isMine ? (
                       <Link href={`/ads/${ad.id}/bid`} style={{ display: "block", textAlign: "center", padding: "10px 0", borderRadius: 11, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".82rem", fontWeight: 700, textDecoration: "none" }}>{t.raise}</Link>
                     ) : (
-                      <Link href={`/create?cat=${ad.category}&minBid=${Math.ceil(ad.dailyBidCents/100)+1}`} style={{ display: "block", textAlign: "center", padding: "10px 0", borderRadius: 11, background: "transparent", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".82rem", fontWeight: 600, textDecoration: "none" }}>{t.outbid}</Link>
+                      <Link href={`/create?cat=${ad.category}&minBid=${ad.dailyBidCents + MIN_BID_INCREMENT_CENTS}`} style={{ display: "block", textAlign: "center", padding: "10px 0", borderRadius: 11, background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: ".82rem", fontWeight: 600, textDecoration: "none" }}>{t.outbid}</Link>
                     )}
                   </div>
                 </div>
@@ -794,8 +824,8 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
           <div key={g.label}>
             <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 11 }}>
               <span style={{ fontFamily: "'Unbounded',sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#A78BFA" }}>{g.label}</span>
-              <span style={{ flex: 1, height: 1, background: "#2D1F50" }}/>
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".72rem", color: "#6D5B8E" }}>{g.range}</span>
+              <span style={{ flex: 1, height: 1, background: "var(--border)" }}/>
+              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".72rem", color: "var(--muted)" }}>{g.range}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {g.rows.map((ad, i) => {
@@ -803,20 +833,20 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
                 const isMine = ad.advertiserUID === myUID;
                 return (
                   <div key={ad.id} style={rowStyle(isMine)}>
-                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".78rem", fontWeight: 700, color: "#6D5B8E", width: 26, flexShrink: 0 }}>#{pos}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".78rem", fontWeight: 700, color: "var(--muted)", width: 26, flexShrink: 0 }}>#{pos}</span>
                     <span style={{ width: 28, height: 28, borderRadius: 8, background: thumbColor(ad.title), display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".75rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{initials(ad.title)}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: ".87rem", fontWeight: 600, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</span>
+                        <span style={{ fontSize: ".87rem", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</span>
                         {isMine && <span style={{ padding: "1px 7px", borderRadius: 100, background: "rgba(124,58,237,.2)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".66rem", fontWeight: 700, flexShrink: 0 }}>{t.yourAd}</span>}
                       </div>
-                      <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".71rem", color: "#6D5B8E" }}>{T[lang].catNames[ad.category]}</div>
+                      <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".71rem", color: "var(--muted)" }}>{T[lang].catNames[ad.category]}</div>
                     </div>
                     <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".9rem", fontWeight: 600, color: "#FCD34D", flexShrink: 0 }}>{fmtBid(ad.dailyBidCents)}</span>
                     {isMine ? (
                       <Link href={`/ads/${ad.id}/bid`} style={{ padding: "7px 12px", borderRadius: 9, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".77rem", fontWeight: 700, textDecoration: "none", flexShrink: 0 }}>{t.raise}</Link>
                     ) : (
-                      <Link href={`/create?cat=${ad.category}&minBid=${Math.ceil(ad.dailyBidCents / 100) + 1}`} style={{ padding: "7px 12px", borderRadius: 9, background: "transparent", border: "1px solid #2D1F50", color: "#6D5B8E", fontSize: ".77rem", fontWeight: 500, textDecoration: "none", flexShrink: 0 }}>{t.outbid}</Link>
+                      <Link href={`/create?cat=${ad.category}&minBid=${ad.dailyBidCents + MIN_BID_INCREMENT_CENTS}`} style={{ padding: "7px 12px", borderRadius: 9, background: "transparent", border: "1px solid var(--border)", color: "var(--muted)", fontSize: ".77rem", fontWeight: 500, textDecoration: "none", flexShrink: 0 }}>{t.outbid}</Link>
                     )}
                   </div>
                 );
@@ -830,9 +860,12 @@ function AllView({ allAds, myUID, lang, onRaise }: { allAds: Ad[]; myUID: string
 }
 
 // ─── My Ads view ──────────────────────────────────────────────────────────────
-function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boolean; lang: Lang; onGoCreate: () => void }) {
+function MyAdsView({ ads, allAds, loading, lang, onGoCreate }: { ads: Ad[]; allAds: Ad[]; loading: boolean; lang: Lang; onGoCreate: () => void }) {
   const t = T[lang];
+  const oc = OVERVIEW_COPY[lang];
   const router = useRouter();
+  const [now] = useState(() => Date.now());
+  const insights = useMemo(() => new Map(buildInsights(ads, allAds, now).map((i) => [i.ad.id, i])), [ads, allAds, now]);
   const active = ads.filter((a) => a.status === "active").length;
   const spent = ads.reduce((s, a) => s + (a.totalPaidCents || 0), 0);
   const imp = ads.reduce((s, a) => s + (a.impressions || 0), 0);
@@ -851,22 +884,21 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
     }
   };
 
-  const statusColor: Record<string, string> = {
-    active: "#34D399", pending: "#FCD34D", pending_verification: "#FCD34D",
-    rejected: "#F87171", expired: "#6D5B8E",
-  };
-  const statusLabel: Record<string, string> = {
-    active: "Faol", pending: "Kutmoqda", pending_verification: "Tekshiruvda",
-    rejected: "Rad etildi", expired: "Muddati oʻtdi",
-  };
+  const actionBtn = (primary: boolean, gold = false): React.CSSProperties => ({
+    display: "inline-flex", alignItems: "center", minHeight: 38, padding: "0 14px", borderRadius: 10,
+    fontSize: ".84rem", fontWeight: 700, textDecoration: "none", cursor: "pointer",
+    border: `1px solid ${gold ? "var(--gold)" : primary ? "var(--violet)" : "var(--border-strong)"}`,
+    background: gold ? "var(--gold)" : primary ? "rgba(124,58,237,.16)" : "transparent",
+    color: gold ? "#1A1206" : "var(--text)",
+  });
 
   return (
-    <div style={{ animation: "fade .35s ease both" }}>
+    <div style={{ animation: "fade .35s ease both", padding: "24px 0 0" }}>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 18, flexWrap: "wrap", marginBottom: 20 }}>
         <div>
           <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 9 }}>DASHBOARD</div>
           <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-.03em" }}>{t.myAdsTitle}</h1>
-          <p style={{ fontSize: ".88rem", color: "#6D5B8E", marginTop: 5 }}>
+          <p style={{ fontSize: ".88rem", color: "var(--muted)", marginTop: 5 }}>
             {ads.length === 0 ? t.myAdsSub : `${active} ${t.myAdsActive}`}
           </p>
         </div>
@@ -875,23 +907,23 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
 
       <div className="rg-4" style={{ marginBottom: 18 }}>
         {[
-          { k: t.faol,      v: String(active),               color: active > 0 ? "#34D399" : "#EDE9FE", hint: "Jonli reklamalar" },
+          { k: t.faol,      v: String(active),               color: active > 0 ? "#34D399" : "var(--text)", hint: "Jonli reklamalar" },
           { k: t.sarflangan,v: `$${(spent / 100).toFixed(0)}`, color: "#FCD34D", hint: "Jami toʻlov" },
-          { k: t.korilish,  v: imp.toLocaleString(),          color: "#EDE9FE", hint: "Jami koʻrilish" },
-          { k: t.bosish,    v: clicks.toLocaleString(),       color: "#EDE9FE", hint: "Jami klik" },
+          { k: t.korilish,  v: imp.toLocaleString(),          color: "var(--text)", hint: "Jami koʻrilish" },
+          { k: t.bosish,    v: clicks.toLocaleString(),       color: "var(--text)", hint: "Jami klik" },
         ].map((k) => (
-          <div key={k.k} style={{ padding: "15px 17px", borderRadius: 14, background: "#1A1230", border: "1px solid #2D1F50" }}>
-            <div style={{ fontSize: ".67rem", letterSpacing: ".09em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 7 }}>{k.k}</div>
+          <div key={k.k} style={{ padding: "15px 17px", borderRadius: 14, background: "var(--surface)", border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: ".67rem", letterSpacing: ".09em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 7 }}>{k.k}</div>
             <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.45rem", fontWeight: 700, lineHeight: 1, color: k.color }}>{k.v}</div>
-            <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{k.hint}</div>
+            <div style={{ fontSize: ".74rem", color: "var(--muted)", marginTop: 6 }}>{k.hint}</div>
           </div>
         ))}
       </div>
 
-      {loading && <div style={{ color: "#6D5B8E", fontSize: ".88rem" }}>Yuklanmoqda...</div>}
+      {loading && <div style={{ color: "var(--muted)", fontSize: ".88rem" }}>Yuklanmoqda...</div>}
 
       {!loading && ads.length === 0 && (
-        <div style={{ padding: "46px 32px", textAlign: "center", borderRadius: 18, border: "1px dashed #2D1F50", background: "#160F2A" }}>
+        <div style={{ padding: "46px 32px", textAlign: "center", borderRadius: 18, border: "1px dashed var(--border)", background: "var(--surface-2)" }}>
           <div style={{ display: "inline-block", padding: "3px 11px", borderRadius: 100, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".68rem", fontWeight: 700, marginBottom: 14 }}>{t.newAccountBadge}</div>
           <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.15rem", fontWeight: 700, marginBottom: 8 }}>{t.emptyAdsTitle}</div>
           <div style={{ fontSize: ".86rem", color: "#A78BFA", lineHeight: 1.7, maxWidth: "46ch", margin: "0 auto 20px" }}>{t.emptyAdsBody}</div>
@@ -901,40 +933,51 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
 
       {!loading && ads.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {ads.map((ad) => (
-            <div key={ad.id} style={{ ...card, borderRadius: 16, overflow: "hidden", borderLeft: `3px solid ${statusColor[ad.status] || "#2D1F50"}` }}>
+          {ads.map((ad) => {
+            const ins = insights.get(ad.id)!;
+            const act = primaryAction(ins);
+            const color = STATUS_COLOR[ad.status] || "var(--border)";
+            const ctr = ad.impressions > 0 ? ((ad.clicks / ad.impressions) * 100).toFixed(1) : "0.0";
+            return (
+            <div key={ad.id} style={{ ...card, borderRadius: 16, overflow: "hidden", borderLeft: `3px solid ${color}` }}>
               <div style={{ padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 5 }}>
-                    <span style={{ fontSize: ".98rem", fontWeight: 700, color: "#EDE9FE" }}>{ad.title}</span>
-                    <span style={{ padding: "2px 9px", borderRadius: 100, background: `${statusColor[ad.status]}18`, border: `1px solid ${statusColor[ad.status]}`, color: statusColor[ad.status], fontSize: ".68rem", fontWeight: 700 }}>
-                      {statusLabel[ad.status] || ad.status}
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 6 }}>
+                    <span style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)", overflowWrap: "anywhere" }}>{ad.title}</span>
+                    <span style={{ padding: "2px 9px", borderRadius: 100, border: `1px solid ${color}`, color, fontSize: ".72rem", fontWeight: 700 }}>
+                      {oc.status[ad.status as keyof typeof oc.status] || ad.status}
                     </span>
                   </div>
-                  <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".77rem", color: "#6D5B8E" }}>
-                    {CATEGORIES[ad.category]?.emoji} {T[lang].catNames[ad.category]} · {fmtBid(ad.dailyBidCents)}/kun · {ad.durationDays} kun
+                  {/* Status, category rank, daily bid, end date */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: ".8rem", color: "var(--muted)" }}>
+                    <span>
+                      {CATEGORIES[ad.category]?.emoji} {T[lang].catNames[ad.category]}
+                      {ins.position !== null && <> · <b style={{ color: ins.position === 1 ? "var(--gold)" : "var(--text)" }}>#{ins.position}</b>/{ins.categorySize}</>}
+                    </span>
+                    <span><b style={{ color: "var(--text)" }}>{fmtBid(ad.dailyBidCents)}</b>{oc.perDay} · {ad.durationDays} {oc.daysUnit}</span>
+                    {ad.expiresAt && <span>{oc.ends}: <b style={{ color: "var(--text)" }}>{fmtDate(ad.expiresAt)}</b></span>}
                   </div>
+                  {/* Results */}
+                  {(ad.status === "active" || ad.status === "expired") && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 6, fontSize: ".84rem", color: "var(--muted)" }}>
+                      <span>{oc.kpi.views}: <b style={{ color: "var(--text)" }}>{(ad.impressions || 0).toLocaleString()}</b></span>
+                      <span>{oc.kpi.clicks}: <b style={{ color: "var(--text)" }}>{(ad.clicks || 0).toLocaleString()}</b></span>
+                      <span>CTR: <b style={{ color: "var(--text)" }}>{ctr}%</b></span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-                  {ad.status === "active" && (
-                    <Link href={`/ads/${ad.id}/bid`} style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(124,58,237,.14)", border: "1px solid #7C3AED", color: "#A855F7", fontSize: ".79rem", fontWeight: 700, textDecoration: "none" }}>Taklifni oshirish</Link>
-                  )}
-                  {(ad.status === "pending" || ad.status === "pending_verification") && (
-                    <Link href={`/ads/${ad.id}/pending`} style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(245,158,11,.1)", border: "1px solid #F59E0B", color: "#FCD34D", fontSize: ".79rem", fontWeight: 700, textDecoration: "none" }}>Ko&apos;rish</Link>
+                  <Link href={act.href} style={actionBtn(true, act.kind === "pay")}>{oc.action[act.kind]}</Link>
+                  {act.kind === "raise" && (
+                    <Link href={`/ads/${ad.id}/renew`} style={actionBtn(false)}>{oc.action.renew}</Link>
                   )}
                   {ad.status === "pending" && (
-                    <Link href={`/ads/${ad.id}/pay`} style={{ padding: "8px 14px", borderRadius: 9, background: "#F59E0B", border: "none", color: "#1A1230", fontSize: ".79rem", fontWeight: 700, textDecoration: "none" }}>To&apos;lash</Link>
-                  )}
-                  {(ad.status === "pending" || ad.status === "rejected") && (
-                    <button
-                      onClick={() => router.push(`/ads/${ad.id}/edit`)}
-                      style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(99,102,241,.12)", border: "1px solid rgba(99,102,241,.4)", color: "#818CF8", fontSize: ".79rem", fontWeight: 700, cursor: "pointer" }}
-                    >Tahrirlash</button>
+                    <button onClick={() => router.push(`/ads/${ad.id}/edit`)} style={actionBtn(false)}>{oc.action.edit}</button>
                   )}
                   {(ad.status === "pending" || ad.status === "rejected") && (
                     <button
                       onClick={() => setConfirmDeleteId(ad.id)}
-                      style={{ padding: "8px 14px", borderRadius: 9, background: "rgba(248,113,113,.1)", border: "1px solid rgba(248,113,113,.3)", color: "#F87171", fontSize: ".79rem", fontWeight: 700, cursor: "pointer" }}
+                      style={{ ...actionBtn(false), borderColor: "rgba(248,113,113,.4)", color: "var(--danger)" }}
                     >O&apos;chirish</button>
                   )}
                 </div>
@@ -949,18 +992,19 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
-                      style={{ padding: "7px 16px", borderRadius: 8, background: "transparent", border: "1px solid #2D1F50", color: "#A78BFA", fontSize: ".8rem", fontWeight: 600, cursor: "pointer" }}
+                      style={{ padding: "7px 16px", borderRadius: 8, background: "transparent", border: "1px solid var(--border)", color: "#A78BFA", fontSize: ".8rem", fontWeight: 600, cursor: "pointer" }}
                     >Bekor qilish</button>
                     <button
                       onClick={() => handleDelete(ad.id)}
                       disabled={deleting}
-                      style={{ padding: "7px 16px", borderRadius: 8, background: "#F87171", border: "none", color: "#1A1230", fontSize: ".8rem", fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer" }}
+                      style={{ padding: "7px 16px", borderRadius: 8, background: "#F87171", border: "none", color: "var(--surface)", fontSize: ".8rem", fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer" }}
                     >{deleting ? "O'chirilmoqda..." : "Ha, o'chirish"}</button>
                   </div>
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -971,7 +1015,7 @@ function MyAdsView({ ads, loading, lang, onGoCreate }: { ads: Ad[]; loading: boo
 function CatsView({ allAds, lang, onSelectCat }: { allAds: Ad[]; lang: Lang; onSelectCat: (cat: Category) => void }) {
   const t = T[lang];
   return (
-    <div style={{ animation: "fade .35s ease both", padding: "44px 0 0" }}>
+    <div style={{ animation: "fade .35s ease both", padding: "20px 0 0" }}>
       <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 12 }}>{t.catLabel}</div>
       <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "2.1rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 12 }}>{t.catsTitle}</h1>
       <p style={{ fontSize: ".96rem", color: "#A78BFA", maxWidth: "60ch", lineHeight: 1.75, marginBottom: 26 }}>{t.catsSub}</p>
@@ -980,22 +1024,22 @@ function CatsView({ allAds, lang, onSelectCat }: { allAds: Ad[]; lang: Lang; onS
           const catAds = allAds.filter((a) => a.status === "active" && a.category === k);
           const topBid = catAds.length ? Math.max(...catAds.map((a) => a.dailyBidCents)) : 0;
           return (
-            <button key={k} onClick={() => onSelectCat(k)} style={{ textAlign: "left", background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 16, padding: 20, color: "#EDE9FE", display: "flex", gap: 16, alignItems: "flex-start", cursor: "pointer" }}
+            <button key={k} onClick={() => onSelectCat(k)} style={{ textAlign: "left", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 20, color: "var(--text)", display: "flex", gap: 16, alignItems: "flex-start", cursor: "pointer" }}
               onMouseEnter={e => (e.currentTarget.style.borderColor = "#7C3AED")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "#2D1F50")}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}
             >
-              <span style={{ width: 44, height: 44, borderRadius: 13, background: "#160F2A", border: "1px solid #2D1F50", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>{CATEGORIES[k].emoji}</span>
+              <span style={{ width: 44, height: 44, borderRadius: 13, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>{CATEGORIES[k].emoji}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: ".98rem", fontWeight: 700, marginBottom: 3 }}>{t.catNames[k]}</div>
-                <div style={{ fontSize: ".8rem", color: "#6D5B8E", marginBottom: 13, lineHeight: 1.5 }}>{CATEGORIES[k].description}</div>
+                <div style={{ fontSize: ".8rem", color: "var(--muted)", marginBottom: 13, lineHeight: 1.5 }}>{CATEGORIES[k].description}</div>
                 <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                   {[
                     { k: t.firstPlace, v: topBid ? fmtBid(topBid) : "$—", color: "#FCD34D" },
                     { k: t.minEntry,   v: "$1.00",                         color: "#34D399" },
-                    { k: t.adsWord,    v: String(catAds.length),            color: "#EDE9FE" },
+                    { k: t.adsWord,    v: String(catAds.length),            color: "var(--text)" },
                   ].map((x) => (
                     <div key={x.k}>
-                      <div style={{ fontSize: ".68rem", letterSpacing: ".08em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>{x.k}</div>
+                      <div style={{ fontSize: ".68rem", letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700 }}>{x.k}</div>
                       <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: ".94rem", fontWeight: 600, color: x.color }}>{x.v}</div>
                     </div>
                   ))}
@@ -1051,10 +1095,10 @@ function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCen
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div className="rg-3">
             {KPIS.map((k) => (
-              <div key={k.k} style={{ padding: "17px 18px", borderRadius: 15, background: "#1A1230", border: "1px solid #2D1F50" }}>
-                <div style={{ fontSize: ".68rem", letterSpacing: ".09em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 8 }}>{k.k}</div>
+              <div key={k.k} style={{ padding: "17px 18px", borderRadius: 15, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div style={{ fontSize: ".68rem", letterSpacing: ".09em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 8 }}>{k.k}</div>
                 <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1, color: k.color }}>{k.v}</div>
-                <div style={{ fontSize: ".74rem", color: "#6D5B8E", marginTop: 6 }}>{k.hint}</div>
+                <div style={{ fontSize: ".74rem", color: "var(--muted)", marginTop: 6 }}>{k.hint}</div>
               </div>
             ))}
           </div>
@@ -1084,15 +1128,15 @@ function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCen
                   </span>
                   {/* Ad info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: ".88rem", fontWeight: 600, color: "#EDE9FE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
-                    <div style={{ fontSize: ".74rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>
+                    <div style={{ fontSize: ".88rem", fontWeight: 600, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ad.title}</div>
+                    <div style={{ fontSize: ".74rem", color: "var(--muted)", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>
                       ${(ad.dailyBidCents / 100).toFixed(2)}/kun · {ad.durationDays} kun · jami ${((ad.dailyBidCents * ad.durationDays) / 100).toFixed(2)}
                     </div>
                   </div>
                   {/* Pay button */}
                   <button
                     onClick={() => router.push(`/ads/${ad.id}/pay`)}
-                    style={{ flexShrink: 0, padding: "9px 18px", borderRadius: 10, border: "none", background: "#F59E0B", color: "#1A1230", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                    style={{ flexShrink: 0, padding: "9px 18px", borderRadius: 10, border: "none", background: "#F59E0B", color: "var(--surface)", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
                   >
                     {lang === "uz" ? "To'lash →" : "Pay →"}
                   </button>
@@ -1101,23 +1145,23 @@ function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCen
             </div>
           )}
 
-          <div style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 18, overflow: "hidden" }}>
-            <div style={{ padding: "18px 20px", borderBottom: "1px solid #2D1F50", fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700 }}>{(t as any).txTitle}</div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18, overflow: "hidden" }}>
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--border)", fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700 }}>{(t as any).txTitle}</div>
             {txLoading ? (
               <div style={{ padding: "26px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-                {[1,2,3].map((i) => <div key={i} style={{ height: 48, borderRadius: 10, background: "#160F2A" }} />)}
+                {[1,2,3].map((i) => <div key={i} style={{ height: 48, borderRadius: 10, background: "var(--surface-2)" }} />)}
               </div>
             ) : txs.length === 0 ? (
-              <div style={{ padding: "26px 20px", fontSize: ".83rem", color: "#6D5B8E", lineHeight: 1.6 }}>{(t as any).txEmpty}</div>
+              <div style={{ padding: "26px 20px", fontSize: ".83rem", color: "var(--muted)", lineHeight: 1.6 }}>{(t as any).txEmpty}</div>
             ) : (
               txs.map((x: any) => (
-                <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 13, padding: "14px 20px", borderBottom: "1px solid #2D1F50" }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 10, background: "#160F2A", border: "1px solid #2D1F50", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".85rem" }}>{txIcon(x.type)}</span>
+                <div key={x.id} style={{ display: "flex", alignItems: "center", gap: 13, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".85rem" }}>{txIcon(x.type)}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: ".85rem", fontWeight: 600, color: "#EDE9FE" }}>
+                    <div style={{ fontSize: ".85rem", fontWeight: 600, color: "var(--text)" }}>
                       {x.type === "refund" ? (lang === "uz" ? "Qaytarish" : "Refund") : (lang === "uz" ? "Toʻlov" : "Payment")}
                     </div>
-                    <div style={{ fontSize: ".73rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace" }}>{fmtDate(x.createdAt)} · {x.paymentMethod || "card"}</div>
+                    <div style={{ fontSize: ".73rem", color: "var(--muted)", fontFamily: "'JetBrains Mono',monospace" }}>{fmtDate(x.createdAt)} · {x.paymentMethod || "card"}</div>
                   </div>
                   <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 700, color: txColor(x.type), fontSize: ".9rem" }}>
                     {txSign(x.type)}${((x.amountCents || 0) / 100).toFixed(2)}
@@ -1129,39 +1173,39 @@ function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCen
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: "#1A1230", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{(t as any).payMethod}</div>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 12 }}>{(t as any).payMethod}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {(t as any).payOpts.map((p: any) => (
                 <div key={p.label} style={{ display: "flex", alignItems: "flex-start", gap: 11 }}>
                   <span style={{ width: 24, textAlign: "center", fontSize: ".9rem" }}>{p.icon}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: ".82rem", fontWeight: 600, color: "#EDE9FE" }}>{p.label}</div>
-                    <div style={{ fontSize: ".75rem", color: "#6D5B8E", lineHeight: 1.5 }}>{p.hint}</div>
+                    <div style={{ fontSize: ".82rem", fontWeight: 600, color: "var(--text)" }}>{p.label}</div>
+                    <div style={{ fontSize: ".75rem", color: "var(--muted)", lineHeight: 1.5 }}>{p.hint}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 14, fontSize: ".75rem", color: "#6D5B8E", lineHeight: 1.6 }}>{(t as any).topUpNote}</div>
+            <div style={{ marginTop: 14, fontSize: ".75rem", color: "var(--muted)", lineHeight: 1.6 }}>{(t as any).topUpNote}</div>
           </div>
 
-          <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{(t as any).warnTitle}</div>
+          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 13 }}>{(t as any).warnTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
               {(t as any).warnRows.map((w: any) => (
                 <div key={w.title} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                   <span style={{ width: 8, height: 8, borderRadius: "50%", marginTop: 7, flexShrink: 0, background: w.color }}/>
                   <div>
-                    <div style={{ fontSize: ".82rem", fontWeight: 600, color: "#EDE9FE" }}>{w.title}</div>
-                    <div style={{ fontSize: ".77rem", color: "#6D5B8E", lineHeight: 1.5 }}>{w.body}</div>
+                    <div style={{ fontSize: ".82rem", fontWeight: 600, color: "var(--text)" }}>{w.title}</div>
+                    <div style={{ fontSize: ".77rem", color: "var(--muted)", lineHeight: 1.5 }}>{w.body}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{(t as any).refundTitle}</div>
+          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 13 }}>{(t as any).refundTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
               {(t as any).refundRows.map((r: any) => (
                 <div key={r.k} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: ".79rem", lineHeight: 1.5 }}>
@@ -1180,7 +1224,7 @@ function WalletView({ lang, myAds, userProfile, uid, txs: txsProp, totalSpentCen
 // ─── Toggle component ─────────────────────────────────────────────────────────
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button onClick={onToggle} style={{ position: "relative", width: 42, height: 24, borderRadius: 100, background: on ? "#7C3AED" : "#160F2A", border: on ? "none" : "1px solid #2D1F50", cursor: "pointer", flexShrink: 0, transition: "all .2s" }}>
+    <button onClick={onToggle} style={{ position: "relative", width: 42, height: 24, borderRadius: 100, background: on ? "#7C3AED" : "var(--surface-2)", border: on ? "none" : "1px solid var(--border)", cursor: "pointer", flexShrink: 0, transition: "all .2s" }}>
       <span style={{ position: "absolute", top: on ? 4 : 3, left: on ? undefined : 4, right: on ? 4 : undefined, width: 16, height: 16, borderRadius: "50%", background: "#fff", display: "block", transition: "all .2s" }} />
     </button>
   );
@@ -1240,18 +1284,18 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
   const STATS = useMemo(() => {
     const active = ads.filter((a) => a.status === "active").length;
     return [
-      { k: "Jami reklamalar",  v: String(ads.length),                        color: "#EDE9FE" },
+      { k: "Jami reklamalar",  v: String(ads.length),                        color: "var(--text)" },
       { k: "Faol reklamalar",  v: String(active),                            color: "#34D399" },
       { k: "Jami sarflangan",  v: `$${(totalSpentCents / 100).toFixed(2)}`,  color: "#FCD34D" },
-      { k: "Koʻrilish",        v: ads.reduce((s, a) => s + (a.impressions || 0), 0).toLocaleString(), color: "#EDE9FE" },
-      { k: "Bosish",           v: ads.reduce((s, a) => s + (a.clicks || 0), 0).toLocaleString(),      color: "#EDE9FE" },
+      { k: "Koʻrilish",        v: ads.reduce((s, a) => s + (a.impressions || 0), 0).toLocaleString(), color: "var(--text)" },
+      { k: "Bosish",           v: ads.reduce((s, a) => s + (a.clicks || 0), 0).toLocaleString(),      color: "var(--text)" },
     ];
   }, [ads, totalSpentCents]);
 
   return (
     <div style={{ animation: "fade .35s ease both" }}>
       <div style={{ fontSize: ".72rem", letterSpacing: ".15em", textTransform: "uppercase", color: "#A855F7", fontWeight: 700, marginBottom: 9 }}>AKKAUNT</div>
-      <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 20, color: "#EDE9FE" }}>{t.profileTitle}</h1>
+      <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.8rem", fontWeight: 700, letterSpacing: "-.03em", marginBottom: 20, color: "var(--text)" }}>{t.profileTitle}</h1>
       <div className="rg-profile">
 
         {/* COL 1 — Profil + Akkaunt ma'lumotlari */}
@@ -1263,31 +1307,31 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
               <span style={{ width: 58, height: 58, borderRadius: 17, background: "linear-gradient(135deg,#7C3AED,#F59E0B)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Unbounded',sans-serif", fontSize: "1.4rem", fontWeight: 700, color: "#fff", flexShrink: 0 }}>{initial}</span>
             )}
             <div style={{ flex: 1, minWidth: 180 }}>
-              <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.15rem", fontWeight: 700, letterSpacing: "-.02em", marginBottom: 4, color: "#EDE9FE" }}>{brand}</div>
-              <div style={{ fontSize: ".83rem", color: "#6D5B8E", fontFamily: "'JetBrains Mono',monospace" }}>Google · {googleEmail}</div>
+              <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.15rem", fontWeight: 700, letterSpacing: "-.02em", marginBottom: 4, color: "var(--text)" }}>{brand}</div>
+              <div style={{ fontSize: ".83rem", color: "var(--muted)", fontFamily: "'JetBrains Mono',monospace" }}>Google · {googleEmail}</div>
             </div>
             <span style={{ padding: "3px 11px", borderRadius: 100, background: "rgba(16,185,129,.12)", border: "1px solid #10B981", color: "#34D399", fontSize: ".68rem", fontWeight: 700 }}>✅ {t.verified}</span>
           </div>
 
           <div style={{ ...card, padding: 22, flex: 1 }}>
-            <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 16, color: "#EDE9FE" }}>Akkaunt ma&apos;lumotlari</div>
+            <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 16, color: "var(--text)" }}>Akkaunt ma&apos;lumotlari</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 7 }}>Foydalanuvchi nomi</label>
+                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "var(--text)", marginBottom: 7 }}>Foydalanuvchi nomi</label>
                 <input value={brandName} onChange={(e) => setBrandName(e.target.value)} style={inp} placeholder="Foydalanuvchi nomingiz" />
-                <div style={{ fontSize: ".75rem", color: "#6D5B8E", marginTop: 6, lineHeight: 1.55 }}>Reklamada ko&apos;rinadigan nom. Istalgan vaqt o&apos;zgartirish mumkin.</div>
+                <div style={{ fontSize: ".75rem", color: "var(--muted)", marginTop: 6, lineHeight: 1.55 }}>Reklamada ko&apos;rinadigan nom. Istalgan vaqt o&apos;zgartirish mumkin.</div>
               </div>
               <div>
-                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 7 }}>Email</label>
+                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "var(--text)", marginBottom: 7 }}>Email</label>
                 <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" style={{ ...inp, fontFamily: "'JetBrains Mono',monospace" }} placeholder="siz@misol.uz" />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 7 }}>Google akkaunt</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 11, background: "#160F2A", border: "1px solid #2D1F50" }}>
+                <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "var(--text)", marginBottom: 7 }}>Google akkaunt</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "12px 14px", borderRadius: 11, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                   <span style={{ flex: 1, fontFamily: "'JetBrains Mono',monospace", fontSize: ".88rem", color: "#A78BFA" }}>{googleEmail}</span>
                   <span style={{ fontSize: ".72rem", color: "#34D399", fontWeight: 700 }}>✅ {t.verified}</span>
                 </div>
-                <div style={{ fontSize: ".75rem", color: "#6D5B8E", marginTop: 6, lineHeight: 1.55 }}>Google orqali tasdiqlangan. O&apos;zgartirib bo&apos;lmaydi.</div>
+                <div style={{ fontSize: ".75rem", color: "var(--muted)", marginTop: 6, lineHeight: 1.55 }}>Google orqali tasdiqlangan. O&apos;zgartirib bo&apos;lmaydi.</div>
               </div>
               <button onClick={handleSave} disabled={saving} style={{ alignSelf: "flex-start", padding: "11px 19px", borderRadius: 11, border: "none", background: saved ? "#10B981" : saving ? "#4C1D95" : "#7C3AED", color: "#fff", fontSize: ".84rem", fontWeight: 700, cursor: saving ? "not-allowed" : "pointer" }}>
                 {saved ? t.saved : saving ? t.saving : t.save}
@@ -1299,14 +1343,14 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
         {/* COL 2 — Bildirishnomalar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%" }}>
           <div style={{ ...card, padding: 22, flex: 1 }}>
-            <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 6, color: "#EDE9FE" }}>{t.notifTitle}</div>
-            <div style={{ fontSize: ".82rem", color: "#6D5B8E", lineHeight: 1.6, marginBottom: 14 }}>{t.notifSub}</div>
+            <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1rem", fontWeight: 700, marginBottom: 6, color: "var(--text)" }}>{t.notifTitle}</div>
+            <div style={{ fontSize: ".82rem", color: "var(--muted)", lineHeight: 1.6, marginBottom: 14 }}>{t.notifSub}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {NOTIF_PREFS.map((p) => (
-                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderTop: "1px solid #2D1F50" }}>
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 0", borderTop: "1px solid var(--border)" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: ".85rem", fontWeight: 600, color: "#EDE9FE" }}>{p.label}</div>
-                    <div style={{ fontSize: ".76rem", color: "#6D5B8E", lineHeight: 1.5 }}>{p.hint}</div>
+                    <div style={{ fontSize: ".85rem", fontWeight: 600, color: "var(--text)" }}>{p.label}</div>
+                    <div style={{ fontSize: ".76rem", color: "var(--muted)", lineHeight: 1.5 }}>{p.hint}</div>
                   </div>
                   <Toggle on={notifs[p.id as keyof typeof notifs]} onToggle={() => setNotifs((n) => ({ ...n, [p.id]: !n[p.id as keyof typeof n] }))} />
                 </div>
@@ -1318,7 +1362,7 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
         {/* COL 3 — Hisob statistikasi + Muhim + Akkauntdan chiqish */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
           <div style={{ ...card, borderRadius: 16, padding: 18 }}>
-            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 13 }}>{t.statsTitle}</div>
+            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 13 }}>{t.statsTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 11, fontSize: ".84rem" }}>
               {STATS.map((x) => (
                 <div key={x.k} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
@@ -1329,20 +1373,20 @@ function ProfileView({ ads, lang, onSignOut, totalSpentCents }: { ads: Ad[]; lan
             </div>
           </div>
 
-          <div style={{ background: "#160F2A", border: "1px solid #2D1F50", borderRadius: 16, padding: 18, flex: 1 }}>
-            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700, marginBottom: 12 }}>{t.rulesTitle}</div>
+          <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 16, padding: 18, flex: 1 }}>
+            <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700, marginBottom: 12 }}>{t.rulesTitle}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
               {FORM_RULES.map((r) => (
                 <div key={r} style={{ display: "flex", gap: 9, fontSize: ".79rem", color: "#A78BFA", lineHeight: 1.55 }}>
-                  <span style={{ color: "#6D5B8E" }}>·</span><span>{r}</span>
+                  <span style={{ color: "var(--muted)" }}>·</span><span>{r}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ background: "rgba(248,113,113,.06)", border: "1px solid #2D1F50", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontSize: ".84rem", fontWeight: 700, marginBottom: 6, color: "#EDE9FE" }}>{t.dangerTitle}</div>
-            <div style={{ fontSize: ".78rem", color: "#6D5B8E", lineHeight: 1.6, marginBottom: 13 }}>{t.dangerBody}</div>
+          <div style={{ background: "rgba(248,113,113,.06)", border: "1px solid var(--border)", borderRadius: 16, padding: 18 }}>
+            <div style={{ fontSize: ".84rem", fontWeight: 700, marginBottom: 6, color: "var(--text)" }}>{t.dangerTitle}</div>
+            <div style={{ fontSize: ".78rem", color: "var(--muted)", lineHeight: 1.6, marginBottom: 13 }}>{t.dangerBody}</div>
             <button onClick={onSignOut} style={{ width: "100%", padding: 11, borderRadius: 11, background: "transparent", border: "1px solid #F87171", color: "#F87171", fontSize: ".81rem", fontWeight: 700, cursor: "pointer" }}>🚪 {t.logout}</button>
           </div>
         </div>
@@ -1358,7 +1402,7 @@ export default function DashboardPage() {
   const { lang: globalLang, setLang: setGlobalLang } = useLang();
   const lang = (["uz","en","ru"].includes(globalLang) ? globalLang : "en") as Lang;
   const setLang = (l: string) => setGlobalLang(l as Lang);
-  const [screen, setScreen] = useState<Screen>("all");
+  const [screen, setScreen] = useState<Screen>("overview");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [allAds, setAllAds] = useState<Ad[]>([]);
   const [myAds, setMyAds]   = useState<Ad[]>([]);
@@ -1368,6 +1412,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading && !firebaseUser) router.replace("/auth");
   }, [loading, firebaseUser, router]);
+
+  // Deep links from other pages: /dashboard?screen=wallet etc.
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get("screen");
+    if (param) setScreen(screenFromParam(param));
+  }, []);
 
   // All active ads (leaderboard)
   useEffect(() => {
@@ -1401,7 +1451,7 @@ export default function DashboardPage() {
   const handleSignOut = useCallback(() => { signOut(); router.push("/"); }, [signOut, router]);
   const handleGoCreate = useCallback(() => router.push("/create"), [router]);
 
-  if (loading || !firebaseUser) return <div style={{ minHeight: "100vh", background: "#0E0B1A" }} />;
+  if (loading || !firebaseUser) return <div style={{ minHeight: "100vh", background: "var(--bg)" }} />;
 
   const brand   = userProfile?.displayName || firebaseUser.displayName || "?";
   const initial = initials(brand);
@@ -1415,13 +1465,13 @@ export default function DashboardPage() {
         @keyframes fade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
         @keyframes livedot { 0%,100%{opacity:1} 50%{opacity:.3} }
       `}</style>
-      <div style={{ minHeight: "100vh", background: "#0E0B1A", color: "#EDE9FE" }}>
+      <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)" }}>
         <AppHeader
           lang={lang} setLang={setLang}
           totalSpentCents={spent}
           brandName={brand} brandInitial={initial}
           onGoCreate={handleGoCreate}
-          onGoAll={() => startTransition(() => setScreen("all"))}
+          onGoAll={() => startTransition(() => setScreen("overview"))}
           onGoProfile={() => startTransition(() => setScreen("profile"))}
           onGoWallet={() => startTransition(() => setScreen("wallet"))}
           onOpenDrawer={() => setDrawerOpen(true)}
@@ -1441,9 +1491,16 @@ export default function DashboardPage() {
             onSignOut={handleSignOut} onGoCreate={handleGoCreate}
           />
           <main className="dash-main" style={{ padding: "0 32px 60px" }}>
-            {screen === "all"     && <AllView allAds={allAds} myUID={firebaseUser.uid} lang={lang} onRaise={() => {}} />}
-            {screen === "myads"  && <MyAdsView ads={myAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
-            {screen === "cats"   && <CatsView allAds={allAds} lang={lang} onSelectCat={() => startTransition(() => setScreen("all"))} />}
+            {screen === "overview" && (
+              <OverviewView
+                lang={lang} brand={brand}
+                myAds={myAds} activeAds={allAds} txs={txs} paidCents={spent}
+                loading={adsLoading}
+                onNavigate={(s) => startTransition(() => setScreen(s))}
+              />
+            )}
+            {screen === "myads"  && <MyAdsView ads={myAds} allAds={allAds} loading={adsLoading} lang={lang} onGoCreate={handleGoCreate} />}
+            {screen === "ranking" && <RankingView allAds={allAds} myUID={firebaseUser.uid} lang={lang} />}
             {screen === "wallet" && <WalletView lang={lang} myAds={myAds} userProfile={userProfile} uid={firebaseUser.uid} txs={txs} totalSpentCents={spent} />}
             {screen === "profile"&& <ProfileView ads={myAds} lang={lang} onSignOut={handleSignOut} totalSpentCents={spent} />}
           </main>

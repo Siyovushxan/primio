@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import { statsDayKey } from "@/lib/dailyStats";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,11 @@ export async function POST(
     if (!snap.exists || snap.data()?.status !== "active") {
       return NextResponse.json({ ok: false }, { status: 404 });
     }
-    await adRef.update({ impressions: FieldValue.increment(1) });
+    const day = statsDayKey();
+    const batch = adminDb.batch();
+    batch.update(adRef, { impressions: FieldValue.increment(1) });
+    batch.set(adminDb.doc(`ads/${adId}/daily/${day}`), { date: day, impressions: FieldValue.increment(1) }, { merge: true });
+    await batch.commit();
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });

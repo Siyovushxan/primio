@@ -14,8 +14,8 @@ import Link from "next/link";
 
 const inp = {
   width: "100%", padding: "13px 15px", borderRadius: 12,
-  background: "rgba(22,15,42,.8)", border: "1px solid rgba(45,31,80,.8)",
-  color: "#EDE9FE", fontSize: ".92rem", outline: "none",
+  background: "rgba(21,21,27,.8)", border: "1px solid rgba(42,42,53,.8)",
+  color: "var(--text)", fontSize: ".92rem", outline: "none",
   boxSizing: "border-box" as const,
 } as const;
 
@@ -78,7 +78,7 @@ function AuthPageInner() {
   };
 
   return (
-    <div style={{ minHeight: "calc(100vh - 64px)", background: "#0A0715", position: "relative", overflow: "hidden" }}>
+    <div style={{ minHeight: "calc(100vh - 64px)", background: "var(--bg)", position: "relative", overflow: "hidden" }}>
 
       {/* ── Background orbs ──────────────────────────────────────────────── */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
@@ -96,10 +96,10 @@ function AuthPageInner() {
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7C3AED", boxShadow: "0 0 8px #7C3AED" }} />
               <span style={{ fontSize: ".67rem", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#A78BFA" }}>{t.authLabel}</span>
             </div>
-            <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.6rem,3.5vw,2.4rem)", fontWeight: 800, letterSpacing: "-.035em", lineHeight: 1.12, marginBottom: 14, color: "#EDE9FE" }}>
+            <h1 style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "clamp(1.6rem,3.5vw,2.4rem)", fontWeight: 800, letterSpacing: "-.035em", lineHeight: 1.12, marginBottom: 14, color: "var(--text)" }}>
               {t.authTitle}
             </h1>
-            <p style={{ fontSize: ".95rem", color: "#7C6E9E", lineHeight: 1.75, maxWidth: "50ch", marginBottom: 28 }}>
+            <p style={{ fontSize: ".95rem", color: "var(--muted)", lineHeight: 1.75, maxWidth: "50ch", marginBottom: 28 }}>
               {t.authSub}
             </p>
 
@@ -107,20 +107,20 @@ function AuthPageInner() {
             <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: "52ch" }}>
               {t.authPerks.map((p, i) => (
                 <div key={p.icon} style={{ display: "flex", gap: 13, alignItems: "flex-start", animation: `slideUp .5s both ${100 + i * 80}ms` }}>
-                  <span style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg, rgba(124,58,237,.2), rgba(45,31,80,.5))", border: "1px solid rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".85rem", flexShrink: 0 }}>
+                  <span style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg, rgba(124,58,237,.2), rgba(42,42,53,.5))", border: "1px solid rgba(124,58,237,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".85rem", flexShrink: 0 }}>
                     {p.icon}
                   </span>
                   <div>
-                    <div style={{ fontSize: ".87rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 2 }}>{p.title}</div>
-                    <div style={{ fontSize: ".81rem", color: "#7C6E9E", lineHeight: 1.6 }}>{p.body}</div>
+                    <div style={{ fontSize: ".87rem", fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{p.title}</div>
+                    <div style={{ fontSize: ".81rem", color: "var(--muted)", lineHeight: 1.6 }}>{p.body}</div>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Note card */}
-            <div style={{ marginTop: 28, padding: "16px 20px", borderRadius: 16, background: "rgba(22,15,42,.7)", border: "1px solid rgba(45,31,80,.7)", maxWidth: "52ch" }}>
-              <div style={{ fontSize: ".8rem", color: "#7C6E9E", lineHeight: 1.65 }}>
+            <div style={{ marginTop: 28, padding: "16px 20px", borderRadius: 16, background: "rgba(21,21,27,.7)", border: "1px solid rgba(42,42,53,.7)", maxWidth: "52ch" }}>
+              <div style={{ fontSize: ".8rem", color: "var(--muted)", lineHeight: 1.65 }}>
                 {t.authNoAccountNote}
               </div>
               <Link href="/browse" style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 12, padding: "9px 15px", borderRadius: 10, background: "rgba(124,58,237,.1)", border: "1px solid rgba(124,58,237,.25)", color: "#A78BFA", fontSize: ".8rem", fontWeight: 600, textDecoration: "none", transition: "all .2s" }}
@@ -134,7 +134,7 @@ function AuthPageInner() {
           {/* ── RIGHT — card ─────────────────────────────────────────────── */}
           <div className="rg-auth-card" style={{ animation: "slideUp .7s both .1s" }}>
             <div style={{
-              background: "linear-gradient(160deg, rgba(45,31,80,.8) 0%, rgba(14,11,26,.95) 100%)",
+              background: "linear-gradient(160deg, rgba(42,42,53,.8) 0%, rgba(11,11,15,.95) 100%)",
               border: "1px solid rgba(124,58,237,.3)",
               borderRadius: 24, padding: 28,
               boxShadow: "0 30px 80px rgba(0,0,0,.5), 0 0 40px rgba(124,58,237,.12)",
@@ -153,10 +153,10 @@ function AuthPageInner() {
               {/* Step 1 — Google button */}
               {step === 1 && (
                 <>
-                  <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 6 }}>
+                  <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>
                     {t.authWelcome}
                   </div>
-                  <div style={{ fontSize: ".83rem", color: "#7C6E9E", lineHeight: 1.65, marginBottom: 24 }}>
+                  <div style={{ fontSize: ".83rem", color: "var(--muted)", lineHeight: 1.65, marginBottom: 24 }}>
                     {t.authWelcomeSub.split("\n").map((line, i) => (
                       <span key={i}>{line}{i < t.authWelcomeSub.split("\n").length - 1 && <br />}</span>
                     ))}
@@ -192,14 +192,14 @@ function AuthPageInner() {
                     )}
                   </button>
 
-                  <div style={{ marginTop: 14, padding: "11px 14px", borderRadius: 10, background: "rgba(14,11,26,.6)", border: "1px solid rgba(45,31,80,.6)" }}>
-                    <div style={{ fontSize: ".77rem", color: "#4A3C6E", lineHeight: 1.6 }}>
+                  <div style={{ marginTop: 14, padding: "11px 14px", borderRadius: 10, background: "rgba(11,11,15,.6)", border: "1px solid rgba(42,42,53,.6)" }}>
+                    <div style={{ fontSize: ".77rem", color: "var(--dim)", lineHeight: 1.6 }}>
                       {t.authPrivacy}
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid rgba(45,31,80,.6)" }}>
-                    <div style={{ fontSize: ".78rem", color: "#4A3C6E", lineHeight: 1.6, marginBottom: 12 }}>
+                  <div style={{ marginTop: 20, paddingTop: 18, borderTop: "1px solid rgba(42,42,53,.6)" }}>
+                    <div style={{ fontSize: ".78rem", color: "var(--dim)", lineHeight: 1.6, marginBottom: 12 }}>
                       {t.authDemoNote}
                     </div>
                     <Link href="/browse" style={{ display: "block", width: "100%", padding: "12px 0", borderRadius: 11, background: "rgba(124,58,237,.08)", border: "1px dashed rgba(124,58,237,.3)", color: "#A78BFA", fontSize: ".82rem", fontWeight: 600, textDecoration: "none", textAlign: "center", boxSizing: "border-box", transition: "background .2s" }}
@@ -218,18 +218,18 @@ function AuthPageInner() {
                     <div style={{ flex: 1, height: 4, borderRadius: 100, background: "#7C3AED" }} />
                     <div style={{ flex: 1, height: 4, borderRadius: 100, background: "#7C3AED" }} />
                   </div>
-                  <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "#6D5B8E", fontWeight: 700 }}>
+                  <div style={{ fontSize: ".7rem", letterSpacing: ".1em", textTransform: "uppercase", color: "var(--muted)", fontWeight: 700 }}>
                     {t.authLastStep}
                   </div>
-                  <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#EDE9FE" }}>
+                  <div style={{ fontFamily: "'Unbounded',sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "var(--text)" }}>
                     {t.authBrandTitle}
                   </div>
-                  <div style={{ fontSize: ".83rem", color: "#7C6E9E", lineHeight: 1.6, marginTop: -8 }}>
+                  <div style={{ fontSize: ".83rem", color: "var(--muted)", lineHeight: 1.6, marginTop: -8 }}>
                     {t.authBrandSub}
                   </div>
 
                   <div>
-                    <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "#EDE9FE", marginBottom: 8 }}>{t.authBrandLabel}</label>
+                    <label style={{ display: "block", fontSize: ".77rem", fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{t.authBrandLabel}</label>
                     <input
                       value={brand}
                       onChange={(e) => setBrand(e.target.value)}
@@ -248,7 +248,7 @@ function AuthPageInner() {
                     {loading ? t.authCreating : t.authCreate}
                   </button>
 
-                  <div style={{ fontSize: ".75rem", color: "#4A3C6E", textAlign: "center", lineHeight: 1.55 }}>
+                  <div style={{ fontSize: ".75rem", color: "var(--dim)", textAlign: "center", lineHeight: 1.55 }}>
                     {t.authTerms}
                   </div>
                 </form>
