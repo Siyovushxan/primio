@@ -1,177 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
-import { adminDb } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
-
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { applyPayment, applyRefund, dodoRequest } from "@/lib/payments";
 export const dynamic = "force-dynamic";
-
-function verifyDodoWebhook(
-  body: string,
-  webhookId: string,
-  webhookTimestamp: string,
-  webhookSignature: string,
-  secret: string,
-): boolean {
-  try {
-    // Standard Webhooks: secret is "whsec_<base64>"
-    const rawSecret = Buffer.from(secret.replace(/^whsec_/, ""), "base64");
-    const signedContent = `${webhookId}.${webhookTimestamp}.${body}`;
-    const expected = createHmac("sha256", rawSecret)
-      .update(signedContent)
-      .digest("base64");
-
-    // webhookSignature may be "v1,<sig1> v1,<sig2>"
-    const signatures = webhookSignature.split(" ").map((s) => s.replace(/^v1,/, ""));
-    return signatures.some((sig) => {
-      try {
-        return timingSafeEqual(Buffer.from(sig, "base64"), Buffer.from(expected, "base64"));
-      } catch {
-        return false;
-      }
-    });
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(req: NextRequest) {
   const body = await req.text();
-
-  const webhookId = req.headers.get("webhook-id") || "";
-  const webhookTimestamp = req.headers.get("webhook-timestamp") || "";
-  const webhookSignature = req.headers.get("webhook-signature") || "";
-  const secret = process.env.DODO_WEBHOOK_SECRET || "";
-
-  if (!secret) {
-    console.error("DODO_WEBHOOK_SECRET is not set");
-    return NextResponse.json({ error: "Webhook secret missing" }, { status: 500 });
-  }
-
-  if (!verifyDodoWebhook(body, webhookId, webhookTimestamp, webhookSignature, secret)) {
-    console.error("Dodo webhook signature verification failed");
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
-  }
-
-  let event: any;
+  const id = req.headers.get("webhook-id") ?? "";
+  const timestamp = req.headers.get("webhook-timestamp") ?? "";
+  const secret = process.env.DODO_WEBHOOK_SECRET;
+  if (!secret) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
+  if (!id || !Number.isFinite(Number(timestamp)) || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300)
+    return NextResponse.json({ error: "Invalid timestamp" }, { status: 400 });
+  const expected = createHmac("sha256", Buffer.from(secret.replace(/^whsec_/, ""), "base64")).update(`${id}.${timestamp}.${body}`).digest();
+  const valid = (req.headers.get("webhook-signature") ?? "").split(" ").some(sig => {
+    try { const got = Buffer.from(sig.replace(/^v1,/, ""), "base64"); return got.length === expected.length && timingSafeEqual(got, expected); } catch { return false; }
+  });
+  if (!valid) return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   try {
-    event = JSON.parse(body);
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  if (event.type === "payment.succeeded") {
-    const payload = event.data?.payload ?? event.data ?? {};
-    const paymentId = payload.payment_id;
-    const metadata = payload.metadata || {};
-    const adId = metadata.adId;
-    const advertiserUID = metadata.advertiserUID;
-    const type = metadata.type || "purchase";
-    const newDailyBidCents = parseInt(metadata.newDailyBidCents || "0");
-    const amountTotal = payload.total_amount || 0;
-
-    if (!adId || !advertiserUID) {
-      console.error("Webhook missing metadata:", metadata);
-      return NextResponse.json({ received: true });
+    const event = JSON.parse(body);
+    if (event.type === "payment.succeeded") {
+      const paymentId = (event.data?.payload ?? event.data)?.payment_id;
+      if (typeof paymentId !== "string" || !/^[\w-]{1,128}$/.test(paymentId)) throw new Error("Missing payment id.");
+      await applyPayment(await dodoRequest(`/payments/${paymentId}`));
     }
-
-    try {
-      const adRef = adminDb.doc(`ads/${adId}`);
-      const adSnap = await adRef.get();
-
-      // Idempotency: check transactions collection first (works even if ad deleted)
-      const existingTx = await adminDb
-        .collection("transactions")
-        .where("externalTxId", "==", paymentId)
-        .limit(1)
-        .get();
-      if (!existingTx.empty) {
-        console.log("Webhook already processed (idempotency):", paymentId);
-        return NextResponse.json({ received: true });
-      }
-
-      if (!adSnap.exists) {
-        // Ad was deleted after payment — still record the transaction for audit/refund purposes
-        console.warn(`Ad not found (deleted?): ${adId} — recording orphan transaction`);
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "orphan_" + type, // e.g. "orphan_purchase"
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          note: "Ad was deleted before webhook processed",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        await adminDb.doc(`users/${advertiserUID}`).update({
-          totalSpentCents: FieldValue.increment(amountTotal),
-        });
-        return NextResponse.json({ received: true });
-      }
-
-      const ad = adSnap.data()!;
-
-      if (type === "bid_upgrade") {
-        await adRef.update({
-          dailyBidCents: newDailyBidCents,
-          externalTxId: paymentId,
-          pendingPaymentId: FieldValue.delete(),
-        });
-
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "bid_upgrade",
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-
-        await adminDb.doc(`users/${advertiserUID}`).update({
-          totalSpentCents: FieldValue.increment(amountTotal),
-        });
-      } else {
-        const userSnap = await adminDb.doc(`users/${advertiserUID}`).get();
-        const isNewAccount = userSnap.exists ? userSnap.data()!.isNewAccount : false;
-        const newStatus = isNewAccount ? "pending_verification" : "active";
-
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + (ad.durationDays || 7) * 24 * 60 * 60 * 1000);
-
-        await adRef.update({
-          status: newStatus,
-          startsAt: isNewAccount ? null : FieldValue.serverTimestamp(),
-          expiresAt: isNewAccount ? null : expiresAt,
-          totalPaidCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          pendingPaymentId: FieldValue.delete(),
-        });
-
-        await adminDb.collection("transactions").add({
-          uid: advertiserUID,
-          adId,
-          type: "purchase",
-          amountCents: amountTotal,
-          externalTxId: paymentId,
-          paymentMethod: "card",
-          createdAt: FieldValue.serverTimestamp(),
-        });
-
-        if (userSnap.exists) {
-          await adminDb.doc(`users/${advertiserUID}`).update({
-            totalSpentCents: FieldValue.increment(amountTotal),
-            isNewAccount: false,
-          });
-        }
-
-        console.log(`Ad ${adId} activated via webhook. Status: ${newStatus}`);
-      }
-    } catch (err) {
-      console.error("Webhook processing error:", err);
-      return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    if (event.type === "refund.succeeded") {
+      const refundId = (event.data?.payload ?? event.data)?.refund_id;
+      if (typeof refundId !== "string" || !/^[\w-]{1,128}$/.test(refundId)) throw new Error("Missing refund id.");
+      await applyRefund(await dodoRequest(`/refunds/${refundId}`));
     }
-  }
-
-  return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true });
+  } catch (error) { console.error("Webhook:", error); return NextResponse.json({ error: "Processing failed" }, { status: 500 }); }
 }

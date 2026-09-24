@@ -111,8 +111,8 @@ export async function GET(req: NextRequest) {
       total: entries.length,
       message: `${sent} ta reklamachiga haftalik hisobot yuborildi`,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Weekly report error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Weekly report failed" }, { status: 500 });
   }
 }

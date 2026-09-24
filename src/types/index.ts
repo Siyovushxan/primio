@@ -14,7 +14,7 @@ export type PaymentMethod =
   | "crypto"
   | "card";
 
-export type TransactionType = "purchase" | "bid_upgrade" | "refund";
+export type TransactionType = "purchase" | "renewal" | "bid_upgrade" | "refund";
 
 export type Category =
   | "technology"
@@ -30,11 +30,12 @@ export interface Ad {
   id: string;
   advertiserUID: string;
   title: string;
+  description?: string;
   imageURL: string;
   destinationURL: string;
   category: Category;
   dailyBidCents: number;
-  durationDays: 7 | 14 | 30;
+  durationDays: number;
   totalPaidCents: number;
   status: AdStatus;
   startsAt: Timestamp | null;
@@ -44,6 +45,9 @@ export interface Ad {
   externalTxId: string;
   paymentMethod: PaymentMethod | "";
   rejectionReason?: string;
+  pendingOrderId?: string;
+  moderationPassed?: boolean;
+  paymentReviewRequired?: boolean;
   createdAt: Timestamp;
 }
 

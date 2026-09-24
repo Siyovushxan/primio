@@ -7,8 +7,8 @@ export async function GET() {
   try {
     const { getApps } = await import("firebase-admin/app");
     fbStatus = `apps: ${getApps().length}`;
-  } catch (e: any) {
-    fbStatus = `error: ${e?.message?.slice(0, 100)}`;
+  } catch (e: unknown) {
+    fbStatus = `error: ${e instanceof Error ? e.message.slice(0, 100) : "unknown"}`;
   }
 
   return NextResponse.json({

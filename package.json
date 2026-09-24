@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint src next.config.ts eslint.config.mjs",
+    "test": "node tests/business.test.cjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

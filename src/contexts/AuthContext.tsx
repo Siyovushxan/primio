@@ -1,97 +1,46 @@
 "use client";
-
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
-import {
-  User as FirebaseUser,
-  onAuthStateChanged,
-  signOut as firebaseSignOut,
-} from "firebase/auth";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { type User as FirebaseUser, onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { User } from "@/types";
-
+import type { User } from "@/types";
 interface AuthContextType {
-  firebaseUser: FirebaseUser | null;
-  userProfile: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-  refreshProfile: () => void;
+  firebaseUser: FirebaseUser | null; userProfile: User | null; loading: boolean; profileError: string; isAdmin: boolean;
+  signOut: () => Promise<void>; refreshProfile: () => void;
 }
-
-const AuthContext = createContext<AuthContextType>({
-  firebaseUser: null,
-  userProfile: null,
-  loading: true,
-  signOut: async () => {},
-  refreshProfile: () => {},
-});
-
+const AuthContext = createContext<AuthContextType>({ firebaseUser:null,userProfile:null,loading:true,profileError:"",isAdmin:false,signOut:async()=>{},refreshProfile:()=>{} });
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [userProfile, setUserProfile] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const profileUnsubRef = useRef<(() => void) | null>(null);
-
-  // no-op — profile updates come via onSnapshot automatically
-  const refreshProfile = () => {};
-
-  useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      setFirebaseUser(user);
-
-      // Cancel previous profile listener
-      if (profileUnsubRef.current) {
-        profileUnsubRef.current();
-        profileUnsubRef.current = null;
-      }
-
-      if (user) {
-        const ref = doc(db, "users", user.uid);
-
-        // Subscribe to real-time profile updates
-        const unsubProfile = onSnapshot(ref, async (snap) => {
-          if (snap.exists()) {
-            setUserProfile({ uid: user.uid, ...snap.data() } as User);
-          } else {
-            // First-time sign in — create the doc
-            const newProfile: User = {
-              uid: user.uid,
-              displayName: user.displayName || "",
-              email: user.email || "",
-              totalSpentCents: 0,
-              phone: "",
-              isNewAccount: true,
-              createdAt: serverTimestamp() as any,
-            };
-            await setDoc(ref, newProfile);
-            // onSnapshot will fire again after setDoc
-          }
+  const [firebaseUser,setFirebaseUser]=useState<FirebaseUser|null>(null);
+  const [userProfile,setUserProfile]=useState<User|null>(null);
+  const [loading,setLoading]=useState(true);
+  const [profileError,setProfileError]=useState("");
+  const [isAdmin,setIsAdmin]=useState(false);
+  const [revision,setRevision]=useState(0);
+  useEffect(()=>{
+    let generation=0;
+    let unsubscribeProfile: (()=>void)|undefined;
+    const unsubscribeAuth=onAuthStateChanged(auth,async user=>{
+      const current=++generation;
+      unsubscribeProfile?.();
+      setFirebaseUser(user);setUserProfile(null);setProfileError("");setIsAdmin(false);
+      if(!user){setLoading(false);return;}
+      setLoading(true);
+      try {
+        const token=await user.getIdToken();
+        const response=await fetch("/api/profile",{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`},body:"{}"});
+        if(!response.ok) throw new Error("Profile could not be loaded.");
+        const result=await response.json();
+        if(current!==generation)return;
+        setIsAdmin(result.admin===true);
+        unsubscribeProfile=onSnapshot(doc(db,"users",user.uid),snap=>{
+          if(current!==generation)return;
+          if(snap.exists())setUserProfile({uid:user.uid,...snap.data()} as User);
           setLoading(false);
-        });
-
-        profileUnsubRef.current = unsubProfile;
-      } else {
-        setUserProfile(null);
-        setLoading(false);
-      }
+        },()=>{if(current===generation){setProfileError("Profile could not be loaded.");setLoading(false);}});
+      }catch {if(current===generation){setProfileError("Profile could not be loaded.");setLoading(false);}}
     });
-
-    return () => {
-      unsubAuth();
-      if (profileUnsubRef.current) profileUnsubRef.current();
-    };
-  }, []);
-
-  const signOut = async () => {
-    await firebaseSignOut(auth);
-    setUserProfile(null);
-  };
-
-  return (
-    <AuthContext.Provider value={{ firebaseUser, userProfile, loading, signOut, refreshProfile }}>
-      {children}
-    </AuthContext.Provider>
-  );
+    return ()=>{generation++;unsubscribeAuth();unsubscribeProfile?.();};
+  },[revision]);
+  return <AuthContext.Provider value={{firebaseUser,userProfile,loading,profileError,isAdmin,signOut:()=>firebaseSignOut(auth),refreshProfile:()=>setRevision(value=>value+1)}}>{children}</AuthContext.Provider>;
 }
-
-export const useAuth = () => useContext(AuthContext);
+export const useAuth=()=>useContext(AuthContext);

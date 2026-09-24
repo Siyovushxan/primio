@@ -1,43 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest,NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
-
-export const dynamic = "force-dynamic";
-
-export async function GET(req: NextRequest) {
-  // Verify cron secret so only Vercel Cron (or our server) can call this
-  const authHeader = req.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(req:NextRequest){
+ const secret=process.env.CRON_SECRET;
+ if(!secret||req.headers.get("authorization")!==`Bearer ${secret}`)return NextResponse.json({error:"Unauthorized"},{status:401});
+ try{
+  let count=0;
+  for(let page=0;page<20;page++){
+   const snap=await adminDb.collection("ads").where("status","==","active").where("expiresAt","<=",new Date()).limit(400).get();
+   if(snap.empty)break;
+   const batch=adminDb.batch();snap.docs.forEach(doc=>batch.update(doc.ref,{status:"expired",expiredAt:new Date()},{lastUpdateTime:doc.updateTime}));await batch.commit();count+=snap.size;
   }
-
-  try {
-    const now = new Date();
-
-    // Find all active ads whose expiresAt is in the past
-    const snapshot = await adminDb
-      .collection("ads")
-      .where("status", "==", "active")
-      .where("expiresAt", "<=", now)
-      .get();
-
-    if (snapshot.empty) {
-      return NextResponse.json({ expired: 0, message: "No ads to expire" });
-    }
-
-    const batch = adminDb.batch();
-    snapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, {
-        status: "expired",
-        expiredAt: FieldValue.serverTimestamp(),
-      });
-    });
-    await batch.commit();
-
-    console.log(`expire-ads: ${snapshot.size} ads expired at ${now.toISOString()}`);
-    return NextResponse.json({ expired: snapshot.size });
-  } catch (err) {
-    console.error("expire-ads error:", err);
-    return NextResponse.json({ error: "Failed to expire ads" }, { status: 500 });
-  }
+  return NextResponse.json({expired:count});
+ }catch{return NextResponse.json({error:"Expiry processing failed."},{status:500});}
 }

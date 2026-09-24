@@ -1,54 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifyFirebaseToken } from "@/lib/verifyFirebaseToken";
-
-export const dynamic = "force-dynamic";
-
+import { validateAdInput, milliseconds } from "@/lib/auction";
+import { contentHash } from "@/lib/moderation-receipt";
 export async function POST(req: NextRequest) {
   const uid = await verifyFirebaseToken(req);
   if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   try {
-    const {
-      advertiserUID, title, description, imageURL,
-      destinationURL, category, dailyBidCents, durationDays,
-    } = await req.json();
-
-    if (uid !== advertiserUID) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!title || !destinationURL || !category || !dailyBidCents || !durationDays) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { FieldValue } = require("firebase-admin/firestore");
-
-    const adRef = await adminDb.collection("ads").add({
-      advertiserUID,
-      title,
-      description: description || "",
-      imageURL: imageURL || "",
-      destinationURL,
-      category,
-      dailyBidCents: Number(dailyBidCents),
-      durationDays: Number(durationDays),
-      totalPaidCents: 0,
-      status: "pending",
-      moderationPassed: true,
-      startsAt: null,
-      expiresAt: null,
-      impressions: 0,
-      clicks: 0,
-      externalTxId: "",
-      paymentMethod: "",
-      createdAt: FieldValue.serverTimestamp(),
+    const body = await req.json();
+    const data = validateAdInput(body);
+    if (typeof body.reviewId !== "string" || !/^[\w-]{1,128}$/.test(body.reviewId)) throw new Error("Moderation approval is required.");
+    const ref = adminDb.collection("ads").doc();
+    const reviewRef = adminDb.doc(`moderationReviews/${body.reviewId}`);
+    const adId = await adminDb.runTransaction(async tx => {
+      const review = (await tx.get(reviewRef)).data();
+      if (!review || review.uid !== uid || review.hash !== contentHash(data)) throw new Error("Content does not match the moderation approval.");
+      if (review.used && review.adId) return review.adId as string;
+      if (milliseconds(review.expiresAt) <= Date.now()) throw new Error("Moderation approval expired. Please review again.");
+      tx.create(ref, { ...data, advertiserUID: uid, status: "pending", moderationPassed: true, contentVersion: 1,
+        totalPaidCents: 0, startsAt: null, expiresAt: null, impressions: 0, clicks: 0,
+        externalTxId: "", paymentMethod: "", createdAt: FieldValue.serverTimestamp() });
+      tx.update(reviewRef, { used: true, adId: ref.id });
+      return ref.id;
     });
-
-    return NextResponse.json({ adId: adRef.id });
-  } catch (err: unknown) {
-    console.error("Create ad error:", err);
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
-  }
+    return NextResponse.json({ adId });
+  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not create ad." }, { status: 400 }); }
 }

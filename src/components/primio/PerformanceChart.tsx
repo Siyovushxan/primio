@@ -1,0 +1,18 @@
+"use client";
+import { useState } from "react";
+import { ChartNoAxesCombined } from "lucide-react";
+import type { Lang } from "@/lib/i18n";
+import { pick } from "./shared";
+import type { DailyStat } from "./dashboard-data";
+export default function PerformanceChart({stats,lang,now}:{stats:DailyStat[];lang:Lang;now:number}){
+ const [period,setPeriod]=useState(7);
+ const dates=Array.from({length:period},(_,index)=>new Date(now-(period-1-index)*86400000).toISOString().slice(0,10));
+ const points=dates.map(date=>({date,impressions:stats.filter(stat=>stat.date===date).reduce((sum,stat)=>sum+(stat.impressions||0),0),clicks:stats.filter(stat=>stat.date===date).reduce((sum,stat)=>sum+(stat.clicks||0),0)}));
+ const hasData=stats.some(stat=>dates.includes(stat.date));
+ const maximum=Math.max(1,...points.map(point=>point.impressions),...points.map(point=>point.clicks));
+ const coords=(metric:"impressions"|"clicks")=>points.map((point,index)=>`${index/(period-1)*600},${150-(point[metric]/maximum)*125}`).join(" ");
+ return <section className="p-panel"><div className="p-panel-heading"><div><h2>{pick(lang,"Reklama natijalari","Campaign performance","Результаты рекламы")}</h2><p>{pick(lang,"Kunlik ko‘rsatkichlar · UTC","Daily activity · UTC","Дневная статистика · UTC")}</p></div><div className="p-segmented">{[7,30].map(value=><button key={value} aria-pressed={period===value} onClick={()=>setPeriod(value)}>{value}{pick(lang," kun"," days"," дн.")}</button>)}</div></div>
+ {hasData?<div className="p-performance"><div className="p-chart-legend"><span><i/>{pick(lang,"Ko‘rilishlar","Impressions","Показы")}</span><span><i/>{pick(lang,"Bosishlar","Clicks","Клики")}</span></div><svg viewBox="0 0 600 170" role="img" aria-label={pick(lang,"Ko‘rilishlar va bosishlar grafigi","Impressions and clicks chart","График показов и кликов")} preserveAspectRatio="none"><defs><linearGradient id="performance-area" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#a986dd" stopOpacity=".22"/><stop offset="1" stopColor="#a986dd" stopOpacity="0"/></linearGradient></defs>{[25,66,108,150].map(y=><line key={y} x1="0" y1={y} x2="600" y2={y} stroke="#ffffff08" strokeDasharray="3 5"/>)}<polygon points={`0,170 ${coords("impressions")} 600,170`} fill="url(#performance-area)"/><polyline points={coords("impressions")} fill="none" stroke="#b797ee" strokeWidth="2.5" strokeLinejoin="round"/><polyline points={coords("clicks")} fill="none" stroke="#d6ebad" strokeWidth="2" strokeLinejoin="round"/></svg><div className="p-chart-axis">{dates.filter((_,i)=>i===0||i===Math.floor(period/2)||i===period-1).map(date=><span key={date}>{date.slice(5).replace("-"," / ")}</span>)}</div><details style={{fontSize:10,color:"#a28baf",marginTop:14}}><summary>{pick(lang,"Raqamlarda ko‘rish","View data table","Таблица данных")}</summary><div className="p-table-scroll"><table className="p-table"><thead><tr><th>{pick(lang,"Sana","Date","Дата")}</th><th>{pick(lang,"Ko‘rilish","Views","Показы")}</th><th>{pick(lang,"Bosish","Clicks","Клики")}</th></tr></thead><tbody>{points.map(point=><tr key={point.date}><td>{point.date}</td><td>{point.impressions}</td><td>{point.clicks}</td></tr>)}</tbody></table></div></details></div>
+ :<div className="p-chart-empty"><ChartNoAxesCombined size={27}/>{pick(lang,"Hali kunlik statistika yo‘q","No daily activity yet","Пока нет дневной статистики")}<small>{pick(lang,"Reklamangiz ko‘rila boshlagach, haqiqiy natijalar shu yerda ko‘rinadi.","Actual results appear here once your ads start receiving views.","Реальные данные появятся здесь, когда объявления начнут получать показы.")}</small></div>}
+ </section>;
+}

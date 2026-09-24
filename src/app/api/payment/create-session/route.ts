@@ -1,132 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebaseAdmin";
-
+import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebaseAdmin";
+import { verifiedIdentity } from "@/lib/verifyFirebaseToken";
+import { quotePayment, type PaymentKind, type QuotedAd } from "@/lib/auction";
+import { dodoRequest } from "@/lib/payments";
 export const dynamic = "force-dynamic";
-
-const DODO_BASE =
-  process.env.DODO_LIVE_MODE === "true"
-    ? "https://live.dodopayments.com"
-    : "https://test.dodopayments.com";
-
-const DODO_PRODUCT_ID = process.env.DODO_PRODUCT_ID || "pdt_0NnMK7juPTBBNjaJIZmgz";
-
 export async function POST(req: NextRequest) {
-  // Verify caller is authenticated
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  let callerUid: string;
+  const user = await verifiedIdentity(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let orderId: string | undefined;
+  let reservedAdId: string | undefined;
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    callerUid = decoded.uid;
-  } catch {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  try {
-    const { adId, type, newDailyBidCents, durationDays } = await req.json();
-
-    if (!adId) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
-    }
-
-    const adSnap = await adminDb.doc(`ads/${adId}`).get();
-    if (!adSnap.exists) {
-      return NextResponse.json({ error: "Ad not found" }, { status: 404 });
-    }
-    const ad = adSnap.data()!;
-
-    // Verify caller owns this ad
-    if (ad.advertiserUID !== callerUid) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    // Validate status and inputs per payment type, then compute amount server-side
-    let amount: number;
-    if (type === "bid_upgrade") {
-      if (ad.status !== "active") {
-        return NextResponse.json({ error: "Ad is not active" }, { status: 400 });
+    const body = await req.json();
+    const { adId, newDailyBidCents, durationDays } = body;
+    const type: PaymentKind = body.type ?? "purchase";
+    if (typeof adId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(adId) || !["purchase","renewal","bid_upgrade"].includes(type)) throw new Error("Invalid payment request.");
+    const orderRef = adminDb.collection("paymentOrders").doc();
+    const adRef = adminDb.doc(`ads/${adId}`);
+    const result = await adminDb.runTransaction(async tx => {
+      const snap = await tx.get(adRef);
+      if (!snap.exists || snap.data()!.advertiserUID !== user.uid) throw new Error("Ad not found.");
+      const ad = snap.data()!;
+      const quote = quotePayment(ad as QuotedAd, type, newDailyBidCents, durationDays);
+      if (ad.pendingOrderId) {
+        const previous = await tx.get(adminDb.doc(`paymentOrders/${ad.pendingOrderId}`));
+        if (previous.exists && ["pending", "creating"].includes(previous.data()!.status)) {
+          const old = previous.data()!;
+          if (old.type !== quote.type || old.dailyBidCents !== quote.dailyBidCents || old.durationDays !== quote.durationDays || old.contentVersion !== quote.contentVersion) throw new Error("Cancel the previous checkout before changing your order.");
+          if (old.checkoutUrl) return { url: old.checkoutUrl as string };
+          throw new Error("Checkout is being created. Please try again shortly.");
+        }
       }
-      const newBid = Number(newDailyBidCents);
-      if (!newBid || newBid <= ad.dailyBidCents) {
-        return NextResponse.json({ error: "New bid must exceed current bid" }, { status: 400 });
-      }
-      const expiresAt: Date = ad.expiresAt?.toDate?.() ?? new Date();
-      const remainingDays = Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000));
-      amount = (newBid - ad.dailyBidCents) * remainingDays;
-    } else if (type === "renewal") {
-      if (ad.status !== "expired") {
-        return NextResponse.json({ error: "Only expired ads can be renewed" }, { status: 400 });
-      }
-      const days = Math.max(1, Number(durationDays) || ad.durationDays);
-      amount = ad.dailyBidCents * days;
-    } else {
-      // purchase — new ad awaiting first payment
-      if (ad.status !== "pending") {
-        return NextResponse.json({ error: "Ad is not in pending status" }, { status: 400 });
-      }
-      amount = ad.dailyBidCents * ad.durationDays;
-    }
-
-    // Get user email for Dodo customer record
-    let customerEmail = `user_${ad.advertiserUID}@primio.com.uz`;
-    try {
-      const userSnap = await adminDb.doc(`users/${ad.advertiserUID}`).get();
-      if (userSnap.exists && userSnap.data()?.email) {
-        customerEmail = userSnap.data()!.email;
-      }
-    } catch {}
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.primio.com.uz";
-
-    const res = await fetch(`${DODO_BASE}/payments`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.DODO_API_KEY}`,
-      },
-      body: JSON.stringify({
-        billing: { country: "UZ" },
-        customer: {
-          name: ad.title || "PRIMIO Customer",
-          email: customerEmail,
-        },
-        product_cart: [
-          {
-            product_id: DODO_PRODUCT_ID,
-            quantity: 1,
-            amount, // override product price with actual amount in cents
-          },
-        ],
-        metadata: {
-          adId,
-          advertiserUID: ad.advertiserUID,
-          type: type === "bid_upgrade" ? "bid_upgrade" : type === "renewal" ? "renewal" : "purchase",
-          newDailyBidCents: String(newDailyBidCents || ""),
-          durationDays: String(durationDays || ""),
-        },
-        payment_link: true,
-        return_url: `${baseUrl}/payment/success?adId=${adId}`,
-      }),
+      tx.create(orderRef, { ...quote, uid: user.uid, adId, status: "creating", createdAt: FieldValue.serverTimestamp() });
+      tx.update(adRef, { pendingOrderId: orderRef.id });
+      return { quote, title: ad.title as string };
     });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Dodo create payment error:", err);
-      return NextResponse.json({ error: "To'lov yaratishda xato" }, { status: 500 });
-    }
-
-    const data = await res.json();
-
-    if (!data.payment_link) {
-      return NextResponse.json({ error: "To'lov havolasi yaratilmadi" }, { status: 500 });
-    }
-
-    // Pre-save payment_id to Firestore so verify-session can look it up
-    await adminDb.doc(`ads/${adId}`).update({ pendingPaymentId: data.payment_id });
-
+    if ("url" in result) return NextResponse.json({ url: result.url });
+    orderId = orderRef.id; reservedAdId = adId;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.primio.com.uz";
+    if (!process.env.DODO_PRODUCT_ID) throw new Error("Payment product is not configured.");
+    const data = await dodoRequest("/payments", {
+      billing: { country: "UZ" }, billing_currency: "USD", customer: { name: result.title, email: user.email },
+      product_cart: [{ product_id: process.env.DODO_PRODUCT_ID, quantity: 1, amount: result.quote!.amountCents }],
+      metadata: { orderId, adId, advertiserUID: user.uid, type }, payment_link: true,
+      return_url: `${baseUrl}/payment/success?adId=${adId}&orderId=${orderId}`
+    });
+    if (!data.payment_link || !data.payment_id) throw new Error("Could not create checkout.");
+    await adminDb.runTransaction(async tx => {
+      const snap = await tx.get(orderRef);
+      const currentAd = await tx.get(adRef);
+      tx.update(orderRef, { providerPaymentId: data.payment_id, providerTotal: data.total_amount,
+        checkoutUrl: data.payment_link, ...(snap.data()?.status === "creating" ? { status: "pending" } : {}) });
+      if (currentAd.data()?.pendingOrderId === orderId) tx.update(adRef, { pendingPaymentId: data.payment_id });
+    });
     return NextResponse.json({ url: data.payment_link });
-  } catch (err: any) {
-    console.error("Create session error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error) {
+    if (orderId && reservedAdId) {
+      await adminDb.runTransaction(async tx => {
+        const adRef = adminDb.doc(`ads/${reservedAdId}`);
+        const snap = await tx.get(adRef);
+        const orderRef = adminDb.doc(`paymentOrders/${orderId}`);
+        const order = await tx.get(orderRef);
+        if (order.data()?.status === "creating") {
+          tx.update(orderRef, { status: "cancelled" });
+          if (snap.data()?.pendingOrderId === orderId) tx.update(adRef, { pendingOrderId: FieldValue.delete() });
+        }
+      }).catch(console.error);
+    }
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Payment failed." }, { status: 400 });
   }
 }

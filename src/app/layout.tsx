@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./primio.css";
+import "./flows.css";
 import Header from "@/components/layout/Header";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LangProvider } from "@/contexts/LangContext";
 
 export const metadata: Metadata = {
-  title: "PRIMIO — Global Ad Auction Platform",
-  description: "The highest bidder ranks first. Global ad auction platform.",
+  title: "Primio — Brendingiz uchun yangi o‘rin",
+  description: "Reklamangizni joylashtiring, kunlik taklifingizni belgilang va toifa reytingidagi o‘rningiz hamda natijalarni kuzating.",
   keywords: "advertising, auction, ad platform, ranking",
   icons: {
     icon: "/logo.svg",
@@ -25,12 +27,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="uz">
       <body className="min-h-screen bg-bg text-text font-sans antialiased">
         <LangProvider>
           <AuthProvider>
+            <a className="p-skip" href="#main-content">Asosiy kontentga o‘tish / Skip to content</a>
             <Header />
-            <main>{children}</main>
+            <main id="main-content">{children}</main>
           </AuthProvider>
         </LangProvider>
       </body>

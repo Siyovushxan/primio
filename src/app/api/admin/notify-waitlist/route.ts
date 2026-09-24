@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ sent, total: emails.length, message: `${sent} ta emailga xabar yuborildi` });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Waitlist notify error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Notification failed" }, { status: 500 });
   }
 }
