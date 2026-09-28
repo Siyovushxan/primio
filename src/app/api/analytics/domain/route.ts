@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     if (!snap.exists || snap.data()?.advertiserUID !== identity.uid) return NextResponse.json({ error: "project_not_found" }, { status: 404 });
     const destination = snap.data()?.destinationURL;
     if (typeof destination !== "string") return NextResponse.json({ available: false, reason: "no_website_domain" });
-    const domain = publicDomain(destination);
+    // Registries store the registered domain, not its common www subdomain.
+    // Querying www.example.uz directly returns a false 404 from RDAP.
+    const domain = publicDomain(destination)?.replace(/^www\./, "") || null;
     if (!domain) return NextResponse.json({ available: false, reason: "no_website_domain" });
     const url = `${domain.endsWith(".uz") ? RDAP_UZ : RDAP_OTHER}${encodeURIComponent(domain)}`;
     const response = await fetch(url, { headers: { Accept: "application/rdap+json, application/json" }, signal: AbortSignal.timeout(5000), cache: "no-store" });
