@@ -11,7 +11,7 @@ function loadSource(file,dependencies={}){
  vm.runInNewContext(code,context,{filename:file});return exports;
 }
 const auction=loadSource("src/lib/auction.ts");
-const {DAY_MS,quotePayment,rankAds,validBid,validDuration,publicWebsite}=auction;
+const {DAY_MS,quotePayment,rankAds,estimatedPosition,validBid,validDuration,publicWebsite}=auction;
 const now=1_800_000_000_000;
 test("bids and durations reject fractional cents, NaN, negative and oversized values",()=>{
  for(const value of [NaN,Infinity,-1,0,99,100.5,1_000_001,"100"])assert.equal(validBid(value),false);
@@ -37,6 +37,15 @@ test("ranking excludes expired and non-active ads and resolves equal bids determ
  ads.push({id:"expired",dailyBidCents:9999,status:"active",startsAt:1,expiresAt:now},{id:"pending",dailyBidCents:9999,status:"pending",startsAt:1,expiresAt:now+DAY_MS});
  assert.deepEqual(Array.from(rankAds(ads,now),a=>a.id),["highest","first","a","b"]);
  assert.equal(ads[0].id,"b");
+});
+test("placement preview follows active category rank, including ties and existing ads",()=>{
+ const ads=[{id:"early",dailyBidCents:500,startsAt:now-200,expiresAt:now+DAY_MS},
+  {id:"later",dailyBidCents:500,startsAt:now-100,expiresAt:now+DAY_MS},
+  {id:"expired",dailyBidCents:900,startsAt:now-300,expiresAt:now}];
+ assert.equal(estimatedPosition(ads,500,now),3);
+ assert.equal(estimatedPosition(ads,501,now),1);
+ assert.equal(estimatedPosition(ads,500,now,"early"),1);
+ assert.equal(estimatedPosition(ads,600,now,"later"),1);
 });
 test("destination validation rejects local/IP, credentials and non-HTTPS addresses",()=>{
  for(const url of ["http://example.com","https://localhost","https://127.0.0.1","https://2130706433","https://[::1]","https://example.local","https://user:pass@example.com","https://example.com:8080"])assert.throws(()=>publicWebsite(url));

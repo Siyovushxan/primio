@@ -40,6 +40,13 @@ export function rankAds<T extends Rankable>(ads: T[], now = Date.now()): T[] {
     .sort((a, b) => b.dailyBidCents - a.dailyBidCents ||
       (milliseconds(a.startsAt) || milliseconds(a.createdAt)) - (milliseconds(b.startsAt) || milliseconds(b.createdAt)) || a.id.localeCompare(b.id));
 }
+export function estimatedPosition(ads: Rankable[], bidCents: number, now = Date.now(), excludeId?: string): number {
+  const existing = excludeId ? ads.find(ad => ad.id === excludeId) : undefined;
+  const candidate: Rankable = {id: excludeId || "~new-ad",dailyBidCents:bidCents,status:"active",
+    startsAt:existing?.startsAt || now,createdAt:existing?.createdAt || now,expiresAt:existing?.expiresAt || now + DAY_MS};
+  return rankAds([...ads.filter(ad => ad.id !== excludeId),candidate],now)
+    .findIndex(ad => ad === candidate) + 1;
+}
 export interface QuotedAd { status: string; dailyBidCents: number; durationDays: number; expiresAt?: DateValue; moderationPassed?: boolean; contentVersion?: number; paymentReviewRequired?: boolean }
 export function quotePayment(ad: QuotedAd, type: PaymentKind, newBid?: unknown, duration?: unknown, now = Date.now()) {
   if (ad.paymentReviewRequired) throw new Error("A previous payment needs review. Do not pay again.");
