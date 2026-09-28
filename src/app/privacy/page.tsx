@@ -1,9 +1,10 @@
 import Link from "next/link";
+import "./privacy.css";
 
 export const metadata = { title: "Maxfiylik siyosati — Primio" };
 
 export default function PrivacyPage() {
-  return <article style={{ maxWidth: 760, margin: "60px auto", padding: "0 24px 80px", lineHeight: 1.8 }}>
+  return <article className="primio-privacy" style={{ maxWidth: 760, margin: "60px auto", padding: "0 24px 80px", lineHeight: 1.8 }}>
     <h1>Maxfiylik siyosati</h1>
     <p>Yangilangan: 2026-yil 28-sentabr</p>
     <p>Primio hisob ma’lumotlari, reklamalar, to‘lovlar va reklama samaradorligi ma’lumotlaridan xizmatni ko‘rsatish uchun foydalanadi. Kabinetdagi Primio ko‘rsatkichlari Primio ichidagi reklama harakatlariga tegishli.</p>

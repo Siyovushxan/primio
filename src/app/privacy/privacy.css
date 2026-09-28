@@ -1,0 +1,6 @@
+.primio-privacy h1{font-size:clamp(30px,4vw,42px);font-weight:750;letter-spacing:-.04em;line-height:1.2;margin-bottom:18px;color:#f3e8ff}
+.primio-privacy h2{font-size:clamp(21px,2.5vw,26px);font-weight:700;letter-spacing:-.02em;line-height:1.3;margin:34px 0 12px;color:#e9d5ff}
+.primio-privacy p{margin:0 0 18px;color:#c9bbd6}
+.primio-privacy p:first-of-type{font-size:12px;color:#9a86aa}
+.primio-privacy code{background:#ffffff10;padding:2px 5px;border-radius:4px;color:#dfc2ff}
+.primio-privacy a{color:#c9a1ff;text-decoration:underline;text-underline-offset:3px}
