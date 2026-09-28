@@ -58,6 +58,6 @@ export function LoadingState({ label }: { label: string }) {
 export function Footer({ lang }: { lang: Lang }) {
   return <footer className="p-footer p-container"><Brand/><span>© {new Date().getFullYear()} Primio</span>
     <div><Link href="/browse">{pick(lang,"Reklamalar","Explore ads","Объявления")}</Link><Link href="/terms">{pick(lang,"Foydalanish shartlari","Terms of service","Условия")}</Link>
-    <a href="mailto:support@primio.com.uz">{pick(lang,"Bog‘lanish","Contact","Связаться")} <ArrowUpRight size={14}/></a></div>
+    <Link href="/contact">{pick(lang,"Bog‘lanish","Contact","Связаться")} <ArrowUpRight size={14}/></Link></div>
   </footer>;
 }

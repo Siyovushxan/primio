@@ -13,6 +13,25 @@ function loadSource(file,dependencies={}){
 const auction=loadSource("src/lib/auction.ts");
 const {DAY_MS,quotePayment,rankAds,estimatedPosition,validBid,validDuration,publicWebsite}=auction;
 const now=1_800_000_000_000;
+test("public feedback saves a private, structured Firebase message and rejects invalid input",async()=>{
+ const {validateFeedback}=loadSource("src/lib/feedback.ts");
+ const saved=[];
+ const {POST}=loadSource("src/app/api/feedback/route.ts",{
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
+  "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"server-time"}},
+  "@/lib/firebaseAdmin":{adminDb:{collection:name=>{assert.equal(name,"feedback");return {add:async value=>saved.push(value)};}}},
+  "@/lib/feedback":{validateFeedback}
+ });
+ const request=body=>({headers:{get:key=>key==="content-type"?"application/json":key==="origin"?"https://primio.com.uz":null},nextUrl:{origin:"https://primio.com.uz"},text:async()=>JSON.stringify(body)});
+ assert.equal((await POST(request({name:" Ali ",email:"a@example.com",message:"  Useful feedback  ",website:""}))).status,200);
+ assert.equal(saved.length,1);
+ assert.equal(saved[0].message,"Useful feedback");
+ assert.equal(saved[0].createdAt,"server-time");
+ await POST(request({name:"",email:"",message:"Useful feedback",website:"filled by bot"}));
+ assert.equal(saved.length,1);
+ assert.equal((await POST(request({name:"",email:"not-email",message:"Useful feedback",website:""}))).status,400);
+ assert.equal(saved.length,1);
+});
 test("bids and durations reject fractional cents, NaN, negative and oversized values",()=>{
  for(const value of [NaN,Infinity,-1,0,99,100.5,1_000_001,"100"])assert.equal(validBid(value),false);
  for(const value of [0,-1,1.5,366,NaN,"7"])assert.equal(validDuration(value),false);

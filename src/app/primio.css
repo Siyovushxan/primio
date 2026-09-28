@@ -2,7 +2,8 @@
 :root{--p-bg:#0b0b11;--p-panel:#15151e;--p-panel-raised:#1c1b27;--p-line:rgba(255,255,255,.095);--p-text:#f5f3fc;--p-muted:#a19eaf;--p-violet:#a184fa;--p-lime:#d3f49b}
 .p-site,.p-workspace,.p-form-shell{color:var(--p-text);background:var(--p-bg);font-family:'Plus Jakarta Sans',system-ui,sans-serif}
 .p-container{width:min(1240px,calc(100% - 96px));margin-inline:auto}
-.p-site{overflow:clip}
+.p-site{overflow:clip;min-height:calc(100svh - 86px);display:flex;flex-direction:column}
+.p-site>.p-footer{margin-top:auto}
 .p-site p,.p-workspace p{margin:0;line-height:1.75}
 .p-site h1,.p-site h2,.p-site h3,.p-workspace h1,.p-workspace h2,.p-form-shell h1{font-family:inherit;letter-spacing:-.045em;font-weight:600;line-height:1.13;margin:0}
 .p-header{position:sticky;top:0;z-index:80;background:rgba(11,11,17,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--p-line);color:var(--p-text)}
@@ -177,6 +178,20 @@
 .p-footer>div{margin-left:auto;display:flex;gap:27px;align-items:center}
 .p-footer a{color:#9b8eaa}
 .p-footer>div>a:last-child{display:flex;align-items:center;gap:7px}
+.p-contact{width:min(760px,calc(100% - 40px));margin:0 auto;padding:76px 0 90px;flex:1}
+.p-contact h1{font-size:clamp(34px,5vw,54px);margin:18px 0}
+.p-contact-intro{color:#aaa0b8;font-size:14px;max-width:600px}
+.p-contact-card{margin-top:35px;padding:32px;background:var(--p-panel);border:1px solid var(--p-line);border-radius:14px;display:grid;gap:20px}
+.p-contact-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.p-contact-field{display:grid;gap:9px;color:#e9e2f4;font-size:13px;font-weight:600}
+.p-contact-field small{color:#8f879f;font-weight:400}
+.p-contact-field input,.p-contact-field textarea{width:100%;padding:14px 15px;border-radius:8px;border:1px solid #ffffff25;background:#0d0c15;color:#f5f3fc;outline:none;font-size:14px;resize:vertical}
+.p-contact-field input:focus,.p-contact-field textarea:focus{border-color:#a184fa;box-shadow:0 0 0 3px #a184fa22}
+.p-contact-card .p-btn{justify-self:start}
+.p-contact-success{margin-top:34px;padding:30px;border:1px solid #d3f49b55;border-radius:12px;background:#d3f49b0b;color:#e9f7d2}
+.p-contact-success h2{font-size:22px;margin-bottom:10px}
+.p-contact-success p{color:#c3d2b5}
+@media(max-width:639px){.p-site{min-height:calc(100svh - 70px)}.p-contact{padding:48px 0 68px}.p-contact-card{padding:22px}.p-contact-row{grid-template-columns:1fr}}
 @keyframes p-levitate{0%,100%{transform:translateY(0) rotate(.4deg)}50%{transform:translateY(-12px) rotate(-.4deg)}}
 @keyframes p-spin{to{transform:rotate(360deg)}}
 .p-spin{animation:p-spin 1s linear infinite}
