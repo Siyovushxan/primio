@@ -24,7 +24,7 @@ npm run build
 - Dastlabki to‘lov: kunlik taklif × tanlangan kunlar. Stavkani oshirish: (yangi − eski stavka) × qolgan kunlar, to‘liq bo‘lmagan kun yuqoriga yaxlitlanadi. Uzaytirishda **tanlangan yangi kunlar** qo‘llanadi.
 - Moderatsiya tasdig‘i bir soat amal qiladi va reklama sarlavhasi, tavsifi, sayti hamda rasm URLi bilan bog‘langan. Server foydalanuvchi yuborgan `moderationPassed` bayrog‘ini qabul qilmaydi.
 - Dodo to‘lovi server hisoblagan buyurtma bilan bog‘lanadi. Webhook va muvaffaqiyat sahifasidagi tekshiruv bir vaqtda kelsa, bitta tranzaksiya hisoblanadi. Bekor qilingan yoki kontenti o‘zgargan buyurtmaning kechikkan to‘lovi alohida ko‘rib chiqishga yuboriladi.
-- Yangi hisobning to‘langan reklamasi `pending_verification` bo‘ladi; pullik muddat administrator tasdig‘idan so‘ng boshlanadi. Administrator huquqi Firebase Auth `admin: true` custom claim orqali beriladi.
+- AI moderatsiyadan o‘tgan reklama to‘lovi tasdiqlangach avtomatik `active` bo‘ladi va pullik muddat shu vaqtdan boshlanadi; odatiy jarayonda administrator tasdig‘i talab qilinmaydi. Administrator huquqi Firebase Auth `admin: true` custom claim orqali beriladi va muammoli to‘lovlarni ko‘rib chiqishda qo‘llanadi.
 - Muvaffaqiyatli refund hisoblangan xarajatni kamaytiradi. To‘liq qaytarilgan joriy to‘lov reklamani to‘xtatadi va qo‘lda ko‘rib chiqish belgisi qo‘yadi.
 - Ko‘rilish kartochka ekranda kamida 50% ko‘rinib bir soniya turganda, bosish esa saytga o‘tish bosilganda qayd etiladi. Ikkalasi ham qisqa intervalda deduplikatsiya qilinadi.
 
@@ -38,7 +38,7 @@ Firestore qoidalari va indekslari `firestore.rules` hamda `firestore.indexes.jso
 
 ## Hozirgi cheklovlar
 
-- Tashqi AI moderatsiya va rasm hosting oqimi mavjud kodda xAI, Hugging Face va ImgBB ga uzatadi. Bu ikki marshrutning yangi tasdiq/rasm bog‘lash qismi alohida ruxsatgacha ulanmagan. Reklama formasi tasdiqni ololmaganda xatolik ko‘rsatadi va server reklama yaratishga ruxsat bermaydi.
+- AI moderatsiya va rasm yuklash xAI, Hugging Face hamda ImgBB xizmatlariga bog‘liq. Server tekshiruv tasdig‘ini reklama mazmuni va rasm bilan bog‘laydi; tasdiq olinmasa reklama yaratishga ruxsat bermaydi.
 - Real Firebase va Dodo hisoblari bilan to‘liq end-to-end to‘lov sinovi, Firebase qoidalarini deploy qilish, admin claim berish va webhook/cron konfiguratsiyasi bajarilmagan. Ular live ishga tushirishdan oldin alohida tekshirilishi kerak.
 - Avval yaratilgan, `paymentOrders` hujjati bo‘lmagan to‘lovlar avtomatik yarashtirilmaydi; qo‘lda moslashtirish zarur. `paymentReviewRequired` belgilangan reklamalar administrator kabinetidagi to‘lov tekshiruvi navbatida chiqadi.
 - `/api/cron/weekly-report` va `/api/admin/notify-waitlist` avvalgi email funksiyalari sifatida qolgan. Ularning foydalanuvchiga xabar yuborish siyosati va hisobot mazmuni alohida mahsulot qarorini talab qiladi.
