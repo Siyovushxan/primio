@@ -7,7 +7,7 @@ const ts=require("typescript");
 function loadSource(file,dependencies={},environment={}){
  const source=fs.readFileSync(path.join(__dirname,"..",file),"utf8");
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:environment},URL,Date,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");}};
+ const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:environment},URL,Date,Buffer,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");}};
  vm.runInNewContext(code,context,{filename:file});return exports;
 }
 const auction=loadSource("src/lib/auction.ts");
@@ -46,6 +46,20 @@ test("public feedback saves a private, structured Firebase message and rejects i
  assert.equal((await POST(request({name:"",email:"not-email",message:"Useful feedback",website:""}))).status,400);
  assert.equal(saved.length,1);
 });
+
+test("Google Analytics token encryption and bounded date filters behave safely",()=>{
+ const key=require("node:crypto").randomBytes(32).toString("base64");
+ const analytics=loadSource("src/lib/google-analytics.ts",{"node:crypto":require("node:crypto")},{ANALYTICS_TOKEN_ENCRYPTION_KEY:key});
+ const token="google-refresh-secret";const encrypted=analytics.encryptRefreshToken(token);
+ assert.notEqual(encrypted,token);assert.equal(analytics.decryptRefreshToken(encrypted),token);
+ assert.throws(()=>analytics.decryptRefreshToken(encrypted.replace(/.$/,encrypted.endsWith("A")?"B":"A")));
+ assert.equal(analytics.isPropertyId("123456"),true);assert.equal(analytics.isPropertyId("properties/123456"),false);
+ const now=Date.parse("2026-09-28T12:00:00Z");
+ assert.deepEqual(JSON.parse(JSON.stringify(analytics.parseAnalyticsRange(new URLSearchParams({range:"7d"}),now,"Asia/Tashkent"))),{startDate:"2026-09-22",endDate:"2026-09-28"});
+ assert.deepEqual(JSON.parse(JSON.stringify(analytics.parseAnalyticsRange(new URLSearchParams({range:"custom",startDate:"2026-09-01",endDate:"2026-09-28"}),now,"UTC"))),{startDate:"2026-09-01",endDate:"2026-09-28"});
+ for(const [startDate,endDate] of [["2026-06-30","2026-09-28"],["2026-02-31","2026-03-01"],["2026-09-29","2026-09-28"]])assert.throws(()=>analytics.parseAnalyticsRange(new URLSearchParams({range:"custom",startDate,endDate}),now,"UTC"));
+});
+
 test("bids and durations reject fractional cents, NaN, negative and oversized values",()=>{
  for(const value of [NaN,Infinity,-1,0,99,100.5,1_000_001,"100"])assert.equal(validBid(value),false);
  for(const value of [0,-1,1.5,366,NaN,"7"])assert.equal(validDuration(value),false);
