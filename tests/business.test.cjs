@@ -4,10 +4,10 @@ const fs=require("node:fs");
 const path=require("node:path");
 const vm=require("node:vm");
 const ts=require("typescript");
-function loadSource(file,dependencies={}){
+function loadSource(file,dependencies={},environment={}){
  const source=fs.readFileSync(path.join(__dirname,"..",file),"utf8");
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:{}},URL,Date,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");}};
+ const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:environment},URL,Date,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");}};
  vm.runInNewContext(code,context,{filename:file});return exports;
 }
 const auction=loadSource("src/lib/auction.ts");
@@ -169,4 +169,21 @@ test("moderation receipts bind only the inspected image and match the ad saved l
  const saved=auction.validateAdInput({title:" Primio ",description:"Ad ",destinationURL:"https://primio.com.uz",imageURL:url,category:"technology",dailyBidCents:100,durationDays:1});
  assert.equal(contentHash(reviewed),contentHash(saved));
  assert.notEqual(contentHash(reviewed),contentHash({...saved,title:"Other"}));
+});
+test("moderation diagnostics require sign-in before contacting AI",async()=>{
+ let checks=0;
+ const {GET}=loadSource("src/app/api/moderation/route.ts",{
+  "next/server":{NextResponse:{json:(body,{status=200}={})=>({body,status})}},
+  "@/lib/verifyFirebaseToken":{verifyFirebaseToken:async req=>{checks++;return req.headers.get("authorization")==="Bearer valid-test-token"?"u1":null;}},
+  "@/lib/firebaseAdmin":{adminDb:{}},
+  "@/lib/auction":{publicWebsite:()=>{}},
+  "@/lib/moderation-receipt":{imageHash:()=>{},issueReview:()=>{},ownedImageMatches:()=>{},uploadMatches:()=>{}}
+ },{XAI_API_KEY:"test-api-key"});
+ const anonymous=await GET({headers:{get:()=>null}});
+ assert.equal(anonymous.status,401);
+ assert.equal(anonymous.body.error,"Unauthorized");
+ assert.equal(checks,1);
+ const signedIn=await GET({headers:{get:()=>"Bearer valid-test-token"}});
+ assert.equal(signedIn.status,200);
+ assert.equal(signedIn.body.xai_key,true);
 });
