@@ -13,6 +13,20 @@ function loadSource(file,dependencies={},environment={}){
 const auction=loadSource("src/lib/auction.ts");
 const {DAY_MS,quotePayment,rankAds,estimatedPosition,validBid,validDuration,publicWebsite}=auction;
 const now=1_800_000_000_000;
+test("a free trial is exactly seven days and cannot be extended by a later login",()=>{
+ const {FREE_TRIAL_MS,isTrialActive,freeCampaignExpiry}=loadSource("src/lib/trial.ts",{"./auction":auction});
+ const start=Date.now();const user={trialExpiresAt:start+FREE_TRIAL_MS};
+ assert.equal(FREE_TRIAL_MS,7*DAY_MS);assert.equal(isTrialActive(user,start),true);assert.equal(isTrialActive(user,user.trialExpiresAt),false);
+ assert.equal(freeCampaignExpiry(start,30,user.trialExpiresAt),user.trialExpiresAt);
+ assert.equal(freeCampaignExpiry(start,3,user.trialExpiresAt),start+3*DAY_MS);
+});
+test("temporary free bid ranks first only until its free-week expiry",()=>{
+ const {effectiveBidCents,rankAds}=auction;const start=Date.now();
+ const boosted={id:"boosted",status:"active",dailyBidCents:300,trialBidCents:900,trialBidUntil:start+DAY_MS,startsAt:start,expiresAt:start+10*DAY_MS};
+ const rival={id:"rival",status:"active",dailyBidCents:600,startsAt:start+1,expiresAt:start+10*DAY_MS};
+ assert.equal(effectiveBidCents(boosted,start),900);assert.equal(rankAds([boosted,rival],start)[0].id,"boosted");
+ assert.equal(effectiveBidCents(boosted,start+DAY_MS),300);assert.equal(rankAds([boosted,rival],start+DAY_MS)[0].id,"rival");
+});
 test("public feedback saves a private, structured Firebase message and rejects invalid input",async()=>{
  const {validateFeedback}=loadSource("src/lib/feedback.ts");
  const saved=[];
@@ -140,6 +154,42 @@ test("insufficient amount, wrong currency and payment ID cannot activate",async(
 });
 test("non-successful payment produces no writes",async()=>{
  const {db,applyPayment,payment}=fixture();assert.equal((await applyPayment({...payment,status:"processing"})).paid,false);assert.equal(db.versions.size,0);
+});
+test("the trial profile grant is persisted once and repeat logins do not restart it",async()=>{
+ const data=new Map([["users/u1",{uid:"u1",displayName:"A",totalSpentCents:0}]]);
+ const ref=path=>({path,id:path.split("/").at(-1)});
+ const db={doc:ref,runTransaction:async work=>work({get:async r=>({exists:data.has(r.path),data:()=>data.get(r.path)}),create:(r,v)=>data.set(r.path,v),update:(r,v)=>data.set(r.path,{...data.get(r.path),...v})})};
+ const {POST}=loadSource("src/app/api/profile/route.ts",{
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
+  "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"server-time"}},
+  "@/lib/verifyFirebaseToken":{verifiedIdentity:async()=>({uid:"u1",email:"a@example.com"})},
+  "@/lib/firebaseAdmin":{adminDb:db},"@/lib/trial":loadSource("src/lib/trial.ts",{"./auction":auction}),"@/lib/auction":auction
+ });
+ const request=()=>({json:async()=>({})});
+ const first=await POST(request());const expiry=data.get("users/u1").trialExpiresAt.getTime();
+ assert.equal(first.status,200);assert.equal(first.body.trialActive,true);assert.equal(expiry-data.get("users/u1").trialStartedAt.getTime(),7*DAY_MS);
+ await new Promise(resolve=>setTimeout(resolve,5));const second=await POST(request());
+ assert.equal(second.body.trialEndsAt,expiry);assert.equal(data.get("users/u1").trialExpiresAt.getTime(),expiry);
+});
+test("trial activation skips checkout, costs zero, and ends within the account's remaining free week",async()=>{
+ const trialEndsAt=new Date(Date.now()+2*DAY_MS);const data=new Map([
+  ["ads/ad1",{advertiserUID:"u1",status:"pending",dailyBidCents:650,durationDays:14,contentVersion:1,totalPaidCents:0,moderationPassed:true,paymentReviewRequired:false}],
+  ["users/u1",{trialStartedAt:new Date(Date.now()-5*DAY_MS),trialExpiresAt:trialEndsAt,totalSpentCents:0}]
+ ]);const writes=[];const ref=path=>({path,id:path.split("/").at(-1)});
+ const db={doc:ref,collection:name=>({doc:()=>ref(`${name}/new-order`)}),runTransaction:async work=>{
+  const pending=[];const tx={get:async r=>({exists:data.has(r.path),data:()=>data.get(r.path)}),update:(r,v)=>pending.push([r,v]),create:(r,v)=>pending.push([r,v])};
+  const result=await work(tx);for(const [r,v] of pending){writes.push([r.path,v]);data.set(r.path,{...data.get(r.path),...Object.fromEntries(Object.entries(v).filter(([,x])=>!(x&&x.op==="delete")))})}return result;
+ }};let checkoutCalls=0;
+ const {POST}=loadSource("src/app/api/payment/create-session/route.ts",{
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
+  "firebase-admin/firestore":{FieldValue:{delete:()=>({op:"delete"}),serverTimestamp:()=>"server-time"}},
+  "@/lib/firebaseAdmin":{adminDb:db},"@/lib/verifyFirebaseToken":{verifiedIdentity:async()=>({uid:"u1",email:"a@example.com"})},
+  "@/lib/auction":auction,"@/lib/trial":loadSource("src/lib/trial.ts",{"./auction":auction}),
+  "@/lib/payments":{dodoRequest:async()=>{checkoutCalls++;throw new Error("Must not charge during trial");}}
+ });
+ const response=await POST({json:async()=>({adId:"ad1",type:"purchase"})});const ad=data.get("ads/ad1");
+ assert.equal(response.status,200);assert.equal(response.body.freeTrial,true);assert.equal(ad.status,"active");assert.equal(ad.expiresAt.getTime(),trialEndsAt.getTime());
+ assert.equal(ad.totalPaidCents,0);assert.equal(data.get("users/u1").totalSpentCents,0);assert.equal(checkoutCalls,0);assert.equal(data.has("paymentOrders/new-order"),false);
 });
 test("duplicate partial and full refunds reduce totals exactly once and stop a fully refunded active ad",async()=>{
  const {db,applyPayment,payment}=fixture();await applyPayment(payment);

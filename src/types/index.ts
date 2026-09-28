@@ -42,6 +42,10 @@ export interface Ad {
   expiresAt: Timestamp | null;
   impressions: number;
   clicks: number;
+  profileViews?: number;
+  trialAccess?: boolean;
+  trialBidCents?: number;
+  trialBidUntil?: Timestamp | number | null;
   externalTxId: string;
   paymentMethod: PaymentMethod | "";
   rejectionReason?: string;
@@ -59,6 +63,8 @@ export interface User {
   totalSpentCents: number;
   isNewAccount: boolean;
   createdAt: Timestamp;
+  trialStartedAt?: Timestamp | null;
+  trialExpiresAt?: Timestamp | null;
 }
 
 export interface RankingPosition {
