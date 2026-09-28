@@ -22,7 +22,7 @@ type Screen="overview"|"analytics"|"ads"|"rankings"|"payments"|"settings"|"revie
 const screens:Screen[]=["overview","analytics","ads","rankings","payments","settings","review"];
 function useAccountData(uid?:string){
  const [ads,setAds]=useState<Ad[]>([]);const [txs,setTxs]=useState<Transaction[]>([]);const [stats,setStats]=useState<DailyStat[]>([]);
- const [loaded,setLoaded]=useState(false);const [error,setError]=useState("");
+ const [loaded,setLoaded]=useState(false);const [error,setError]=useState("");const [revision,setRevision]=useState(0);
  useEffect(()=>{
   if(!uid)return;
   const fail=()=>{setError("Account data could not be loaded.");setLoaded(true);};
@@ -30,8 +30,9 @@ function useAccountData(uid?:string){
   const unsubTxs=onSnapshot(query(collection(db,"transactions"),where("uid","==",uid)),snap=>setTxs(snap.docs.map(doc=>({id:doc.id,...doc.data()} as Transaction)).sort((a,b)=>milliseconds(b.createdAt)-milliseconds(a.createdAt))),fail);
   const unsubStats=onSnapshot(query(collection(db,"dailyStats"),where("uid","==",uid)),snap=>setStats(snap.docs.map(doc=>({id:doc.id,...doc.data()} as DailyStat))),fail);
   return()=>{unsubAds();unsubTxs();unsubStats();};
- },[uid]);
- return {ads,txs,stats,loaded,error};
+ },[uid,revision]);
+ const retry=()=>{setError("");setLoaded(false);setRevision(value=>value+1);};
+ return {ads,txs,stats,loaded,error,retry};
 }
 function NoAds({lang,demo=false}:{lang:Lang;demo?:boolean}){
  return <div className="p-empty"><span className="p-brand-avatar violet"><Layers3 size={22}/></span><h2>{pick(lang,"Birinchi reklamangizdan boshlang","Start with your first ad","Начните с первого объявления")}</h2><p>{pick(lang,"Rasm, qisqa matn va taklifingizni kiriting. Natijalar shu yerda jamlanadi.","Add an image, a short description and your bid. Your results will come together here.","Добавьте изображение, описание и ставку. Все результаты будут собраны здесь.")}</p><Link className="p-btn p-btn-primary" href={demo?"/auth":"/create"}>{pick(lang,"Reklama yaratish","Create an ad","Создать объявление")}<Plus size={16}/></Link></div>;
@@ -86,7 +87,7 @@ function DashboardContent({demo=false}:{demo?:boolean}){
  <div className="p-work-area"><header className="p-work-header"><div className="p-breadcrumb"><span>Primio</span><ChevronRight size={12}/><b>{current.label}</b></div><div className="p-work-tools"><select className="p-lang" aria-label={pick(lang,"Til","Language","Язык")} value={lang} onChange={event=>setLang(event.target.value as Lang)}><option value="uz">UZ</option><option value="en">EN</option><option value="ru">RU</option></select><button className="p-icon-btn" aria-label={pick(lang,"Bildirishnomalar","Notifications","Уведомления")} onClick={()=>setScreen("overview")}><Bell size={17}/></button><button className="p-work-avatar" aria-label={pick(lang,"Profil","Profile","Профиль")} onClick={()=>setScreen("settings")}>{name.charAt(0)||"P"}</button></div></header>
  <div className="p-work-content">{demo&&<div className="p-demo-banner"><Sparkles size={15}/><span>{pick(lang,"Demo kabinet · Barcha ko‘rsatkichlar namuna.","Demo workspace · All figures are sample data.","Демо-кабинет · Все показатели — пример.")}</span><Link href="/auth">{pick(lang,"O‘z hisobimni yaratish","Create my account","Создать аккаунт")}<ArrowUpRight size={13}/></Link></div>}{!demo&&trialActive&&<div className="p-demo-banner"><Sparkles size={15}/><span>{pick(lang,`7 kunlik bepul foydalanish · ${trialEndText} gacha. Shu paytda bepul reklamalaringiz ham yakunlanadi.`,`Your 7-day free access ends ${trialEndText}. Free campaigns end then too.`,`Бесплатный доступ на 7 дней — до ${trialEndText}. Бесплатное продвижение завершится тогда же.`)}</span></div>}
  <div className="p-page-heading"><div><h1>{title}</h1><p>{screen==="overview"?pick(lang,"Reklamalaringiz qanday ishlayotganini bir qarashda ko‘ring.","Here’s how your campaigns are doing.","Все результаты ваших объявлений — с первого взгляда."):pick(lang,"Brendingiz uchun muhim ma’lumotlar bir joyda.","Everything that matters to your brand, in one place.","Всё важное для вашего бренда — в одном месте.")}</p></div><Link className="p-btn p-btn-primary" href={demo?"/auth":"/create"}><Plus size={16}/>{pick(lang,"Yangi reklama","New campaign","Создать")}</Link></div>
- {!demo&&(profileError||account.error)&&<div className="p-error" role="alert">{pick(lang,"Ma’lumotlarni yuklab bo‘lmadi. Ulanishni tekshirib, qayta urinib ko‘ring.","Could not load your data. Check your connection and retry.","Не удалось загрузить данные. Проверьте соединение.")}<button onClick={refreshProfile}>{pick(lang,"Qayta urinish","Retry","Повторить")}</button></div>}
+ {!demo&&(profileError||account.error)&&<div className="p-error" role="alert">{pick(lang,"Ma’lumotlarni yuklab bo‘lmadi. Ulanishni tekshirib, qayta urinib ko‘ring.","Could not load your data. Check your connection and retry.","Не удалось загрузить данные. Проверьте соединение.")}<button onClick={()=>{refreshProfile();account.retry();}}>{pick(lang,"Qayta urinish","Retry","Повторить")}</button></div>}
  {!demo&&publicData.error&&screen==="rankings"&&<div className="p-error" role="alert">{pick(lang,"Reyting vaqtincha mavjud emas.","Rankings are temporarily unavailable.","Рейтинг временно недоступен.")}<button onClick={publicData.retry}>{pick(lang,"Qayta urinish","Retry","Повторить")}</button></div>}
  {screen==="overview"&&<><div className="p-metric-grid">{[
   {label:pick(lang,"Jami ko‘rilish","Total impressions","Всего показов"),value:impressions.toLocaleString(),icon:Eye,hint:pick(lang,"Barcha reklamalar bo‘yicha","Across all campaigns","По всем объявлениям")},
