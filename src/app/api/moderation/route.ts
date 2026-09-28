@@ -330,7 +330,10 @@ async function grokCheckImage(
 // ROUTES
 // ══════════════════════════════════════════════════════════════════════════════
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const uid = await verifyFirebaseToken(req);
+  if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   let xaiTextStatus = "not_tested";
   let xaiVisionStatus = "not_tested";
   let xaiError = "";
