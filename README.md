@@ -34,6 +34,8 @@ Firebase web konfiguratsiyasi, Firebase Admin credentials, `DODO_API_KEY`, `DODO
 
 Firestore qoidalari va indekslari `firestore.rules` hamda `firestore.indexes.json` da. Dashboarddagi reklama, tranzaksiya va kunlik statistika so‘rovlari faqat egasining UIDiga cheklangan. Administrator bo‘ladigan hisobga custom claim berilishi, `/api/payment/webhook` Dodo panelida `payment.succeeded` va `refund.succeeded` eventlari uchun ro‘yxatdan o‘tishi, `/api/cron/expire-ads` muntazam chaqirilishi kerak. `trackingLimits.expiresAt` maydoniga Firestore TTL yoqilishi kerak.
 
+`/contact` sahifasidagi xabarlar server orqali Firestore `feedback` kolleksiyasiga yoziladi (`name`, `email`, `message`, `status`, `source`, `createdAt`). Ism va email ixtiyoriy. Mijoz dasturi xabarlarni bevosita o‘qiy yoki o‘zgartira olmaydi; ular hozircha Firebase konsolida ko‘rinadi. Kelajakdagi shaxsiy BI sahifasi uchun alohida administrator API va egasi bo‘yicha cheklov talab qilinadi.
+
 ## Hozirgi cheklovlar
 
 - Tashqi AI moderatsiya va rasm hosting oqimi mavjud kodda xAI, Hugging Face va ImgBB ga uzatadi. Bu ikki marshrutning yangi tasdiq/rasm bog‘lash qismi alohida ruxsatgacha ulanmagan. Reklama formasi tasdiqni ololmaganda xatolik ko‘rsatadi va server reklama yaratishga ruxsat bermaydi.
