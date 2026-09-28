@@ -7,7 +7,7 @@ const CONTENT = {
   en: {
     title: "Public Offer Agreement",
     subtitle: "Advertising Terms & Conditions — PRIMIO Platform",
-    updated: "Last updated: June 2025",
+    updated: "Last updated: September 2026",
     intro: "By placing an advertisement on the PRIMIO platform, you (the Advertiser) fully and unconditionally accept the terms of this Public Offer Agreement. If you do not agree with any provision, you may not use the advertising services.",
     sections: [
       {
@@ -23,7 +23,6 @@ const CONTENT = {
           "Adult content (18+): pornography, escort services, sexual content, nudity, or sexually suggestive imagery",
           "Content that humiliates, degrades, or discriminates against individuals or groups based on race, religion, gender, nationality, or other characteristics",
           "Inappropriate or indecent images, including bikini, underwear, or other revealing clothing",
-          "Social media page promotions (Instagram, TikTok, YouTube, Facebook, Telegram channels, etc.)",
           "Gambling, casinos, betting, or lottery services",
           "Drugs, narcotics, or psychotropic substances",
           "Fraud, phishing, scam, or illegal services",
@@ -55,6 +54,7 @@ const CONTENT = {
         body: "The Advertiser agrees to:",
         items: [
           "Submit only truthful and accurate advertising content.",
+          "Use a business website or social page as a destination only when it represents a genuine business and follows these terms.",
           "Ensure the advertised website is functional and does not contain prohibited content.",
           "Not attempt to circumvent AI moderation by disguising prohibited content.",
           "Accept full legal responsibility for the content of their advertisements.",
@@ -66,7 +66,11 @@ const CONTENT = {
       },
       {
         title: "7. Agreement Acceptance",
-        body: "By checking the agreement box and proceeding to payment, the Advertiser confirms full and unconditional acceptance of this Public Offer Agreement. This Agreement is considered concluded at the moment of clicking the agreement checkbox.",
+        body: "By checking the agreement box before payment or free activation, the Advertiser confirms acceptance of this Public Offer Agreement.",
+      },
+      {
+        title: "8. Seven-day free access",
+        body: "Once per account, free access begins at the first successful sign-in after this feature is introduced and lasts seven days. All available Primio features can be used without a charge during that period. Free campaigns and free bid increases end with the free period; they do not continue automatically. After the period, standard prices apply, and payment is collected only when the Advertiser chooses a paid campaign or renewal.",
       },
     ],
     back: "← Back",
@@ -74,7 +78,7 @@ const CONTENT = {
   uz: {
     title: "Ommaviy Oferta Shartnomasi",
     subtitle: "Reklama Shartlari va Qoidalari — PRIMIO Platformasi",
-    updated: "So'nggi yangilanish: Iyun 2025",
+    updated: "So‘nggi yangilanish: 2026-yil sentabr",
     intro: "PRIMIO platformasida reklama joylashtirish orqali siz (Reklama beruvchi) ushbu Ommaviy Oferta Shartnomasining barcha shartlarini to'liq va so'zsiz qabul qilasiz. Agar biron-bir bandga rozi bo'lmasangiz, reklama xizmatlaridan foydalana olmaysiz.",
     sections: [
       {
@@ -90,7 +94,6 @@ const CONTENT = {
           "Kattalar kontenti (18+): pornografiya, eskort xizmatlari, jinsiy kontent, yalang'ochlik yoki jinsiy ishorali tasvirlar",
           "Irq, din, jins, millat yoki boshqa xususiyatlar asosida shaxslar yoki guruhlarni kamsituvchi, tahqirlovchi yoki kamsituvchi kontent",
           "Nomaqbul yoki uyatsiz rasmlar, jumladan bikini, ichki kiyim yoki boshqa ochiq kiyimlar",
-          "Ijtimoiy tarmoq sahifalarining reklamasi (Instagram, TikTok, YouTube, Facebook, Telegram kanallari va boshqalar)",
           "Qimor, kazino, tikish yoki lotereya xizmatlari",
           "Giyohvand moddalar, narkotiklar yoki psixotrop moddalar",
           "Firibgarlik, fishing, scam yoki noqonuniy xizmatlar",
@@ -122,6 +125,7 @@ const CONTENT = {
         body: "Reklama beruvchi quyidagilarga rozi bo'ladi:",
         items: [
           "Faqat to'g'ri va aniq reklama kontentini yuborish.",
+          "Sayt yoki ijtimoiy sahifani faqat haqiqiy biznes faoliyatini ko'rsatganda va ushbu shartlarga amal qilganda havola sifatida berish.",
           "Reklamalanayotgan veb-saytning ishlashini va taqiqlangan kontent o'z ichiga olmasligini ta'minlash.",
           "Taqiqlangan kontentni yashirish orqali AI moderatsiyasini chetlab o'tishga urinmaslik.",
           "Reklamalarining kontenti uchun to'liq huquqiy javobgarlikni qabul qilish.",
@@ -133,7 +137,11 @@ const CONTENT = {
       },
       {
         title: "7. Shartnomani Qabul Qilish",
-        body: "Rozilik katagiga belgi qo'yib to'lovga o'tish orqali Reklama beruvchi ushbu Ommaviy Oferta Shartnomasini to'liq va so'zsiz qabul qilishini tasdiqlaydi. Ushbu Shartnoma rozilik katagiga belgi qo'yilgan zahoti tuzilgan deb hisoblanadi.",
+        body: "To'lov yoki bepul faollashtirishdan oldin rozilik katagiga belgi qo'yish orqali Reklama beruvchi ushbu Ommaviy Oferta Shartlarini qabul qilishini tasdiqlaydi.",
+      },
+      {
+        title: "8. Yetti kunlik bepul foydalanish",
+        body: "Har bir hisobga bir marta beriladi. Ushbu imkoniyat yoqilgandan keyingi birinchi muvaffaqiyatli kirishdan boshlanib, yetti kun davom etadi. Shu davrda Primio’ning mavjud imkoniyatlaridan to‘lovsiz foydalanish mumkin. Bepul reklama va bepul taklif oshirishlari muddat tugaganda yakunlanadi; ular avtomatik davom ettirilmaydi. Keyin standart narxlar amal qiladi. To‘lov faqat Reklama beruvchi pullik reklama yoki muddatni uzaytirishni tanlaganida olinadi.",
       },
     ],
     back: "← Orqaga",
@@ -141,7 +149,7 @@ const CONTENT = {
   ru: {
     title: "Договор Публичной Оферты",
     subtitle: "Условия размещения рекламы — Платформа PRIMIO",
-    updated: "Последнее обновление: Июнь 2025",
+    updated: "Последнее обновление: сентябрь 2026",
     intro: "Размещая рекламу на платформе PRIMIO, вы (Рекламодатель) полностью и безоговорочно принимаете условия настоящего Договора публичной оферты. Если вы не согласны с каким-либо положением, вы не можете использовать рекламные услуги.",
     sections: [
       {
@@ -157,7 +165,6 @@ const CONTENT = {
           "Контент для взрослых (18+): порнография, эскорт-услуги, сексуальный контент, нагота или сексуально-провокационные изображения",
           "Контент, унижающий, оскорбляющий или дискриминирующий людей или группы по признаку расы, религии, пола, национальности или других характеристик",
           "Неприличные или непристойные изображения, включая бикини, нижнее бельё или другую открытую одежду",
-          "Продвижение страниц в социальных сетях (Instagram, TikTok, YouTube, Facebook, Telegram-каналы и т.д.)",
           "Азартные игры, казино, ставки или лотерейные услуги",
           "Наркотики, наркотические или психотропные вещества",
           "Мошенничество, фишинг, скам или незаконные услуги",
@@ -189,6 +196,7 @@ const CONTENT = {
         body: "Рекламодатель соглашается:",
         items: [
           "Представлять только правдивый и точный рекламный контент.",
+          "Указывать сайт или социальную страницу только для реального бизнеса и при соблюдении этих условий.",
           "Обеспечивать работоспособность рекламируемого сайта и отсутствие запрещённого контента.",
           "Не пытаться обойти AI-модерацию, маскируя запрещённый контент.",
           "Принять полную юридическую ответственность за содержание своих объявлений.",
@@ -200,7 +208,11 @@ const CONTENT = {
       },
       {
         title: "7. Принятие Договора",
-        body: "Установив флажок согласия и перейдя к оплате, Рекламодатель подтверждает полное и безоговорочное принятие настоящего Договора публичной оферты. Настоящий Договор считается заключённым с момента установки флажка согласия.",
+        body: "Установив флажок согласия перед оплатой или бесплатной активацией, Рекламодатель подтверждает принятие условий настоящей публичной оферты.",
+      },
+      {
+        title: "8. Семь дней бесплатного доступа",
+        body: "Доступ предоставляется один раз на аккаунт. Он начинается при первом успешном входе после запуска этой возможности и длится семь дней. В этот период всеми доступными функциями Primio можно пользоваться бесплатно. Бесплатное продвижение и бесплатное повышение ставки завершатся вместе с этим периодом и не будут продлены автоматически. После него действуют обычные цены. Оплата взимается только если Рекламодатель сам выберет платное размещение или продление.",
       },
     ],
     back: "← Назад",

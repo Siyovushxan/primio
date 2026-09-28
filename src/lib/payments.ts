@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { DAY_MS, milliseconds } from "./auction";
+import { DAY_MS, effectiveBidCents, milliseconds } from "./auction";
 export const dodoBase = process.env.DODO_LIVE_MODE === "true" ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
 export async function dodoRequest(path: string, body?: unknown) {
   if (!process.env.DODO_API_KEY) throw new Error("Payment service is not configured.");
@@ -64,7 +64,7 @@ export async function applyPayment(payment: ProviderPayment) {
     const now = new Date();
     const conflict = !ad || ad.advertiserUID !== order.uid || order.status === "cancelled" ||
       (ad.contentVersion ?? 0) !== order.contentVersion ||
-      (order.type === "bid_upgrade" ? ad.status !== "active" || ad.dailyBidCents !== order.previousBidCents || milliseconds(ad.expiresAt) <= now.getTime()
+      (order.type === "bid_upgrade" ? ad.status !== "active" || effectiveBidCents(ad as { dailyBidCents: number; trialBidCents?: number; trialBidUntil?: number }, now.getTime()) !== order.previousBidCents || milliseconds(ad.expiresAt) <= now.getTime()
       : order.type === "purchase" ? ad.status !== "pending" : !(ad.status === "expired" || (ad.status === "active" && milliseconds(ad.expiresAt) <= now.getTime())));
     tx.create(txRef, { uid: order.uid, adId: order.adId, orderId, type: order.type, amountCents: payment.total_amount,
       currency: "USD", externalTxId: payment.payment_id, paymentMethod: "card", needsReview: conflict, createdAt: FieldValue.serverTimestamp() });
@@ -75,7 +75,7 @@ export async function applyPayment(payment: ProviderPayment) {
         totalPaidCents: FieldValue.increment(payment.total_amount), paymentMethod: "card" };
       if (ad.pendingOrderId === orderId) { update.pendingOrderId = FieldValue.delete(); update.pendingPaymentId = FieldValue.delete(); }
       if (conflict) update.paymentReviewRequired = true;
-      else if (order.type === "bid_upgrade") update.dailyBidCents = order.dailyBidCents;
+      else if (order.type === "bid_upgrade") Object.assign(update, { dailyBidCents: order.dailyBidCents, trialBidCents: FieldValue.delete(), trialBidUntil: FieldValue.delete() });
       // AI-moderated and paid ads go live immediately — there is no manual verification step
       else Object.assign(update, { dailyBidCents: order.dailyBidCents, durationDays: order.durationDays,
         status: "active", startsAt: now, expiresAt: new Date(now.getTime() + order.durationDays * DAY_MS) });

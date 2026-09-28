@@ -429,7 +429,7 @@ async function handlePost(req: NextRequest) {
   const description = typeof body.description === "string" ? body.description.trim() : "";
   const imageBase64 = typeof body.imageBase64 === "string" && body.imageBase64 ? body.imageBase64 : undefined;
   const mimeType = typeof body.mimeType === "string" ? body.mimeType : "";
-  if (!title || title.length > 60 || description.length > 200 || !body.destinationURL || !body.imageURL) {
+  if (!title || title.length > 60 || description.length > 500 || !body.destinationURL || !body.imageURL) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
   let destinationURL: string, imageURL: string;

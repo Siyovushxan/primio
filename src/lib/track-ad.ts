@@ -3,7 +3,7 @@ import { NextRequest,NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
 import { milliseconds } from "./auction";
-export async function trackAd(req:NextRequest,adId:string,event:"clicks"|"impressions"){
+export async function trackAd(req:NextRequest,adId:string,event:"clicks"|"impressions"|"profileViews"){
  if(!/^[\w-]{1,128}$/.test(adId))return NextResponse.json({ok:false},{status:400});
  const origin=req.headers.get("origin");
  if(origin&&origin!==req.nextUrl.origin&&origin!==process.env.NEXT_PUBLIC_BASE_URL)return NextResponse.json({ok:false},{status:403});

@@ -232,7 +232,7 @@
 .p-demo-banner{display:flex;align-items:center;gap:12px;padding:12px 17px;border:1px solid #b492df30;background:#b492df09;border-radius:8px;margin-bottom:24px;font-size:11px;color:#b4a3c9}
 .p-demo-banner>svg{flex:none;color:#bc9ded}
 .p-demo-banner a{margin-left:auto;color:#d8c3f9;display:flex;align-items:center;gap:8px;white-space:nowrap}
-.p-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin-bottom:23px}
+.p-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:15px;margin-bottom:23px}
 .p-metric-card{background:#191820;border:1px solid var(--p-line);border-radius:11px;padding:21px}
 .p-metric-top{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#a29aaa;margin-bottom:19px}
 .p-metric-top>svg{width:16px;height:16px;color:#85748f}
@@ -252,7 +252,8 @@
 .p-chart-legend{display:flex;gap:17px;margin-bottom:14px;font-size:9px;color:#9384a0}
 .p-chart-legend span{display:flex;align-items:center;gap:6px}
 .p-chart-legend i{width:6px;height:6px;border-radius:50%;background:#b797ee}
-.p-chart-legend span:last-child i{background:#d6ebad}
+.p-chart-legend .p-legend-page{background:#79d8cb}
+.p-chart-legend .p-legend-click{background:#d6ebad}
 .p-performance svg{display:block;width:100%;height:165px;overflow:visible}
 .p-chart-axis{display:flex;justify-content:space-between;color:#71677c;font-size:8px;padding-top:10px}
 .p-chart-empty{min-height:210px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:25px;color:#8e829d;font-size:12px}

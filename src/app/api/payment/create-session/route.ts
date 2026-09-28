@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifiedIdentity } from "@/lib/verifyFirebaseToken";
-import { quotePayment, type PaymentKind, type QuotedAd } from "@/lib/auction";
+import { milliseconds, quotePayment, type PaymentKind, type QuotedAd } from "@/lib/auction";
+import { freeCampaignExpiry, isTrialActive, trialExpiry } from "@/lib/trial";
 import { dodoRequest } from "@/lib/payments";
 export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
@@ -17,11 +18,33 @@ export async function POST(req: NextRequest) {
     if (typeof adId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(adId) || !["purchase","renewal","bid_upgrade"].includes(type)) throw new Error("Invalid payment request.");
     const orderRef = adminDb.collection("paymentOrders").doc();
     const adRef = adminDb.doc(`ads/${adId}`);
+    const userRef = adminDb.doc(`users/${user.uid}`);
     const result = await adminDb.runTransaction(async tx => {
-      const snap = await tx.get(adRef);
+      const [snap, userSnap] = await Promise.all([tx.get(adRef), tx.get(userRef)]);
       if (!snap.exists || snap.data()!.advertiserUID !== user.uid) throw new Error("Ad not found.");
       const ad = snap.data()!;
       const quote = quotePayment(ad as QuotedAd, type, newDailyBidCents, durationDays);
+      const now = Date.now();
+      const trialEndsAt = trialExpiry(userSnap.data());
+      if (isTrialActive(userSnap.data(), now)) {
+        if (ad.pendingOrderId) throw new Error("Cancel the open checkout first, then activate this campaign for free.");
+        if (type === "bid_upgrade") {
+          if (ad.trialAccess === true) {
+            tx.update(adRef, { dailyBidCents: quote.dailyBidCents, trialBidCents: FieldValue.delete(), trialBidUntil: FieldValue.delete() });
+          } else {
+            const trialBidUntil = Math.min(milliseconds(ad.expiresAt), trialEndsAt);
+            if (trialBidUntil <= now) throw new Error("This campaign has ended.");
+            tx.update(adRef, { trialBidCents: quote.dailyBidCents, trialBidUntil: new Date(trialBidUntil) });
+          }
+        } else {
+          const expiresAt = freeCampaignExpiry(now, quote.durationDays, trialEndsAt);
+          if (expiresAt <= now) throw new Error("Your free week has ended. Choose a paid campaign to continue.");
+          tx.update(adRef, { dailyBidCents: quote.dailyBidCents, durationDays: quote.durationDays, status: "active",
+            startsAt: new Date(now), expiresAt: new Date(expiresAt), trialAccess: true, trialAccessUntil: new Date(expiresAt),
+            pendingOrderId: FieldValue.delete(), pendingPaymentId: FieldValue.delete() });
+        }
+        return { freeTrial: true, trialEndsAt };
+      }
       if (ad.pendingOrderId) {
         const previous = await tx.get(adminDb.doc(`paymentOrders/${ad.pendingOrderId}`));
         if (previous.exists && ["pending", "creating"].includes(previous.data()!.status)) {
@@ -35,6 +58,7 @@ export async function POST(req: NextRequest) {
       tx.update(adRef, { pendingOrderId: orderRef.id });
       return { quote, title: ad.title as string };
     });
+    if ("freeTrial" in result) return NextResponse.json({ freeTrial: true, trialEndsAt: result.trialEndsAt });
     if ("url" in result) return NextResponse.json({ url: result.url });
     orderId = orderRef.id; reservedAdId = adId;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.primio.com.uz";
