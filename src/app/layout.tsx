@@ -5,6 +5,8 @@ import "./flows.css";
 import Header from "@/components/layout/Header";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LangProvider } from "@/contexts/LangContext";
+import AnalyticsConsent from "@/components/primio/AnalyticsConsent";
+import "./analytics-consent.css";
 
 export const metadata: Metadata = {
   title: "Primio — Brendingiz uchun yangi o‘rin",
@@ -31,6 +33,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-bg text-text font-sans antialiased">
         <LangProvider>
           <AuthProvider>
+            <AnalyticsConsent />
             <a className="p-skip" href="#main-content">Asosiy kontentga o‘tish / Skip to content</a>
             <Header />
             <main id="main-content">{children}</main>

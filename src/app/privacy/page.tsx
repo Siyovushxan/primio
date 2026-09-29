@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AnalyticsPreferencesButton } from "@/components/primio/AnalyticsConsent";
 import "./privacy.css";
 
 export const metadata = { title: "Maxfiylik siyosati — Primio" };
@@ -13,6 +14,9 @@ export default function PrivacyPage() {
     <p>Google bergan refresh token serverda AES-256-GCM bilan shifrlanib saqlanadi. Hisobotlar Google’dan so‘rov paytida olinadi va Primio ma’lumotlar bazasida alohida saqlanmaydi. Ulanishni kabinetingizdan uzsangiz, Primio saqlagan tokenni o‘chiradi va Google’dagi ruxsatni bekor qilishga so‘rov yuboradi. Google hisobingizda ham uchinchi tomon ruxsatini bekor qilishingiz mumkin.</p>
     <h2>Ma’lumotlardan foydalanish</h2>
     <p>Google Analytics ma’lumotlari sizga sayt hisobotini ko‘rsatish uchun ishlatiladi. Ular boshqa foydalanuvchilarga ko‘rsatilmaydi. AI xulosasi faqat o‘zingiz har safar rozilik bildirganingizda so‘raladi; bunda faqat yig‘ma ko‘rsatkichlar AI xizmatiga yuboriladi.</p>
+    <h2>Primio saytidagi tashriflarni o‘lchash</h2>
+    <p>Rozilik bersangiz, Primio ommaviy sahifalarga tashrifni Google Analytics orqali o‘lchaydi. Sahifa yo‘li va brauzerga oid texnik ma’lumotlar Google’ga yuboriladi. Kabinet, hisobga kirish va to‘lov sahifalari o‘lchanmaydi. Dastlab rad etsangiz, Google Analytics tegi yuklanmaydi; keyin rad etsangiz, keyingi tashriflar o‘lchanmaydi. Tanlovni keyin o‘zgartirishingiz mumkin.</p>
+    <AnalyticsPreferencesButton />
     <h2>Savollar va o‘chirish</h2>
     <p>Ma’lumotlaringiz yoki ulanishni o‘chirish bo‘yicha savollar uchun OAuth oynasida ko‘rsatilgan Primio aloqa manziliga murojaat qiling.</p>
     <p><Link href="/">Bosh sahifaga qaytish</Link></p>
