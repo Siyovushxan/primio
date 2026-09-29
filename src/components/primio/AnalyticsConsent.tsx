@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/contexts/LangContext";
 
 // This public GA4 stream ID is not an OAuth client ID or secret.
@@ -39,6 +39,7 @@ export default function AnalyticsConsent() {
   const [choice, setChoice] = useState<Choice | undefined>();
   const [showPreferences, setShowPreferences] = useState(false);
   const [tagReady, setTagReady] = useState(false);
+  const lastTrackedPath = useRef<string | null>(null);
   const publicPage = isPublicPage(pathname);
 
   useEffect(() => {
@@ -59,7 +60,11 @@ export default function AnalyticsConsent() {
   }, []);
 
   useEffect(() => {
-    if (choice !== "accepted" || !tagReady || !publicPage) return;
+    if (choice !== "accepted" || !tagReady || !publicPage) {
+      if (!publicPage) lastTrackedPath.current = null;
+      return;
+    }
+    if (lastTrackedPath.current === pathname) return;
     window.gtag?.("event", "page_view", {
       send_to: MEASUREMENT_ID,
       page_path: pathname,
@@ -67,6 +72,7 @@ export default function AnalyticsConsent() {
       page_referrer: "",
       page_title: "Primio",
     });
+    lastTrackedPath.current = pathname;
   }, [choice, tagReady, pathname, publicPage]);
 
   useEffect(() => {
@@ -82,7 +88,13 @@ export default function AnalyticsConsent() {
         ad_personalization: "denied",
       });
       window.gtag("js", new Date());
-      window.gtag("config", MEASUREMENT_ID, { send_page_view: false });
+      lastTrackedPath.current = pathname;
+      window.gtag("config", MEASUREMENT_ID, {
+        page_path: pathname,
+        page_location: `${window.location.origin}${pathname}`,
+        page_referrer: "",
+        page_title: "Primio",
+      });
     } else {
       window.gtag("consent", "update", { analytics_storage: "granted" });
     }
@@ -105,11 +117,12 @@ export default function AnalyticsConsent() {
       script.addEventListener("load", ready);
     }
     return () => script?.removeEventListener("load", ready);
-  }, [choice, publicPage]);
+  }, [choice, publicPage, pathname]);
 
   function choose(next: Exclude<Choice, null>) {
     try { localStorage.setItem(STORAGE_KEY, next); } catch {}
     window.gtag?.("consent", "update", { analytics_storage: next === "accepted" ? "granted" : "denied" });
+    if (next === "accepted" && choice === "rejected") lastTrackedPath.current = null;
     setChoice(next);
     setShowPreferences(false);
   }
