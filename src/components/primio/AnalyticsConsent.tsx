@@ -80,7 +80,9 @@ export default function AnalyticsConsent() {
 
     if (!window.gtag) {
       window.dataLayer = window.dataLayer || [];
-      window.gtag = (...args: unknown[]) => { window.dataLayer?.push(args); };
+      // Match Google's gtag bootstrap: it queues the Arguments object.
+      // eslint-disable-next-line prefer-rest-params
+      window.gtag = function () { window.dataLayer?.push(arguments); };
       window.gtag("consent", "default", {
         analytics_storage: "granted",
         ad_storage: "denied",
