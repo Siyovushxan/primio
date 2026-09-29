@@ -23,7 +23,6 @@ const dateKey = (timestamp: number) => new Date(timestamp).toISOString().slice(0
 export default function BusinessIntelligence({ ads, stats, transactions, lang, now }: { ads: Ad[]; stats: DailyStat[]; transactions: Transaction[]; lang: Lang; now: number }) {
   const [period, setPeriod] = useState<Period>("all");
   const [adId, setAdId] = useState("all");
-  const locale = lang === "uz" ? "uz-UZ" : lang === "ru" ? "ru-RU" : "en-US";
   const filteredAds = useMemo(() => ads.filter(ad => adId === "all" || ad.id === adId), [ads, adId]);
   const start = period === "all" ? "" : dateKey(now - (Number(period) - 1) * 86400000);
   const end = dateKey(now);
@@ -42,7 +41,7 @@ export default function BusinessIntelligence({ ads, stats, transactions, lang, n
   const daily = dates.map(date => ({ date, ...scopedStats.filter(row => row.date === date).reduce<Counts>((total, row) => add(total, row), empty()) }));
   const maximum = Math.max(1, ...daily.map(day => day.impressions), ...daily.map(day => day.profileViews), ...daily.map(day => day.clicks));
   const points = (metric: keyof Counts) => daily.map((day, index) => `${(index / Math.max(1, daily.length - 1) * 600).toFixed(1)},${(150 - day[metric] / maximum * 124).toFixed(1)}`).join(" ");
-  const format = (value: number) => value.toLocaleString(locale);
+  const format = (value: number) => value.toLocaleString("en-US");
   const statusCopy: Record<Ad["status"], string> = {
     active: pick(lang, "Faol", "Active", "Активно"),
     pending: pick(lang, "To‘lov kutilmoqda", "Awaiting payment", "Ожидает оплаты"),
