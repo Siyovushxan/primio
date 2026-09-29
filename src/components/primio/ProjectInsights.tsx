@@ -59,7 +59,7 @@ function fmt(value: number | null, lang: Lang) {
   return value === null ? pick(lang, "Ma’lumot yo‘q", "No data", "Нет данных") : value.toLocaleString(lang === "uz" ? "uz-UZ" : lang === "ru" ? "ru-RU" : "en-US");
 }
 
-export default function ProjectInsights({ lang, firebaseUser, ads, demo = false }: { lang: Lang; firebaseUser: FirebaseUser | null; ads: Ad[]; demo?: boolean }) {
+export default function ProjectInsights({ lang, firebaseUser, ads, demo = false, showPrimioSource = true }: { lang: Lang; firebaseUser: FirebaseUser | null; ads: Ad[]; demo?: boolean; showPrimioSource?: boolean }) {
   const [connection, setConnection] = useState<Connection | null>(null);
   const [properties, setProperties] = useState<Property[]>([]);
   const [report, setReport] = useState<Report | null>(null);
@@ -126,7 +126,7 @@ export default function ProjectInsights({ lang, firebaseUser, ads, demo = false 
     if (!result) return;
     const timer = window.setTimeout(() => {
       setNotice(result === "connected" ? pick(lang, "Google Analytics ulandi. Endi saytni tanlang.", "Google Analytics connected. Choose a website.", "Google Analytics подключена. Выберите сайт.") : pick(lang, "Google Analytics ulanmadi. Qayta urinib ko‘ring.", "Google Analytics was not connected. Please retry.", "Не удалось подключить Google Analytics. Попробуйте ещё раз."));
-      window.history.replaceState({}, "", "/dashboard?view=analytics");
+      window.history.replaceState({}, "", "/dashboard?view=overview");
     }, 0);
     return () => window.clearTimeout(timer);
   }, [lang]);
@@ -186,11 +186,11 @@ export default function ProjectInsights({ lang, firebaseUser, ads, demo = false 
   ] as const : [];
 
   return <div className="p-project-insights">
-    <section className="p-panel p-insights-source"><div className="p-panel-heading"><div><h2>{pick(lang, "Primio’dagi reklama natijalari", "Results inside Primio", "Результаты в Primio")}</h2><p>{pick(lang, "Faqat Primio ichidagi ko‘rish va bosishlar · jami", "Views and clicks inside Primio only · all time", "Просмотры и клики только внутри Primio · всего")}</p></div><BarChart3 size={19}/></div><div className="p-metric-grid p-insights-metrics">{[
+    {showPrimioSource && <section className="p-panel p-insights-source"><div className="p-panel-heading"><div><h2>{pick(lang, "Primio’dagi reklama natijalari", "Results inside Primio", "Результаты в Primio")}</h2><p>{pick(lang, "Faqat Primio ichidagi ko‘rish va bosishlar · jami", "Views and clicks inside Primio only · all time", "Просмотры и клики только внутри Primio · всего")}</p></div><BarChart3 size={19}/></div><div className="p-metric-grid p-insights-metrics">{[
       [pick(lang, "Reklama kartasi ko‘rilishi", "Ad card impressions", "Показы карточки"), totals.impressions],
       [pick(lang, "Loyiha sahifasi ochilishi", "Project page views", "Просмотры страницы проекта"), totals.profileViews],
       [pick(lang, "Tashqi havolaga bosish", "Clicks to your link", "Переходы по ссылке"), totals.clicks],
-    ].map(([label, value]) => <article className="p-metric-card" key={label}><div className="p-metric-top"><span>{label}</span><ExternalLink/></div><strong className="p-metric-value">{Number(value).toLocaleString(locale)}</strong><small>{pick(lang, "Manba: Primio · biznes saytidagi tashrif emas", "Source: Primio · not visits on your own website", "Источник: Primio · это не посещения вашего сайта")}</small></article>)}</div></section>
+    ].map(([label, value]) => <article className="p-metric-card" key={label}><div className="p-metric-top"><span>{label}</span><ExternalLink/></div><strong className="p-metric-value">{Number(value).toLocaleString(locale)}</strong><small>{pick(lang, "Manba: Primio · biznes saytidagi tashrif emas", "Source: Primio · not visits on your own website", "Источник: Primio · это не посещения вашего сайта")}</small></article>)}</div></section>}
 
     <section className="p-panel"><div className="p-panel-heading"><div><h2>{pick(lang, "Saytingiz tahlili", "Your website analytics", "Аналитика вашего сайта")}</h2><p>{pick(lang, "Manba: Google Analytics 4 · faqat o‘qish ruxsati", "Source: Google Analytics 4 · read-only access", "Источник: Google Analytics 4 · доступ только для чтения")}</p></div><ShieldCheck size={19}/></div>
       {demo ? <div className="p-insights-empty"><LockKeyhole size={25}/><b>{pick(lang, "Haqiqiy sayt statistikasi demo hisobda ulanmaydi.", "Real website data is not connected in the demo.", "Статистика реального сайта в демо не подключена.")}</b><p>{pick(lang, "Hisob yarating va o‘zingiz kira oladigan Google Analytics saytini ulang.", "Create an account and connect a Google Analytics property you can access.", "Создайте аккаунт и подключите Google Analytics, к которой у вас есть доступ.")}</p><a className="p-btn p-btn-primary" href="/auth">{pick(lang, "Boshlash", "Get started", "Начать")}<ArrowUpRight size={15}/></a></div>

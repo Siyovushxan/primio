@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./primio.css";
+import "./bi.css";
 import "./flows.css";
 import Header from "@/components/layout/Header";
 import { AuthProvider } from "@/contexts/AuthContext";
