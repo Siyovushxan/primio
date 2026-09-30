@@ -23,6 +23,11 @@
   "overrides": {
     "jose": "4.15.9"
   },
+  "allowScripts": {
+    "@firebase/util": false,
+    "protobufjs": false,
+    "unrs-resolver": false
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
