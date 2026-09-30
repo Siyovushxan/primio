@@ -5,6 +5,7 @@ import {doc,onSnapshot} from "firebase/firestore";
 import {ArrowLeft,ArrowUpRight,Clock,CheckCircle2} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import {GoogleAuthProvider,linkWithPopup} from "firebase/auth";
 import {db} from "@/lib/firebase";
 import {useAuth} from "@/contexts/AuthContext";
 import {useLang} from "@/contexts/LangContext";
@@ -40,6 +41,7 @@ function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
  const {lang}=useLang();
  const {userProfile,firebaseUser}=useAuth();const router=useRouter();
  const [bid,setBid]=useState(((ad.dailyBidCents+100)/100).toFixed(2));const [days,setDays]=useState(ad.durationDays);const [agreed,setAgreed]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [now,setNow]=useState(()=>Date.now());const [contactEmail,setContactEmail]=useState(firebaseUser?.email||"");
+ async function saveAccess(){if(!firebaseUser?.isAnonymous)return;setBusy(true);setError("");try{const result=await linkWithPopup(firebaseUser,new GoogleAuthProvider());setContactEmail(result.user.email||"");}catch{setError(pick(lang,"Google bilan bog‘lab bo‘lmadi. Boshqa qurilmada boshqarish uchun yordam xizmatiga murojaat qiling.","Could not link Google. Contact support to manage this ad on another device.","Не удалось привязать Google. Для управления с другого устройства обратитесь в поддержку."));}finally{setBusy(false);}}
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(id);},[]);
  const trialEndsAt=milliseconds(userProfile?.trialExpiresAt);const trialActive=trialEndsAt>now;
  const trialEndText=trialActive?new Date(trialEndsAt).toLocaleString(lang==="uz"?"uz-UZ":lang==="ru"?"ru-RU":"en-US",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tashkent"}):"";
@@ -55,6 +57,7 @@ function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
  <PositionEstimate category={ad.category} bidCents={quote?.dailyBidCents??0} excludeId={type==="bid_upgrade"?ad.id:undefined}/>
  {!trialActive&&<p className="p-flow-note">{pick(lang,"Soliqlar va yakuniy summa to‘lov oynasida ko‘rsatiladi.","Taxes and the final charge are shown at checkout.","Налоги и итоговая сумма отображаются при оплате.")}</p>}
  {!trialActive&&<label className="p-field">{pick(lang,"To‘lov cheki uchun elektron pochta","Email for your payment receipt","Электронная почта для чека")}<input type="email" autoComplete="email" required maxLength={254} value={contactEmail} onChange={e=>setContactEmail(e.target.value)} placeholder="name@example.com"/></label>}
+ {!trialActive&&firebaseUser?.isAnonymous&&<div className="p-flow-notice"><p>{pick(lang,"Reklamangiz hozir shu brauzerga bog‘langan. Brauzer ma’lumotlarini o‘chirsangiz yoki boshqa qurilmaga o‘tsangiz, uni boshqara olmaysiz. Google orqali kirishni bog‘lasangiz, kirishni saqlab qolasiz.","This ad is currently tied to this browser. Clearing browser data or changing devices will remove your access. Link Google to keep access.","Сейчас объявление привязано к этому браузеру. При очистке данных или смене устройства доступ пропадёт. Привяжите Google, чтобы сохранить доступ.")}</p><button type="button" className="p-text-link" disabled={busy} onClick={()=>void saveAccess()}>{pick(lang,"Google bilan kirishni saqlash","Keep access with Google","Сохранить доступ через Google")}</button></div>}
  {(invalid||error)&&<div className="p-error" role="alert">{error||invalid}</div>}
  {ad.pendingOrderId&&<div className="p-flow-notice"><p>{pick(lang,"Oldingi to‘lov oynasi mavjud. Davom etish avvalgi buyurtmani ochadi. Parametrlarni o‘zgartirish uchun oldin uni bekor qiling.","An existing checkout will be resumed. Cancel it first to change your order.","Продолжение откроет предыдущий заказ. Отмените его, чтобы изменить параметры.")}</p><button type="button" className="p-text-link" disabled={busy} onClick={cancel}>{pick(lang,"Oldingi buyurtmani bekor qilish","Cancel previous checkout","Отменить предыдущий заказ")}</button><small>{pick(lang,"Bu amalga oshgan to‘lovni qaytarmaydi. Bekor qilingan oynada boshqa to‘lov qilmang.","This does not refund a completed payment. Do not pay through the cancelled checkout.","Это не возвращает совершённый платёж. Не оплачивайте отменённый заказ.")}</small></div>}
  <label className="p-consent"><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)}/><span><Link href="/terms" target="_blank">{pick(lang,"Xizmat shartlari","Service terms","Условия сервиса")}</Link>{pick(lang,"ni o‘qidim va qabul qilaman.",": I have read and accept them.",": я прочитал и принимаю их.")}</span></label>
