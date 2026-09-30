@@ -15,7 +15,10 @@ export async function POST(req: NextRequest) {
       const now = Date.now();
       const existing = snap.data();
       const trialStartedAt = existing?.trialStartedAt ?? new Date(now);
-      const trialExpiresAt = existing?.trialExpiresAt ?? new Date((milliseconds(trialStartedAt) || now) + FREE_TRIAL_MS);
+      // Guest sessions can be recreated by clearing browser data. Reserve the
+      // one-time free trial for verified sign-in identities.
+      const isGuest = user.firebase?.sign_in_provider === "anonymous";
+      const trialExpiresAt = existing?.trialExpiresAt ?? new Date(isGuest ? now : (milliseconds(trialStartedAt) || now) + FREE_TRIAL_MS);
       if (!snap.exists) tx.create(ref, { uid: user.uid, displayName: user.name ?? "", email: user.email ?? "", phone: "", totalSpentCents: 0, isNewAccount: true, createdAt: FieldValue.serverTimestamp(), trialStartedAt, trialExpiresAt });
       else if (!existing?.trialStartedAt || !existing?.trialExpiresAt) tx.update(ref, { trialStartedAt, trialExpiresAt });
       if (snap.exists && typeof body.displayName === "string") {

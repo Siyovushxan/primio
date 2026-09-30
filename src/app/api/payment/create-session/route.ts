@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { adId, newDailyBidCents, durationDays } = body;
+    const contactEmail = typeof body.contactEmail === "string" ? body.contactEmail.trim() : "";
     const type: PaymentKind = body.type ?? "purchase";
     if (typeof adId !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(adId) || !["purchase","renewal","bid_upgrade"].includes(type)) throw new Error("Invalid payment request.");
     const orderRef = adminDb.collection("paymentOrders").doc();
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest) {
         }
         return { freeTrial: true, trialEndsAt };
       }
+      const email = user.email || contactEmail;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) throw new Error("Enter a valid email for your payment receipt.");
       if (ad.pendingOrderId) {
         const previous = await tx.get(adminDb.doc(`paymentOrders/${ad.pendingOrderId}`));
         if (previous.exists && ["pending", "creating"].includes(previous.data()!.status)) {
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
       }
       tx.create(orderRef, { ...quote, uid: user.uid, adId, status: "creating", createdAt: FieldValue.serverTimestamp() });
       tx.update(adRef, { pendingOrderId: orderRef.id });
-      return { quote, title: ad.title as string };
+      return { quote, title: ad.title as string, email };
     });
     if ("freeTrial" in result) return NextResponse.json({ freeTrial: true, trialEndsAt: result.trialEndsAt });
     if ("url" in result) return NextResponse.json({ url: result.url });
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.primio.com.uz";
     if (!process.env.DODO_PRODUCT_ID) throw new Error("Payment product is not configured.");
     const data = await dodoRequest("/payments", {
-      billing: { country: "UZ" }, billing_currency: "USD", customer: { name: result.title, email: user.email },
+      billing: { country: "UZ" }, billing_currency: "USD", customer: { name: result.title, email: result.email },
       product_cart: [{ product_id: process.env.DODO_PRODUCT_ID, quantity: 1, amount: result.quote!.amountCents }],
       metadata: { orderId, adId, advertiserUID: user.uid, type }, payment_link: true,
       return_url: `${baseUrl}/payment/success?adId=${adId}&orderId=${orderId}`

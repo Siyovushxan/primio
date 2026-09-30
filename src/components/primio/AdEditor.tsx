@@ -6,6 +6,7 @@ import {useAuth} from "@/contexts/AuthContext";
 import {useLang} from "@/contexts/LangContext";
 import {CATEGORY_IDS,DAY_MS,milliseconds,validBid,validDuration,publicWebsite} from "@/lib/auction";
 import {clientPost} from "@/lib/client-api";
+import {ensureGuestSession} from "@/lib/guest-session";
 import type {Ad,Category} from "@/types";
 import {AdPreview,FlowShell,useOwnedAd} from "./AdFlow";
 import {PositionEstimate} from "./PositionEstimate";
@@ -19,14 +20,13 @@ async function compress(file:File):Promise<string>{
 }
 function Form({ad}:{ad?:Ad}){
  const {lang}=useLang();const {firebaseUser,userProfile,loading}=useAuth();const router=useRouter();const params=useSearchParams();
- const [title,setTitle]=useState(ad?.title||"");const [description,setDescription]=useState(ad?.description||"");const [url,setUrl]=useState(ad?.destinationURL||"");
+ const [title,setTitle]=useState(ad?.title||"");const [description,setDescription]=useState(ad?.description||"");const [url,setUrl]=useState(ad?.destinationURL||params.get("url")||"");
  const [category,setCategory]=useState<Category>(ad?.category||(CATEGORY_IDS.includes(params.get("category") as Category)?params.get("category") as Category:"technology"));
  const initBid=Number(params.get("minBid"));const initDays=Number(params.get("days"));
  const [bid,setBid]=useState(((ad?.dailyBidCents||(validBid(initBid)?initBid:100))/100).toFixed(2));const [days,setDays]=useState(ad?.durationDays||(validDuration(initDays)?initDays:7));
  const [image,setImage]=useState("");const [imageBusy,setImageBusy]=useState(false);const [step,setStep]=useState(0);const [error,setError]=useState("");const [review,setReview]=useState<{id:string;url:string}|null>(null);
  const [now,setNow]=useState(()=>Date.now());
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
- useEffect(()=>{if(!loading&&!firebaseUser)router.replace("/auth?next="+encodeURIComponent("/create"+(params.size?"?"+params.toString():"")));},[loading,firebaseUser,router,params]);
  const cents=Math.round(Number(bid)*100);const busy=step>0;const imageURL=image?"data:image/jpeg;base64,"+image:ad?.imageURL||"";
  const trialEndsAt=milliseconds(userProfile?.trialExpiresAt);const trialActive=trialEndsAt>now;const trialDaysLeft=Math.max(1,Math.ceil((trialEndsAt-now)/DAY_MS));
  const trialEndText=trialActive?new Date(trialEndsAt).toLocaleString(lang==="uz"?"uz-UZ":lang==="ru"?"ru-RU":"en-US",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tashkent"}):"";
@@ -37,6 +37,7 @@ function Form({ad}:{ad?:Ad}){
   try{publicWebsite(url);}catch{setError(pick(lang,"https:// bilan boshlanadigan ochiq sayt manzilini kiriting.","Enter a public HTTPS website.","Введите публичный HTTPS-адрес."));return;}
   if(!imageURL){setError(pick(lang,"Rasm tanlang.","Choose an image.","Выберите изображение."));return;}
   try{
+   if(!firebaseUser) { setStep(1); await ensureGuestSession(); }
    let receipt=review;
    if(!receipt){
     let uploadedURL=ad?.imageURL||"";let uploadId:string|undefined;
@@ -50,7 +51,7 @@ function Form({ad}:{ad?:Ad}){
    router.push(`/ads/${ad?.id||saved.adId}/pay`);
   }catch(e){setError(e instanceof Error?e.message:"Please retry.");setStep(0);}
  }
- if(loading||!firebaseUser)return <LoadingState label="Primio…"/>;
+ if(loading)return <LoadingState label="Primio…"/>;
  if(ad&&(ad.totalPaidCents>0||!["pending","rejected"].includes(ad.status)||ad.pendingOrderId))return <div className="p-error">{pick(lang,"Faqat to‘lanmagan va ochiq to‘lov oynasi bo‘lmagan reklamani tahrirlash mumkin.","Only unpaid ads with no open checkout can be edited.","Можно изменить только неоплаченное объявление без открытого заказа.")}</div>;
  return <form className="p-form-grid" onSubmit={submit}><div><fieldset className="p-form-card p-editor-fields" disabled={busy||imageBusy} onChange={()=>setReview(null)}><h2>01 · {pick(lang,"Brendingiz haqida","About your brand","О вашем бренде")}</h2><label className="p-field">{pick(lang,"Reklama sarlavhasi","Ad title","Заголовок")}<input autoComplete="off" required maxLength={60} value={title} onChange={e=>setTitle(e.target.value)} placeholder={pick(lang,"Brendingizni tanishtiring","Introduce your brand","Представьте ваш бренд")}/><small>{title.length}/60</small></label><label className="p-field">{pick(lang,"Loyiha haqida","About the project","О проекте")}<textarea maxLength={500} rows={4} value={description} onChange={e=>setDescription(e.target.value)}/><small>{description.length}/500</small></label><label className="p-field">{pick(lang,"Sayt yoki ijtimoiy sahifa manzili","Website or social page","Сайт или страница в соцсети")}<input required type="url" value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://example.com"/></label><label className="p-field">{pick(lang,"Toifa","Category","Категория")}<select value={category} onChange={e=>setCategory(e.target.value as Category)}>{CATEGORY_IDS.map(id=><option key={id} value={id}>{categoryName(id,lang)}</option>)}</select></label><label className="p-upload"><ImagePlus size={25}/><strong>{imageBusy?pick(lang,"Tayyorlanmoqda…","Preparing…","Подготовка…"):pick(lang,imageURL?"Rasmni almashtirish":"Rasm tanlash",imageURL?"Replace image":"Choose image",imageURL?"Заменить изображение":"Выбрать изображение")}</strong><span>JPG, PNG, WebP · 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void choose(e.target.files?.[0])}/></label></fieldset>
  <fieldset className="p-form-card p-editor-fields" disabled={busy} onChange={()=>setReview(null)}><h2>02 · {pick(lang,"Narx va ko‘rinish muddati","Price and display time","Цена и срок показа")}</h2><p className="p-flow-note">{pick(lang,"Ko‘proq ko‘rinishni xohlaysizmi? Yuqori joy uchun taklif bering. Eng yuqori taklif yuqorida ko‘rinadi.","Want more visibility? Offer more for a higher spot. The highest offer appears first.","Хотите больше просмотров? Предложите больше за место выше. Самое высокое предложение показывается первым.")}</p><div className="p-field-row"><label className="p-field">{pick(lang,"Bir kun uchun taklif · USD","Your offer per day · USD","Ваше предложение за день · USD")}<input type="number" min={1} max={10000} step=".01" required value={bid} onChange={e=>setBid(e.target.value)}/></label>{!trialActive&&<label className="p-field">{pick(lang,"Necha kun ko‘rinsin?","How many days?","Сколько дней показывать?")}<input type="number" min={1} max={365} step={1} required value={days} onChange={e=>setDays(Number(e.target.value))}/></label>}</div>{trialActive&&<p className="p-flow-note">{pick(lang,`Bepul reklama yana ${trialDaysLeft} kun, ${trialEndText} gacha ko‘rinadi.`, `Your free campaign will display for ${trialDaysLeft} more day(s), until ${trialEndText}.`,`Бесплатное продвижение продлится ещё ${trialDaysLeft} дн., до ${trialEndText}.`)}</p>}<p className="p-flow-note">{pick(lang,"Takliflar teng bo‘lsa, oldin ishga tushgan reklama yuqorida turadi.","If offers are equal, the ad activated earlier stays above.","При равных предложениях выше остаётся объявление, запущенное раньше.")}</p></fieldset>
