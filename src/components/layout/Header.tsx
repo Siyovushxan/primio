@@ -27,8 +27,8 @@ export default function Header() {
         <select className="p-lang" aria-label={pick(lang,"Til","Language","Язык")} value={lang} onChange={event => setLang(event.target.value as typeof lang)}>
           {LANGS.map(item => <option key={item.code} value={item.code}>{item.label}</option>)}
         </select>
-        <Link className="p-btn p-btn-small p-btn-light" href={firebaseUser ? "/dashboard" : "/auth"}>
-          {firebaseUser ? pick(lang,"Kabinet","Dashboard","Кабинет") : pick(lang,"Boshlash","Get started","Начать")}<ArrowUpRight size={16}/>
+        <Link className="p-btn p-btn-small p-btn-light" href={firebaseUser ? "/dashboard" : "/create"}>
+          {firebaseUser ? pick(lang,"Reklamalarim","My ads","Мои объявления") : pick(lang,"Reklama joylash","Place an ad","Разместить рекламу")}<ArrowUpRight size={16}/>
         </Link>
         <button className="p-icon-btn p-menu-toggle" aria-label={pick(lang,"Menyu","Menu","Меню")} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen(!open)}>{open ? <X size={20}/> : <Menu size={20}/>}</button>
       </div>

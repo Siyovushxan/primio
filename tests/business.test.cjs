@@ -185,6 +185,19 @@ test("the trial profile grant is persisted once and repeat logins do not restart
  await new Promise(resolve=>setTimeout(resolve,5));const second=await POST(request());
  assert.equal(second.body.trialEndsAt,expiry);assert.equal(data.get("users/u1").trialExpiresAt.getTime(),expiry);
 });
+test("an anonymous guest cannot restart the free trial by creating a new browser identity",async()=>{
+ const data=new Map();const ref=path=>({path});
+ const db={doc:ref,runTransaction:async work=>work({get:async r=>({exists:data.has(r.path),data:()=>data.get(r.path)}),create:(r,v)=>data.set(r.path,v),update:(r,v)=>data.set(r.path,{...data.get(r.path),...v})})};
+ const {POST}=loadSource("src/app/api/profile/route.ts",{
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
+  "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"server-time"}},
+  "@/lib/verifyFirebaseToken":{verifiedIdentity:async()=>({uid:"guest",firebase:{sign_in_provider:"anonymous"}})},
+  "@/lib/firebaseAdmin":{adminDb:db},"@/lib/trial":loadSource("src/lib/trial.ts",{"./auction":auction}),"@/lib/auction":auction
+ });
+ const result=await POST({json:async()=>({})});
+ assert.equal(result.status,200);assert.equal(result.body.trialActive,false);
+ assert.ok(data.get("users/guest").trialExpiresAt.getTime()<=Date.now());
+});
 test("trial activation skips checkout, costs zero, and ends within the account's remaining free week",async()=>{
  const trialEndsAt=new Date(Date.now()+2*DAY_MS);const data=new Map([
   ["ads/ad1",{advertiserUID:"u1",status:"pending",dailyBidCents:650,durationDays:14,contentVersion:1,totalPaidCents:0,moderationPassed:true,paymentReviewRequired:false}],

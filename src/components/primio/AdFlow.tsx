@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useState,type ReactNode} from "react";
-import {useParams,usePathname,useRouter} from "next/navigation";
+import {useParams,useRouter} from "next/navigation";
 import {doc,onSnapshot} from "firebase/firestore";
 import {ArrowLeft,ArrowUpRight,Clock,CheckCircle2} from "lucide-react";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import {db} from "@/lib/firebase";
 import {useAuth} from "@/contexts/AuthContext";
 import {useLang} from "@/contexts/LangContext";
 import {clientPost} from "@/lib/client-api";
+import {ensureGuestSession} from "@/lib/guest-session";
 import {milliseconds,quotePayment,type PaymentKind} from "@/lib/auction";
 import type {Ad} from "@/types";
 import {Brand,LoadingState,categoryName,money,pick} from "./shared";
@@ -19,16 +20,16 @@ export function FlowShell({title,description,children}:{title:string;description
  return <div className="p-form-shell"><header className="p-simple-header"><Brand/><Link className="p-text-link" href="/dashboard"><ArrowLeft size={15}/>{pick(lang,"Kabinetga qaytish","Back to workspace","В кабинет")}</Link></header><div className="p-form-container"><div className="p-form-heading"><span className="p-eyebrow">PRIMIO / {pick(lang,"REKLAMA BOSHQARUVI","CAMPAIGN MANAGEMENT","УПРАВЛЕНИЕ РЕКЛАМОЙ")}</span><h1>{title}</h1>{description&&<p>{description}</p>}</div>{children}</div></div>;
 }
 export function useOwnedAd(){
- const {adId}=useParams<{adId:string}>();const {firebaseUser,loading:authLoading}=useAuth();const router=useRouter();const path=usePathname();
+ const {adId}=useParams<{adId:string}>();const {firebaseUser,loading:authLoading}=useAuth();
  const [ad,setAd]=useState<Ad|null>(null);const [error,setError]=useState("");
  useEffect(()=>{
   if(authLoading)return;
-  if(!firebaseUser){router.replace("/auth?next="+encodeURIComponent(path));return;}
+  if(!firebaseUser){void ensureGuestSession().catch(()=>setError("Vaqtinchalik kirishni boshlash imkoni bo‘lmadi / Could not start guest session"));return;}
   return onSnapshot(doc(db,"ads",adId),snap=>{
    if(!snap.exists()||snap.data().advertiserUID!==firebaseUser.uid){setError("Reklama topilmadi / Ad not found");return;}
    setAd({id:snap.id,...snap.data()} as Ad);
   },()=>setError("Reklamani yuklab bo‘lmadi / Could not load the ad"));
- },[adId,firebaseUser,authLoading,router,path]);
+ },[adId,firebaseUser,authLoading]);
  return {ad,error,adId};
 }
 export function AdPreview({ad}:{ad:Pick<Ad,"title"|"description"|"imageURL"|"category"|"dailyBidCents">}){
@@ -37,14 +38,14 @@ export function AdPreview({ad}:{ad:Pick<Ad,"title"|"description"|"imageURL"|"cat
 }
 function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
  const {lang}=useLang();
- const {userProfile}=useAuth();const router=useRouter();
- const [bid,setBid]=useState(((ad.dailyBidCents+100)/100).toFixed(2));const [days,setDays]=useState(ad.durationDays);const [agreed,setAgreed]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [now,setNow]=useState(()=>Date.now());
+ const {userProfile,firebaseUser}=useAuth();const router=useRouter();
+ const [bid,setBid]=useState(((ad.dailyBidCents+100)/100).toFixed(2));const [days,setDays]=useState(ad.durationDays);const [agreed,setAgreed]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [now,setNow]=useState(()=>Date.now());const [contactEmail,setContactEmail]=useState(firebaseUser?.email||"");
  useEffect(()=>{const id=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(id);},[]);
  const trialEndsAt=milliseconds(userProfile?.trialExpiresAt);const trialActive=trialEndsAt>now;
  const trialEndText=trialActive?new Date(trialEndsAt).toLocaleString(lang==="uz"?"uz-UZ":lang==="ru"?"ru-RU":"en-US",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Asia/Tashkent"}):"";
  let quote:ReturnType<typeof quotePayment>|undefined;let invalid="";
  try{quote=quotePayment(ad,type,Math.round(Number(bid)*100),days,now);}catch(e){invalid=e instanceof Error?e.message:"Invalid order";}
- async function checkout(){if(!agreed||!quote)return;setBusy(true);setError("");try{const result=await clientPost("/api/payment/create-session",{adId:ad.id,type,newDailyBidCents:quote.dailyBidCents,durationDays:quote.durationDays});if(result.freeTrial){router.push(`/ads/${ad.id}/pending`);return;}window.location.assign(result.url);}catch(e){setError(e instanceof Error?e.message:"Please retry.");setBusy(false);}}
+ async function checkout(){if(!agreed||!quote)return;setBusy(true);setError("");try{const result=await clientPost("/api/payment/create-session",{adId:ad.id,type,newDailyBidCents:quote.dailyBidCents,durationDays:quote.durationDays,contactEmail});if(result.freeTrial){router.push(`/ads/${ad.id}/pending`);return;}window.location.assign(result.url);}catch(e){setError(e instanceof Error?e.message:"Please retry.");setBusy(false);}}
  async function cancel(){setBusy(true);setError("");try{await clientPost("/api/payment/cancel-session",{adId:ad.id});}catch(e){setError(e instanceof Error?e.message:"Please retry.");}finally{setBusy(false);}}
  return <div className="p-form-grid"><div><section className="p-form-card"><h2>{ad.title}</h2>{type==="bid_upgrade"?<label className="p-field">{pick(lang,"Yangi kunlik taklif · USD","New daily bid · USD","Новая дневная ставка · USD")}<input type="number" min={(ad.dailyBidCents+1)/100} max={10000} step=".01" value={bid} onChange={e=>setBid(e.target.value)}/><small>{pick(lang,"Joriy taklif","Current bid","Текущая ставка")}: {money(ad.dailyBidCents)}</small></label>:<div className="p-field"><span>{pick(lang,"Kunlik taklif","Daily bid","Дневная ставка")}</span><strong>{money(ad.dailyBidCents)}</strong></div>}
  {type==="renewal"&&<label className="p-field">{pick(lang,"Yangi muddat · kun","New duration · days","Новый срок · дни")}<input type="number" min={1} max={365} step={1} value={days} onChange={e=>setDays(Number(e.target.value))}/></label>}
@@ -53,10 +54,11 @@ function CheckoutForm({ad,type}:{ad:Ad;type:PaymentKind}){
  <p className="p-flow-note">{trialActive?pick(lang,`Bepul imkoniyatlar ${trialEndText} da tugaydi. Shu paytda bepul reklama ko‘rsatish ham yakunlanadi.`,`Your free access and promotion end ${trialEndText}.`,`Бесплатный доступ и показ завершатся ${trialEndText}.`):type==="bid_upgrade"?pick(lang,"Qo‘shimcha to‘lov mavjud reklamangizning qolgan muddati uchun. Muddati uzaymaydi.","The extra charge covers your ad’s remaining time. It does not extend it.","Доплата действует до конца текущего срока и не продлевает его."):pick(lang,`Reklama ${quote?.durationDays??"—"} kun ko‘rinadi. To‘langan muddat faollashganda boshlanadi.`,`Your ad displays for ${quote?.durationDays??"—"} days. The paid period starts on activation.`,`Объявление показывается ${quote?.durationDays??"—"} дн. Оплаченный срок начинается после активации.`)}</p>
  <PositionEstimate category={ad.category} bidCents={quote?.dailyBidCents??0} excludeId={type==="bid_upgrade"?ad.id:undefined}/>
  {!trialActive&&<p className="p-flow-note">{pick(lang,"Soliqlar va yakuniy summa to‘lov oynasida ko‘rsatiladi.","Taxes and the final charge are shown at checkout.","Налоги и итоговая сумма отображаются при оплате.")}</p>}
+ {!trialActive&&<label className="p-field">{pick(lang,"To‘lov cheki uchun elektron pochta","Email for your payment receipt","Электронная почта для чека")}<input type="email" autoComplete="email" required maxLength={254} value={contactEmail} onChange={e=>setContactEmail(e.target.value)} placeholder="name@example.com"/></label>}
  {(invalid||error)&&<div className="p-error" role="alert">{error||invalid}</div>}
  {ad.pendingOrderId&&<div className="p-flow-notice"><p>{pick(lang,"Oldingi to‘lov oynasi mavjud. Davom etish avvalgi buyurtmani ochadi. Parametrlarni o‘zgartirish uchun oldin uni bekor qiling.","An existing checkout will be resumed. Cancel it first to change your order.","Продолжение откроет предыдущий заказ. Отмените его, чтобы изменить параметры.")}</p><button type="button" className="p-text-link" disabled={busy} onClick={cancel}>{pick(lang,"Oldingi buyurtmani bekor qilish","Cancel previous checkout","Отменить предыдущий заказ")}</button><small>{pick(lang,"Bu amalga oshgan to‘lovni qaytarmaydi. Bekor qilingan oynada boshqa to‘lov qilmang.","This does not refund a completed payment. Do not pay through the cancelled checkout.","Это не возвращает совершённый платёж. Не оплачивайте отменённый заказ.")}</small></div>}
  <label className="p-consent"><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)}/><span><Link href="/terms" target="_blank">{pick(lang,"Xizmat shartlari","Service terms","Условия сервиса")}</Link>{pick(lang,"ni o‘qidim va qabul qilaman.",": I have read and accept them.",": я прочитал и принимаю их.")}</span></label>
- <button className="p-btn p-btn-primary" disabled={busy||!agreed||!quote} onClick={checkout}>{busy?pick(lang,"Tayyorlanmoqda…","Preparing…","Подготовка…"):trialActive?pick(lang,"Bepul faollashtirish","Activate for free","Активировать бесплатно"):pick(lang,"To‘lovga o‘tish","Continue to checkout","Перейти к оплате")}<ArrowUpRight size={16}/></button></section></div><aside><AdPreview ad={ad}/></aside></div>;
+ <button className="p-btn p-btn-primary" disabled={busy||!agreed||!quote||(!trialActive&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail))} onClick={checkout}>{busy?pick(lang,"Tayyorlanmoqda…","Preparing…","Подготовка…"):trialActive?pick(lang,"Bepul faollashtirish","Activate for free","Активировать бесплатно"):pick(lang,"To‘lovga o‘tish","Continue to checkout","Перейти к оплате")}<ArrowUpRight size={16}/></button></section></div><aside><AdPreview ad={ad}/></aside></div>;
 }
 export function Checkout({type}:{type:PaymentKind}){
  const {lang}=useLang();const {ad,error}=useOwnedAd();
