@@ -19,7 +19,7 @@ export default function Landing() {
   const [paused, setPaused] = useState(false);
   const [faq, setFaq] = useState<number | null>(0);
   const publicAds = usePublicAds();
-  const topAds = rankAds(publicAds.ads).slice(0, 3);
+  const topAds = rankAds(publicAds.ads.filter(ad => ad.category === quickCategory)).slice(0, 3);
   const cards = [
     { id: "nova", name: "Nova Studio", bid: 900, letter: "N", tone: "lime" },
     { id: "you", name: pick(lang,"Sizning brendingiz","Your brand","Ваш бренд"), bid, letter: "P", tone: "violet" },
@@ -74,7 +74,7 @@ export default function Landing() {
       <div className="p-hero-bottom"><span>01 — {pick(lang,"O‘rningizni o‘zingiz belgilang","YOUR POSITION. YOUR CHOICE.","ВАША ПОЗИЦИЯ. ВАШ ВЫБОР.")}</span><a href="#how">{pick(lang,"Yana ko‘proq","Discover more","Узнать больше")}<ArrowRight size={14}/></a></div>
     </section>
     <section className="p-live-list p-container" aria-label={pick(lang,"Hozirgi reklamalar","Current ads","Текущие объявления")}>
-      <div className="p-live-list-heading"><div><span className="p-eyebrow p-muted">PRIMIO / LIVE</span><h2>{pick(lang,"Hozir yuqorida","Leading now","Сейчас наверху")}</h2></div><Link className="p-text-link" href="/browse">{pick(lang,"Barcha reklamalar","All ads","Все объявления")}<ArrowUpRight size={17}/></Link></div>
+      <div className="p-live-list-heading"><div><span className="p-eyebrow p-muted">PRIMIO / LIVE · {categoryName(quickCategory,lang)}</span><h2>{pick(lang,"Toifadagi yuqori o‘rinlar","Top in this category","Лидеры категории")}</h2></div><Link className="p-text-link" href={`/browse?category=${quickCategory}`}>{pick(lang,"Barcha reklamalar","All ads","Все объявления")}<ArrowUpRight size={17}/></Link></div>
       {topAds.length>0?<div className="p-live-cards">{topAds.map((ad,index)=><Link key={ad.id} className="p-live-card" href={`/project/${ad.id}`}><span className="p-live-rank">#{index+1}</span><span className="p-live-detail"><strong>{ad.title}</strong><small>{categoryName(ad.category,lang)}</small></span><span className="p-live-offer">{money(ad.dailyBidCents)}<small>/{pick(lang,"kun","day","день")}</small></span><ArrowUpRight size={18}/></Link>)}</div>:<Link className="p-live-empty" href="/browse">{pick(lang,"Reklamalar katalogini ko‘rish","Explore the ad directory","Открыть каталог объявлений")} <ArrowUpRight size={17}/></Link>}
     </section>
     <div className="p-value-strip"><div className="p-container">{[
