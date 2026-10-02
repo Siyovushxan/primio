@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { verifiedIdentity } from "@/lib/verifyFirebaseToken";
-import { milliseconds, quotePayment, type PaymentKind, type QuotedAd } from "@/lib/auction";
+import { RANKING_VERSION, milliseconds, quotePayment, type PaymentKind, type QuotedAd } from "@/lib/auction";
 import { freeCampaignExpiry, isTrialActive, trialExpiry } from "@/lib/trial";
 import { dodoRequest } from "@/lib/payments";
 export const dynamic = "force-dynamic";
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
           throw new Error("Checkout is being created. Please try again shortly.");
         }
       }
-      tx.create(orderRef, { ...quote, uid: user.uid, adId, status: "creating", createdAt: FieldValue.serverTimestamp() });
+      tx.create(orderRef, { ...quote, rankingVersion: RANKING_VERSION, uid: user.uid, adId, status: "creating", createdAt: FieldValue.serverTimestamp() });
       tx.update(adRef, { pendingOrderId: orderRef.id });
       return { quote, title: ad.title as string, email };
     });

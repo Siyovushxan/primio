@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "./firebaseAdmin";
-import { DAY_MS, effectiveBidCents, milliseconds } from "./auction";
+import { DAY_MS, RANKING_VERSION, effectiveBidCents, milliseconds } from "./auction";
 export const dodoBase = process.env.DODO_LIVE_MODE === "true" ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
 export async function dodoRequest(path: string, body?: unknown) {
   if (!process.env.DODO_API_KEY) throw new Error("Payment service is not configured.");
@@ -75,9 +75,12 @@ export async function applyPayment(payment: ProviderPayment) {
         totalPaidCents: FieldValue.increment(payment.total_amount), paymentMethod: "card" };
       if (ad.pendingOrderId === orderId) { update.pendingOrderId = FieldValue.delete(); update.pendingPaymentId = FieldValue.delete(); }
       if (conflict) update.paymentReviewRequired = true;
-      else if (order.type === "bid_upgrade") Object.assign(update, { dailyBidCents: order.dailyBidCents, trialBidCents: FieldValue.delete(), trialBidUntil: FieldValue.delete() });
+      else if (order.type === "bid_upgrade") Object.assign(update, { dailyBidCents: order.dailyBidCents,
+        ...(order.rankingVersion === RANKING_VERSION ? { rankingVersion: RANKING_VERSION, rankingBidAt: now } : {}),
+        trialBidCents: FieldValue.delete(), trialBidUntil: FieldValue.delete() });
       // AI-moderated and paid ads go live immediately — there is no manual verification step
       else Object.assign(update, { dailyBidCents: order.dailyBidCents, durationDays: order.durationDays,
+        ...(order.rankingVersion === RANKING_VERSION ? { rankingVersion: RANKING_VERSION, rankingBidAt: now } : {}),
         status: "active", startsAt: now, expiresAt: new Date(now.getTime() + order.durationDays * DAY_MS) });
       tx.update(adRef, update);
     }
