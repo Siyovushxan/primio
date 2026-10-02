@@ -264,3 +264,50 @@ test("moderation diagnostics require sign-in before contacting AI",async()=>{
  assert.equal(signedIn.status,200);
  assert.equal(signedIn.body.xai_key,true);
 });
+
+test("new paid rank holds for 168 hours then decays hourly to $1 without changing billing",()=>{
+ const {rankingBidCents,TOP_HOLD_MS,TOP_DECAY_MS}=auction;
+ const ad={dailyBidCents:2500,rankingVersion:2,rankingBidAt:now};
+ assert.equal(TOP_HOLD_MS,168*3600000);
+ assert.equal(rankingBidCents(ad,now+TOP_HOLD_MS),2500);
+ assert.equal(rankingBidCents(ad,now+TOP_HOLD_MS+3599999),2500);
+ assert.equal(rankingBidCents(ad,now+TOP_HOLD_MS+3600000),2400);
+ assert.equal(rankingBidCents(ad,now+TOP_HOLD_MS+12*3600000),1300);
+ assert.equal(rankingBidCents(ad,now+TOP_HOLD_MS+TOP_DECAY_MS),100);
+ assert.equal(rankingBidCents(ad,now+100*DAY_MS),100);
+ assert.equal(ad.dailyBidCents,2500);
+ const q=quotePayment({...ad,status:"active",expiresAt:now+30*DAY_MS,moderationPassed:true},"bid_upgrade",2501,undefined,now+8*DAY_MS);
+ assert.equal(q.previousBidCents,2500);assert.equal(q.amountCents,22);
+ assert.throws(()=>quotePayment({...ad,status:"active",expiresAt:now+30*DAY_MS,moderationPassed:true},"bid_upgrade",101,undefined,now+8*DAY_MS));
+});
+test("legacy paid ads and uncharged boosts retain existing terms",()=>{
+ const {rankingBidCents}=auction;
+ assert.equal(rankingBidCents({dailyBidCents:2500},now+100*DAY_MS),2500);
+ assert.equal(rankingBidCents({dailyBidCents:2500,rankingVersion:2},now),2500);
+ const ad={dailyBidCents:2500,rankingVersion:2,rankingBidAt:now-8*DAY_MS,trialBidCents:5000,trialBidUntil:now+DAY_MS};
+ assert.equal(rankingBidCents(ad,now),5000);assert.equal(rankingBidCents(ad,now+DAY_MS),100);
+});
+test("TOP quotes use current strength, expiry, ties, and the bid cap",()=>{
+ const {topBidCents,TOP_HOLD_MS}=auction;
+ const ad={id:"leader",dailyBidCents:2500,rankingVersion:2,rankingBidAt:now,startsAt:now,status:"active",expiresAt:now+30*DAY_MS};
+ assert.equal(topBidCents([],now),100);assert.equal(topBidCents([ad],now),2501);
+ assert.equal(topBidCents([ad],now+TOP_HOLD_MS+12*3600000),1301);
+ assert.equal(topBidCents([ad],now,ad.id),100);
+ assert.equal(topBidCents([{...ad,expiresAt:now}],now),100);
+ assert.equal(topBidCents([{...ad,dailyBidCents:1000000}],now),null);
+ const clock=now+TOP_HOLD_MS+12*3600000;
+ const rival={id:"rival",dailyBidCents:1301,startsAt:clock,status:"active",expiresAt:clock+DAY_MS};
+ assert.equal(rankAds([ad,rival],clock)[0].id,"rival");
+ assert.equal(estimatedPosition([ad],1301,clock),1);
+});
+test("renewal can use a lower fresh daily price instead of the historical price",()=>{
+ const q=quotePayment({status:"expired",dailyBidCents:2500,durationDays:7,moderationPassed:true},"renewal",100,1,now);
+ assert.equal(q.dailyBidCents,100);assert.equal(q.amountCents,100);
+});
+test("only a confirmed new-policy payment stamps the ranking clock, exactly once",async()=>{
+ const {db,applyPayment,payment}=fixture({orderChange:{rankingVersion:2}});
+ await applyPayment(payment);const ad=db.data.get("ads/ad1");const anchor=ad.rankingBidAt.getTime();
+ assert.equal(ad.rankingVersion,2);assert.equal(anchor,ad.startsAt.getTime());
+ await applyPayment(payment);assert.equal(db.data.get("ads/ad1").rankingBidAt.getTime(),anchor);
+ const old=fixture();await old.applyPayment(old.payment);assert.equal(old.db.data.get("ads/ad1").rankingVersion,undefined);
+});

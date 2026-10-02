@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { effectiveBidCents, milliseconds, publicWebsite } from "@/lib/auction";
+import { effectiveBidCents, rankingBidCents, type RankingBid, milliseconds, publicWebsite } from "@/lib/auction";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ projectId: string }> }) {
@@ -14,6 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pro
     return NextResponse.json({ project: {
       id: snap.id, title: ad.title, description: ad.description || "", imageURL: ad.imageURL,
       destinationURL: ad.destinationURL, category: ad.category, dailyBidCents: effectiveBidCents(ad as { dailyBidCents: number; trialBidCents?: number; trialBidUntil?: number }),
+      rankingStrengthCents: rankingBidCents(ad as RankingBid),
       createdAt: milliseconds(ad.createdAt), expiresAt: milliseconds(ad.expiresAt)
     } }, { headers: { "Cache-Control": "public, s-maxage=15, stale-while-revalidate=15" } });
   } catch { return NextResponse.json({ error: "Project is temporarily unavailable." }, { status: 503 }); }

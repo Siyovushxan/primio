@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowUpRight, CalendarDays, LoaderCircle } from "lucide-reac
 import { useLang } from "@/contexts/LangContext";
 import { categoryName, Footer, money, pick } from "@/components/primio/shared";
 
-type Project = { id:string; title:string; description:string; imageURL:string; destinationURL:string; category:string; dailyBidCents:number; createdAt:number };
+type Project = { id:string; title:string; description:string; imageURL:string; destinationURL:string; category:string; dailyBidCents:number; rankingStrengthCents:number; createdAt:number };
 export default function ProjectPage() {
   const { projectId } = useParams<{projectId:string}>();
   const { lang } = useLang();
@@ -43,7 +43,7 @@ export default function ProjectPage() {
         <p className="p-flow-note" style={{display:"flex",alignItems:"center",gap:8,marginTop:24}}><CalendarDays size={15}/>{pick(lang,"Primio’da joylangan:","Listed on Primio:","Добавлено в Primio:")} {new Date(project.createdAt).toLocaleDateString(lang==="uz"?"uz-UZ":lang==="ru"?"ru-RU":"en-US",{day:"numeric",month:"long",year:"numeric",timeZone:"Asia/Tashkent"})}</p>
         <p className="p-flow-note">{pick(lang,"Bu sana loyiha Primio’da joylashtirilgan vaqtni bildiradi.","This is when the project was listed on Primio.","Эта дата показывает, когда проект появился в Primio.")}</p>
         <a className="p-btn p-btn-primary" href={project.destinationURL} target="_blank" rel="noopener noreferrer sponsored" onClick={()=>void fetch(`/api/ads/${project.id}/click`,{method:"POST",keepalive:true}).catch(()=>{})}>{pick(lang,"Loyiha sahifasini ochish","Visit project page","Открыть страницу проекта")} · {destinationLabel}<ArrowUpRight size={16}/></a>
-        <p className="p-flow-note" style={{marginTop:16}}>{money(project.dailyBidCents)} / {pick(lang,"kunlik taklif","daily offer","в день")}</p>
+        <p className="p-flow-note" style={{marginTop:16}}>{money(project.rankingStrengthCents)} / {pick(lang,"reyting taklifi","ranking offer","рейтинговая ставка")}</p>
       </div>
     </article>}
   </main><Footer lang={lang}/></div>;

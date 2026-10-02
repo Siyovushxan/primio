@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowUpRight, MoveUpRight, Check, ShieldCheck, ChartNoAxesCombined, SlidersHorizontal, Zap, Globe2, MousePointer2, Pause, Play, Plus, Layers3, Monitor, Utensils, Shirt, GraduationCap, HeartPulse, Building2, PartyPopper, Sparkles } from "lucide-react";
 import { useLang } from "@/contexts/LangContext";
 import { pick, money, Footer, categoryName, usePublicAds } from "./shared";
-import { CATEGORY_IDS, rankAds } from "@/lib/auction";
+import { CATEGORY_IDS, rankAds, rankingBidCents, topBidCents } from "@/lib/auction";
 
 const icons = [Monitor, Utensils, Shirt, GraduationCap, HeartPulse, Building2, PartyPopper, Sparkles];
 
@@ -15,11 +15,16 @@ export default function Landing() {
   const [quickURL, setQuickURL] = useState("");
   const [quickCategory, setQuickCategory] = useState<(typeof CATEGORY_IDS)[number]>("technology");
   const [bid, setBid] = useState(650);
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState(1);
+  const [placement, setPlacement] = useState<"top" | "standard">("top");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   const [paused, setPaused] = useState(false);
   const [faq, setFaq] = useState<number | null>(0);
   const publicAds = usePublicAds();
-  const topAds = rankAds(publicAds.ads.filter(ad => ad.category === quickCategory)).slice(0, 3);
+  const categoryAds = publicAds.ads.filter(ad => ad.category === quickCategory);
+  const topAds = rankAds(categoryAds, now).slice(0, 3);
+  const topPrice = publicAds.loading || publicAds.error ? null : topBidCents(categoryAds, now);
   const cards = [
     { id: "nova", name: "Nova Studio", bid: 900, letter: "N", tone: "lime" },
     { id: "you", name: pick(lang,"Sizning brendingiz","Your brand","Ваш бренд"), bid, letter: "P", tone: "violet" },
@@ -28,7 +33,7 @@ export default function Landing() {
   const position = cards.findIndex(card => card.id === "you") + 1;
   const faqs = [
     [pick(lang,"Reklamam qayerda ko‘rinadi?","Where will my ad appear?","Где появится моя реклама?"),pick(lang,"Loyihangiz Primio katalogi va tanlangan toifa reytingida ko‘rinadi. Qiziqqan odam loyiha sahifasidan saytingiz yoki ijtimoiy profilingizga o‘tadi.","Your project appears in Primio’s directory and category ranking. Interested visitors can open your website or social profile from its project page.","Проект показывается в каталоге Primio и рейтинге категории. Заинтересованные посетители могут перейти на ваш сайт или профиль в соцсети.")],
-    [pick(lang,"Reytingdagi o‘rin qanday belgilanadi?","How is my position determined?","Как определяется позиция?"),pick(lang,"Yuqoriroq kunlik taklif yuqoriroq o‘rin beradi. Teng takliflarda avvalroq faollashgan reklama oldinda turadi. Raqobatchilar stavkasini o‘zgartirsa, o‘rningiz ham o‘zgarishi mumkin.","Higher daily bids rank first. Equal bids are ordered by activation time, earlier first. Your position can change when competitors change their bids.","Выше дневная ставка — выше позиция. При равных ставках раньше активированное объявление выше. Позиция может измениться при новых ставках конкурентов.")],
+    [pick(lang,"Reytingdagi o‘rin qanday belgilanadi?","How is my position determined?","Как определяется позиция?"),pick(lang,"Reytingdagi joriy taklif kuchi o‘rinni belgilaydi. Yangi pulli taklif 168 soat saqlanadi, keyin har soatda pasayib, keyingi 24 soatda $1 ga yetadi. Reklama muddati tugasa, taklif darhol hisobdan chiqadi. Teng takliflarda avvalroq faollashgan reklama oldinda turadi. Raqobatchilar stavkasini o‘zgartirsa, o‘rningiz ham o‘zgarishi mumkin.","Current ranking strength determines position. New paid bids hold for 168 hours, then decrease hourly to $1 over the next 24 hours. Expired bids leave the ranking immediately. Equal bids are ordered by activation time, earlier first. Your position can change when competitors change their bids.","Позиция зависит от текущей силы ставки. Новая оплаченная ставка сохраняется 168 часов, затем снижается каждый час до $1 за следующие 24 часа. Завершённая реклама сразу исключается. При равных ставках раньше активированное объявление выше. Позиция может измениться при новых ставках конкурентов.")],
     [pick(lang,"To‘lov va reklama muddati qachon boshlanadi?","When do I pay and when does my ad start?","Когда платить и когда начинается показ?"),pick(lang,"Profilsiz reklama AI tekshiruvidan so‘ng to‘lanadi va belgilangan muddatga faollashadi. Tasdiqlangan hisob bilan kirganlar uchun dastlabki 7 kunlik bepul muddat saqlanadi.","Guest ads are paid after AI review and run for the selected period. Verified accounts keep their first seven free days.","Без профиля реклама оплачивается после проверки AI и действует выбранный срок. Для подтверждённых аккаунтов первые семь дней остаются бесплатными.")],
     [pick(lang,"Birinchi o‘rin savdoni kafolatlaydimi?","Does first place guarantee sales?","Гарантирует ли первое место продажи?"),pick(lang,"Yo‘q. Siz katalogdagi joylashuvni sotib olasiz. Ko‘rilish, bosish va savdo natijalari auditoriya hamda reklamangizga bog‘liq. Haqiqiy ko‘rsatkichlarni kabinetda kuzatasiz.","No. You purchase placement in the directory. Views, clicks and sales depend on the audience and your ad. Track actual views and clicks in your dashboard.","Нет. Вы оплачиваете позицию в каталоге. Просмотры, клики и продажи зависят от аудитории и объявления. Реальные показатели доступны в кабинете.")],
     [pick(lang,"Taklifni keyin oshirish mumkinmi?","Can I raise my bid later?","Можно ли повысить ставку позже?"),pick(lang,"Ha. Bepul haftada taklifni to‘lovsiz o‘zgartirish mumkin. Bepul muddat tugaganda bepul reklama yakunlanadi. Keyin pullik taklifni tanlasangiz, qo‘shimcha summa oldindan ko‘rsatiladi.","Yes. You can adjust your offer free during the trial. Free promotion ends with the trial. If you later choose a paid bid increase, the exact price is shown first.","Да. Во время пробного периода ставку можно менять бесплатно. Бесплатное продвижение завершится вместе с ним. Если позже вы выберете платное повышение, сумма будет показана заранее.")]
@@ -39,12 +44,17 @@ export default function Landing() {
         <div className="p-eyebrow"><span className="p-status-dot"/>{pick(lang,"REKLAMANGIZ UCHUN YANGI O‘RIN","A NEW PLACE FOR YOUR BRAND","НОВОЕ МЕСТО ДЛЯ ВАШЕГО БРЕНДА")}</div>
         <h1>{pick(lang,"Ko‘rinish vaqti.","Time to be seen.","Время быть заметным.")}<br/><span className="p-gradient-text">{pick(lang,"Yuqoriga chiqing.","Rise to the top.","Поднимайтесь выше.")}<span className="p-title-star">✳</span></span></h1>
         <p className="p-hero-sub">{pick(lang,"Loyihangizni tanishtiring. Taklifingiz bilan toifada yuqoriroq o‘ringa chiqing va sayt yoki ijtimoiy sahifangizga o‘tishlarni kuzating.","Introduce your project, bid for a higher category position, and track visits to your website or social page.","Представьте свой проект, предложите цену за место выше в категории и отслеживайте переходы на сайт или страницу в соцсети.")}</p>
-        <form className="p-quick-start" onSubmit={event => {event.preventDefault();const params=new URLSearchParams({url:quickURL,category:quickCategory,minBid:String(bid),days:String(days)});router.push(`/create?${params}`);}}>
-          <label>{pick(lang,"Saytingiz havolasi","Your website URL","Адрес вашего сайта")}<input type="url" required placeholder="https://example.com" value={quickURL} onChange={event=>setQuickURL(event.target.value)}/></label>
+        <div className="p-top-price" aria-live="polite"><span>{pick(lang,"Hozir TOP-1 uchun","For TOP-1 now","Сейчас для TOP-1")}</span><strong>{topPrice === null ? "—" : money(topPrice)}<small> / {pick(lang,"kun","day","день")}</small></strong></div>
+        <div className="p-placement-options" role="group" aria-label={pick(lang,"Joylashuv","Placement","Размещение")}>
+          <button type="button" aria-pressed={placement === "top"} onClick={() => setPlacement("top")}>{pick(lang,"TOP-1 ga chiqish","Take TOP-1","Занять TOP-1")}</button>
+          <button type="button" aria-pressed={placement === "standard"} onClick={() => setPlacement("standard")}>{pick(lang,"$1/kun dan boshlash","Start at $1/day","Начать с $1/день")}</button>
+        </div>
+        <form className="p-quick-start" onSubmit={event => {event.preventDefault();if(placement === "top" && topPrice === null)return;const params=new URLSearchParams({url:quickURL,category:quickCategory,minBid:String(placement === "top" ? topPrice : 100),days:"1"});router.push(`/create?${params}`);}}>
+          <label>{pick(lang,"Saytingiz havolasi","Your website URL","Адрес вашего сайта")}<input type="text" inputMode="url" required placeholder="https://example.com" value={quickURL} onChange={event=>setQuickURL(event.target.value)}/></label>
           <label>{pick(lang,"Toifa","Category","Категория")}<select value={quickCategory} onChange={event=>setQuickCategory(event.target.value as (typeof CATEGORY_IDS)[number])}>{CATEGORY_IDS.map(id=><option key={id} value={id}>{categoryName(id,lang)}</option>)}</select></label>
-          <button className="p-btn p-btn-primary" type="submit">{pick(lang,"Davom etish","Continue","Продолжить")}<ArrowUpRight size={19}/></button>
+          <button className="p-btn p-btn-primary" type="submit" disabled={placement === "top" && topPrice === null}>{pick(lang,"Davom etish","Continue","Продолжить")}<ArrowUpRight size={19}/></button>
         </form>
-        <p className="p-quick-hint">{pick(lang,"Profil ochish shart emas. Taklif va muddatni keyingi qadamda tasdiqlaysiz.","No account setup. Confirm your bid and duration in the next step.","Профиль не нужен. Подтвердите ставку и срок на следующем шаге.")}</p>
+        <p className="p-quick-hint">{pick(lang,"Profil shart emas. 1 kunlik reklama. AI tekshiruvidan keyin to‘laysiz. O‘rin to‘lov vaqtida o‘zgarishi mumkin.","No profile required. A one-day ad. Pay after AI review. Position may change before payment.","Профиль не нужен. Реклама на один день. Оплата после AI. Место может измениться до оплаты.")}</p>
         <div className="p-hero-trust"><span><Check size={14}/>{pick(lang,"$1/kun dan","From $1/day","От $1/день")}</span><span><Check size={14}/>{pick(lang,"Aniq reyting qoidalari","Transparent ranking","Прозрачный рейтинг")}</span><span><Check size={14}/>{pick(lang,"8 ta toifa","8 categories","8 категорий")}</span></div>
       </div>
       <div className={`p-scene ${paused ? "is-paused" : ""}`}>
@@ -75,7 +85,7 @@ export default function Landing() {
     </section>
     <section className="p-live-list p-container" aria-label={pick(lang,"Hozirgi reklamalar","Current ads","Текущие объявления")}>
       <div className="p-live-list-heading"><div><span className="p-eyebrow p-muted">PRIMIO / LIVE · {categoryName(quickCategory,lang)}</span><h2>{pick(lang,"Toifadagi yuqori o‘rinlar","Top in this category","Лидеры категории")}</h2></div><Link className="p-text-link" href={`/browse?category=${quickCategory}`}>{pick(lang,"Barcha reklamalar","All ads","Все объявления")}<ArrowUpRight size={17}/></Link></div>
-      {topAds.length>0?<div className="p-live-cards">{topAds.map((ad,index)=><Link key={ad.id} className="p-live-card" href={`/project/${ad.id}`}><span className="p-live-rank">#{index+1}</span><span className="p-live-detail"><strong>{ad.title}</strong><small>{categoryName(ad.category,lang)}</small></span><span className="p-live-offer">{money(ad.dailyBidCents)}<small>/{pick(lang,"kun","day","день")}</small></span><ArrowUpRight size={18}/></Link>)}</div>:<Link className="p-live-empty" href="/browse">{pick(lang,"Reklamalar katalogini ko‘rish","Explore the ad directory","Открыть каталог объявлений")} <ArrowUpRight size={17}/></Link>}
+      {topAds.length>0?<div className="p-live-cards">{topAds.map((ad,index)=><Link key={ad.id} className="p-live-card" href={`/project/${ad.id}`}><span className="p-live-rank">#{index+1}</span><span className="p-live-detail"><strong>{ad.title}</strong><small>{categoryName(ad.category,lang)}</small></span><span className="p-live-offer">{money(rankingBidCents(ad, now))}<small>{pick(lang,"reyting taklifi","ranking offer","рейтинговая ставка")}</small></span><ArrowUpRight size={18}/></Link>)}</div>:<Link className="p-live-empty" href="/browse">{pick(lang,"Reklamalar katalogini ko‘rish","Explore the ad directory","Открыть каталог объявлений")} <ArrowUpRight size={17}/></Link>}
     </section>
     <div className="p-value-strip"><div className="p-container">{[
       [ShieldCheck,pick(lang,"Avval AI tekshiruvi","AI review first","Сначала проверка AI")],

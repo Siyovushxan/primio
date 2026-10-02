@@ -7,9 +7,10 @@ const CONTENT = {
   en: {
     title: "Public Offer Agreement",
     subtitle: "Advertising Terms & Conditions — PRIMIO Platform",
-    updated: "Last updated: September 2026",
+    updated: "Last updated: October 2026",
     intro: "By placing an advertisement on the PRIMIO platform, you (the Advertiser) fully and unconditionally accept the terms of this Public Offer Agreement. If you do not agree with any provision, you may not use the advertising services.",
     sections: [
+      { title: "Ranking strength and TOP price", body: "For new paid orders, the daily offer keeps its ranking strength for 168 hours from successful activation or a paid increase. It then decreases in hourly steps to $1 over the following 24 hours. Higher current ranking strength appears first; equal strength favors earlier activation. Display continues until the paid expiry. This does not reduce prior charges, issue refunds, or extend display time. Expired ads never affect the TOP price. Earlier orders retain their original ranking rules. Free trial bids keep their existing limits. TOP prices and positions shown before payment are estimates; another bidder may overtake you." },
       {
         title: "1. Subject of Agreement",
         body: "PRIMIO provides an advertising auction marketplace where Advertisers bid for ad placement positions. This Agreement governs all advertising relationships between PRIMIO and the Advertiser.",
@@ -81,6 +82,7 @@ const CONTENT = {
     updated: "So‘nggi yangilanish: 2026-yil sentabr",
     intro: "PRIMIO platformasida reklama joylashtirish orqali siz (Reklama beruvchi) ushbu Ommaviy Oferta Shartnomasining barcha shartlarini to'liq va so'zsiz qabul qilasiz. Agar biron-bir bandga rozi bo'lmasangiz, reklama xizmatlaridan foydalana olmaysiz.",
     sections: [
+      { title: "Reyting taklifi va TOP narxi", body: "Yangi pulli buyurtmada taklifning reyting kuchi muvaffaqiyatli faollashish yoki pulli oshirishdan boshlab 168 soat saqlanadi. Keyin har soatda pasayib, keyingi 24 soatda $1 ga yetadi. Joriy kuchi yuqori reklama oldinda turadi; teng bo‘lsa, avval faollashgani ustun. Reklama to‘langan muddati tugaguncha ko‘rinadi. Bu avvalgi to‘lovni kamaytirmaydi, pul qaytarmaydi va muddatni uzaytirmaydi. Muddati tugagan reklama TOP narxiga ta’sir qilmaydi. Oldingi buyurtmalarning reyting qoidalari saqlanadi. Bepul takliflarning mavjud chegaralari saqlanadi. To‘lovdan oldingi TOP narxi va o‘rin taxminiy; boshqa taklif sizni ortda qoldirishi mumkin." },
       {
         title: "1. Shartnoma Mavzusi",
         body: "PRIMIO — bu reklama beruvchilar o'z reklamalari uchun pozitsiya uchun taklif beruvchi reklama auktsion platformasidir. Ushbu Shartnoma PRIMIO va Reklama beruvchi o'rtasidagi barcha reklama munosabatlarini tartibga soladi.",
@@ -152,6 +154,7 @@ const CONTENT = {
     updated: "Последнее обновление: сентябрь 2026",
     intro: "Размещая рекламу на платформе PRIMIO, вы (Рекламодатель) полностью и безоговорочно принимаете условия настоящего Договора публичной оферты. Если вы не согласны с каким-либо положением, вы не можете использовать рекламные услуги.",
     sections: [
+      { title: "Сила ставки и цена TOP", body: "Для новых оплаченных заказов сила ставки сохраняется 168 часов с успешной активации или оплаченного повышения. Затем она снижается каждый час до $1 за следующие 24 часа. Выше текущая сила — выше позиция; при равной силе приоритет у ранней активации. Показ продолжается до конца оплаченного срока. Снижение силы не уменьшает прошлые платежи, не возвращает деньги и не продлевает показ. Завершённые объявления не влияют на цену TOP. Предыдущие заказы сохраняют исходные правила. Бесплатные ставки сохраняют действующие ограничения. Цена TOP и позиция до оплаты приблизительны; конкурент может предложить больше." },
       {
         title: "1. Предмет Договора",
         body: "PRIMIO предоставляет аукционную площадку для размещения рекламы, где Рекламодатели делают ставки за позиции размещения. Настоящий Договор регулирует все рекламные отношения между PRIMIO и Рекламодателем.",

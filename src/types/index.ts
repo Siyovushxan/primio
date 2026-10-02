@@ -35,6 +35,8 @@ export interface Ad {
   destinationURL: string;
   category: Category;
   dailyBidCents: number;
+  rankingVersion?: number;
+  rankingBidAt?: Timestamp | number | null;
   durationDays: number;
   totalPaidCents: number;
   status: AdStatus;

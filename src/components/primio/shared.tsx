@@ -27,6 +27,7 @@ export function categoryName(category: string, lang: Lang) {
 export interface PublicAd {
   id: string; title: string; description: string; imageURL: string; destinationURL: string;
   category: Category; dailyBidCents: number; status: string; startsAt: number; expiresAt: number; createdAt: number;
+  rankingVersion?: number; rankingBidAt?: number;
 }
 export function usePublicAds(enabled = true) {
   const [ads, setAds] = useState<PublicAd[]>([]);

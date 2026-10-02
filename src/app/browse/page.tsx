@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {ArrowUpRight,Search,Layers3} from "lucide-react";
 import {useLang} from "@/contexts/LangContext";
-import {CATEGORY_IDS,rankAds} from "@/lib/auction";
+import {CATEGORY_IDS,rankAds,rankingBidCents} from "@/lib/auction";
 import {categoryName,Footer,LoadingState,money,pick,usePublicAds,type PublicAd} from "@/components/primio/shared";
 function Card({ad,position}:{ad:PublicAd;position:number}){
  const {lang}=useLang();const ref=useRef<HTMLElement>(null);
@@ -18,7 +18,7 @@ function Card({ad,position}:{ad:PublicAd;position:number}){
   document.addEventListener("visibilitychange",start);
   return()=>{stop();observer.disconnect();document.removeEventListener("visibilitychange",start);};
  },[ad.id]);
- return <article className="p-browse-card" ref={ref}><Link href={`/project/${ad.id}`} className="p-browse-project-link" aria-label={`${ad.title} — ${pick(lang,"loyiha sahifasini ochish","view project page","открыть страницу проекта")}`}><div className="p-browse-image">{ad.imageURL&&<Image src={ad.imageURL} alt={ad.title} fill unoptimized sizes="(max-width:639px) 100vw, (max-width:850px) 50vw, 33vw"/>}<span className="p-browse-rank">#{position} · {categoryName(ad.category,lang)}</span></div></Link><div className="p-browse-card-body"><span>{categoryName(ad.category,lang)}</span><h2><Link href={`/project/${ad.id}`}>{ad.title}</Link></h2><p>{ad.description||new URL(ad.destinationURL).hostname}</p><div className="p-browse-card-bottom"><b>{money(ad.dailyBidCents)} <small>/ {pick(lang,"taklif","offer","ставка")}</small></b><Link href={`/project/${ad.id}`}>{pick(lang,"Loyiha haqida","About project","О проекте")}<ArrowUpRight size={16}/></Link></div></div></article>;
+ return <article className="p-browse-card" ref={ref}><Link href={`/project/${ad.id}`} className="p-browse-project-link" aria-label={`${ad.title} — ${pick(lang,"loyiha sahifasini ochish","view project page","открыть страницу проекта")}`}><div className="p-browse-image">{ad.imageURL&&<Image src={ad.imageURL} alt={ad.title} fill unoptimized sizes="(max-width:639px) 100vw, (max-width:850px) 50vw, 33vw"/>}<span className="p-browse-rank">#{position} · {categoryName(ad.category,lang)}</span></div></Link><div className="p-browse-card-body"><span>{categoryName(ad.category,lang)}</span><h2><Link href={`/project/${ad.id}`}>{ad.title}</Link></h2><p>{ad.description||new URL(ad.destinationURL).hostname}</p><div className="p-browse-card-bottom"><b>{money(rankingBidCents(ad))} <small>/ {pick(lang,"taklif","offer","ставка")}</small></b><Link href={`/project/${ad.id}`}>{pick(lang,"Loyiha haqida","About project","О проекте")}<ArrowUpRight size={16}/></Link></div></div></article>;
 }
 function Content(){
  const {lang}=useLang();const params=useSearchParams();const router=useRouter();const category=params.get("category")||"all";const [search,setSearch]=useState("");const data=usePublicAds();
