@@ -134,9 +134,9 @@ export default function AnalyticsConsent() {
       <div>
         <strong>{copy(lang, "Sayt tashriflarini o‘lchash", "Measure website visits", "Измерение посещений сайта")}</strong>
         <p>{copy(lang,
-          "Rozilik bersangiz, Primio ommaviy sahifalarga tashrifni Google Analytics orqali o‘lchaydi. Kabinet va to‘lov sahifalari o‘lchanmaydi.",
-          "If you agree, Primio measures visits to public pages with Google Analytics. Dashboard and payment pages are excluded.",
-          "С вашего согласия Primio измеряет посещения открытых страниц через Google Analytics. Кабинет и платежные страницы исключены.")} <Link href="/privacy">{copy(lang, "Maxfiylik siyosati", "Privacy policy", "Политика конфиденциальности")}</Link></p>
+          "Rozilik bersangiz, Primio ommaviy sahifalarga tashrifni Google Analytics orqali o‘lchaydi. Reklama yaratish va to‘lov sahifalari o‘lchanmaydi.",
+          "If you agree, Primio measures visits to public pages with Google Analytics. Ad creation and payment pages are excluded.",
+          "С вашего согласия Primio измеряет посещения открытых страниц через Google Analytics. Страницы создания рекламы и оплаты исключены.")} <Link href="/privacy">{copy(lang, "Maxfiylik siyosati", "Privacy policy", "Политика конфиденциальности")}</Link></p>
       </div>
       <div className="p-analytics-consent-actions">
         <button type="button" onClick={() => choose("rejected")}>{copy(lang, "Rad etish", "Decline", "Отклонить")}</button>

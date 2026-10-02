@@ -56,6 +56,14 @@ export function usePublicAds(enabled = true) {
 export function LoadingState({ label }: { label: string }) {
   return <div className="p-empty" role="status"><LoaderCircle className="p-spin" size={28}/><p>{label}</p></div>;
 }
+export function statusText(status: string, lang: Lang) {
+  const labels: Record<string, [string, string, string]> = {
+    active: ["Faol", "Active", "Активно"], pending: ["To‘lov kutilmoqda", "Awaiting payment", "Ожидает оплаты"],
+    pending_verification: ["Tekshiruvda", "In review", "На проверке"], expired: ["Muddati tugagan", "Expired", "Завершено"],
+    rejected: ["Rad etilgan", "Rejected", "Отклонено"]
+  };
+  return labels[status] ? pick(lang, ...labels[status]) : status;
+}
 export function Footer({ lang }: { lang: Lang }) {
   return <footer className="p-footer p-container"><Brand/><span>© {new Date().getFullYear()} Primio</span>
     <div><Link href="/browse">{pick(lang,"Reklamalar","Explore ads","Объявления")}</Link><Link href="/terms">{pick(lang,"Foydalanish shartlari","Terms of service","Условия")}</Link><Link href="/privacy">{pick(lang,"Maxfiylik siyosati","Privacy policy","Политика конфиденциальности")}</Link>

@@ -67,9 +67,9 @@ export async function POST(req: NextRequest) {
           <p style="font-size:15px;color:#A78BFA;line-height:1.7;margin:0 0 24px">
             Kutganingiz uchun rahmat. PRIMIO to'lov tizimi endi to'liq ishlaydi — reklamangizni hoziroq faollashtiring.
           </p>
-          <a href="https://primio.com.uz/dashboard"
+          <a href="https://www.primio.com.uz/create"
              style="display:inline-block;background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#1A1230;font-weight:800;font-size:15px;padding:14px 28px;border-radius:12px;text-decoration:none">
-            Dashboardga o'tish →
+            Reklama joylash →
           </a>
         </td></tr>
       </table>
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       <table width="100%" cellpadding="0" cellspacing="0" style="background:#160F2A;border:1px solid #2D1F50;border-radius:16px;padding:20px;margin-bottom:20px">
         <tr><td>
           <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6D5B8E;margin:0 0 14px">KEYINGI QADAMLAR</p>
-          <p style="font-size:14px;color:#EDE9FE;margin:0 0 8px">✅ &nbsp;Dashboard ga kiring</p>
+          <p style="font-size:14px;color:#EDE9FE;margin:0 0 8px">✅ &nbsp;Reklamangizni AI tekshiruviga yuboring</p>
           <p style="font-size:14px;color:#EDE9FE;margin:0 0 8px">💳 &nbsp;Reklamangizni to'lang</p>
           <p style="font-size:14px;color:#EDE9FE;margin:0">🚀 &nbsp;Reklama darhol jonli bo'ladi</p>
         </td></tr>

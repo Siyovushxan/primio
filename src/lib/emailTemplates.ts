@@ -175,9 +175,9 @@ export function weeklyReportEmail(d: WeeklyReportEmailData): { subject: string; 
           Jami sarflangan: <strong style="color:#1a1230">${d.totalSpentUsd}</strong>
         </p>
 
-        <a href="${BASE}/dashboard"
+        <a href="${BASE}/browse"
            style="display:inline-block;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-weight:700;font-size:14px;padding:13px 24px;border-radius:12px;text-decoration:none">
-          Dashboard →
+          Reklamalar →
         </a>
       </td></tr>
     `),

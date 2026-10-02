@@ -1,2 +1,2 @@
-import Dashboard from "@/components/primio/Dashboard";
-export default function DashboardPage(){return <Dashboard/>;}
+import { redirect } from "next/navigation";
+export default function DashboardPage() { redirect("/create"); }
