@@ -1,121 +1,83 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowUpRight, MoveUpRight, Check, ShieldCheck, ChartNoAxesCombined, SlidersHorizontal, Zap, Globe2, MousePointer2, Pause, Play, Plus, Layers3, Monitor, Utensils, Shirt, GraduationCap, HeartPulse, Building2, PartyPopper, Sparkles } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Globe2, ShieldCheck, Sparkles } from "lucide-react";
 import { useLang } from "@/contexts/LangContext";
-import { pick, money, Footer, categoryName, usePublicAds } from "./shared";
 import { CATEGORY_IDS, rankAds, rankingBidCents, topBidCents } from "@/lib/auction";
-
-const icons = [Monitor, Utensils, Shirt, GraduationCap, HeartPulse, Building2, PartyPopper, Sparkles];
+import { categoryName, money, pick, usePublicAds } from "./shared";
+import HorizontalSections from "./HorizontalSections";
 
 export default function Landing() {
   const { lang } = useLang();
   const router = useRouter();
-  const [quickURL, setQuickURL] = useState("");
-  const [quickCategory, setQuickCategory] = useState<(typeof CATEGORY_IDS)[number]>("technology");
-  const [bid, setBid] = useState(650);
-  const [days, setDays] = useState(1);
+  const [url, setURL] = useState("");
+  const [category, setCategory] = useState<(typeof CATEGORY_IDS)[number]>("technology");
   const [placement, setPlacement] = useState<"top" | "standard">("top");
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
-  const [paused, setPaused] = useState(false);
-  const [faq, setFaq] = useState<number | null>(0);
   const publicAds = usePublicAds();
-  const categoryAds = publicAds.ads.filter(ad => ad.category === quickCategory);
-  const topAds = rankAds(categoryAds, now).slice(0, 3);
-  const topPrice = publicAds.loading || publicAds.error ? null : topBidCents(categoryAds, now);
-  const cards = [
-    { id: "nova", name: "Nova Studio", bid: 900, letter: "N", tone: "lime" },
-    { id: "you", name: pick(lang,"Sizning brendingiz","Your brand","Ваш бренд"), bid, letter: "P", tone: "violet" },
-    { id: "orbit", name: "Orbit Academy", bid: 400, letter: "O", tone: "coral" }
-  ].sort((a,b) => b.bid - a.bid || (a.id === "you" ? 1 : -1));
-  const position = cards.findIndex(card => card.id === "you") + 1;
-  const faqs = [
-    [pick(lang,"Reklamam qayerda ko‘rinadi?","Where will my ad appear?","Где появится моя реклама?"),pick(lang,"Loyihangiz Primio katalogi va tanlangan toifa reytingida ko‘rinadi. Qiziqqan odam loyiha sahifasidan saytingiz yoki ijtimoiy profilingizga o‘tadi.","Your project appears in Primio’s directory and category ranking. Interested visitors can open your website or social profile from its project page.","Проект показывается в каталоге Primio и рейтинге категории. Заинтересованные посетители могут перейти на ваш сайт или профиль в соцсети.")],
-    [pick(lang,"Reytingdagi o‘rin qanday belgilanadi?","How is my position determined?","Как определяется позиция?"),pick(lang,"Reytingdagi joriy taklif kuchi o‘rinni belgilaydi. Yangi pulli taklif 168 soat saqlanadi, keyin har soatda pasayib, keyingi 24 soatda $1 ga yetadi. Reklama muddati tugasa, taklif darhol hisobdan chiqadi. Teng takliflarda avvalroq faollashgan reklama oldinda turadi. Raqobatchilar stavkasini o‘zgartirsa, o‘rningiz ham o‘zgarishi mumkin.","Current ranking strength determines position. New paid bids hold for 168 hours, then decrease hourly to $1 over the next 24 hours. Expired bids leave the ranking immediately. Equal bids are ordered by activation time, earlier first. Your position can change when competitors change their bids.","Позиция зависит от текущей силы ставки. Новая оплаченная ставка сохраняется 168 часов, затем снижается каждый час до $1 за следующие 24 часа. Завершённая реклама сразу исключается. При равных ставках раньше активированное объявление выше. Позиция может измениться при новых ставках конкурентов.")],
-    [pick(lang,"To‘lov va reklama muddati qachon boshlanadi?","When do I pay and when does my ad start?","Когда платить и когда начинается показ?"),pick(lang,"Profilsiz reklama AI tekshiruvidan so‘ng to‘lanadi va belgilangan muddatga faollashadi. Tasdiqlangan hisob bilan kirganlar uchun dastlabki 7 kunlik bepul muddat saqlanadi.","Guest ads are paid after AI review and run for the selected period. Verified accounts keep their first seven free days.","Без профиля реклама оплачивается после проверки AI и действует выбранный срок. Для подтверждённых аккаунтов первые семь дней остаются бесплатными.")],
-    [pick(lang,"Birinchi o‘rin savdoni kafolatlaydimi?","Does first place guarantee sales?","Гарантирует ли первое место продажи?"),pick(lang,"Yo‘q. Siz katalogdagi joylashuvni sotib olasiz. Ko‘rilish, bosish va savdo natijalari auditoriya hamda reklamangizga bog‘liq. Haqiqiy ko‘rsatkichlarni kabinetda kuzatasiz.","No. You purchase placement in the directory. Views, clicks and sales depend on the audience and your ad. Track actual views and clicks in your dashboard.","Нет. Вы оплачиваете позицию в каталоге. Просмотры, клики и продажи зависят от аудитории и объявления. Реальные показатели доступны в кабинете.")],
-    [pick(lang,"Taklifni keyin oshirish mumkinmi?","Can I raise my bid later?","Можно ли повысить ставку позже?"),pick(lang,"Ha. Bepul haftada taklifni to‘lovsiz o‘zgartirish mumkin. Bepul muddat tugaganda bepul reklama yakunlanadi. Keyin pullik taklifni tanlasangiz, qo‘shimcha summa oldindan ko‘rsatiladi.","Yes. You can adjust your offer free during the trial. Free promotion ends with the trial. If you later choose a paid bid increase, the exact price is shown first.","Да. Во время пробного периода ставку можно менять бесплатно. Бесплатное продвижение завершится вместе с ним. Если позже вы выберете платное повышение, сумма будет показана заранее.")]
-  ];
-  return <div className="p-site">
-    <section className="p-hero p-container">
-      <div className="p-hero-copy">
-        <div className="p-eyebrow"><span className="p-status-dot"/>{pick(lang,"REKLAMANGIZ UCHUN YANGI O‘RIN","A NEW PLACE FOR YOUR BRAND","НОВОЕ МЕСТО ДЛЯ ВАШЕГО БРЕНДА")}</div>
-        <h1>{pick(lang,"Ko‘rinish vaqti.","Time to be seen.","Время быть заметным.")}<br/><span className="p-gradient-text">{pick(lang,"Yuqoriga chiqing.","Rise to the top.","Поднимайтесь выше.")}<span className="p-title-star">✳</span></span></h1>
-        <p className="p-hero-sub">{pick(lang,"Loyihangizni tanishtiring. Taklifingiz bilan toifada yuqoriroq o‘ringa chiqing va sayt yoki ijtimoiy sahifangizga o‘tishlarni kuzating.","Introduce your project, bid for a higher category position, and track visits to your website or social page.","Представьте свой проект, предложите цену за место выше в категории и отслеживайте переходы на сайт или страницу в соцсети.")}</p>
-        <div className="p-top-price" aria-live="polite"><span>{pick(lang,"Hozir TOP-1 uchun","For TOP-1 now","Сейчас для TOP-1")}</span><strong>{topPrice === null ? "—" : money(topPrice)}<small> / {pick(lang,"kun","day","день")}</small></strong></div>
-        <div className="p-placement-options" role="group" aria-label={pick(lang,"Joylashuv","Placement","Размещение")}>
-          <button type="button" aria-pressed={placement === "top"} onClick={() => setPlacement("top")}>{pick(lang,"TOP-1 ga chiqish","Take TOP-1","Занять TOP-1")}</button>
-          <button type="button" aria-pressed={placement === "standard"} onClick={() => setPlacement("standard")}>{pick(lang,"$1/kun dan boshlash","Start at $1/day","Начать с $1/день")}</button>
-        </div>
-        <form className="p-quick-start" onSubmit={event => {event.preventDefault();if(placement === "top" && topPrice === null)return;const params=new URLSearchParams({url:quickURL,category:quickCategory,minBid:String(placement === "top" ? topPrice : 100),days:"1"});router.push(`/create?${params}`);}}>
-          <label>{pick(lang,"Saytingiz havolasi","Your website URL","Адрес вашего сайта")}<input type="text" inputMode="url" required placeholder="https://example.com" value={quickURL} onChange={event=>setQuickURL(event.target.value)}/></label>
-          <label>{pick(lang,"Toifa","Category","Категория")}<select value={quickCategory} onChange={event=>setQuickCategory(event.target.value as (typeof CATEGORY_IDS)[number])}>{CATEGORY_IDS.map(id=><option key={id} value={id}>{categoryName(id,lang)}</option>)}</select></label>
-          <button className="p-btn p-btn-primary" type="submit" disabled={placement === "top" && topPrice === null}>{pick(lang,"Davom etish","Continue","Продолжить")}<ArrowUpRight size={19}/></button>
-        </form>
-        <p className="p-quick-hint">{pick(lang,"Profil shart emas. 1 kunlik reklama. AI tekshiruvidan keyin to‘laysiz. O‘rin to‘lov vaqtida o‘zgarishi mumkin.","No profile required. A one-day ad. Pay after AI review. Position may change before payment.","Профиль не нужен. Реклама на один день. Оплата после AI. Место может измениться до оплаты.")}</p>
-        <div className="p-hero-trust"><span><Check size={14}/>{pick(lang,"$1/kun dan","From $1/day","От $1/день")}</span><span><Check size={14}/>{pick(lang,"Aniq reyting qoidalari","Transparent ranking","Прозрачный рейтинг")}</span><span><Check size={14}/>{pick(lang,"8 ta toifa","8 categories","8 категорий")}</span></div>
-      </div>
-      <div className={`p-scene ${paused ? "is-paused" : ""}`}>
-        <div className="p-scene-orbit p-orbit-one"/><div className="p-scene-orbit p-orbit-two"/>
-        <div className="p-scene-caption"><span className="p-mini-dot"/>{pick(lang,"INTERAKTIV NAMUNA","INTERACTIVE DEMO","ИНТЕРАКТИВНЫЙ ПРИМЕР")}</div>
-        <div className="p-scene-floating">
-          <div className="p-scene-world">
-            <div className="p-scene-heading"><Layers3 size={18}/><span>{pick(lang,"Sizning keyingi o‘rningiz","Your next position","Ваша следующая позиция")}</span><span className="p-scene-heading-dots">•••</span></div>
-            <div className="p-rank-stack">
-              {cards.map((card,index) => <div key={card.id} className={`p-scene-card ${card.id === "you" ? "p-scene-yours" : ""}`} style={{ transform: `translate3d(0,${index * 91}px,${(3-index)*12}px)` }}>
-                <span className="p-scene-rank">0{index+1}</span><div className={`p-brand-avatar ${card.tone}`}>{card.letter}</div>
-                <div className="p-scene-card-name"><strong>{card.name}</strong><span>{card.id === "you" ? pick(lang,"Sizning reklamangiz","Your advertisement","Ваше объявление") : pick(lang,"Texnologiya","Technology","Технологии")}</span></div>
-                <div className="p-scene-bid"><b>{money(card.bid)}</b><span>/{pick(lang,"kun","day","день")}</span></div>
-                {card.id === "you" && <span className="p-your-card-arrow"><MoveUpRight size={13}/></span>}
-              </div>)}
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
+  const scopedAds = publicAds.ads.filter(ad => ad.category === category);
+  const topAds = rankAds(scopedAds, now).slice(0, 3);
+  const topPrice = publicAds.loading || publicAds.error ? null : topBidCents(scopedAds, now);
+  const labels = [pick(lang, "Joylash", "Place an ad", "Разместить"), pick(lang, "Reklamalar", "Discover", "Объявления"), pick(lang, "Qanday ishlaydi", "How it works", "Как работает")];
+
+  function start(event: FormEvent) {
+    event.preventDefault();
+    const bid = placement === "top" ? topPrice : 100;
+    if (bid === null) return;
+    router.push("/create?" + new URLSearchParams({ url: url.trim(), category, minBid: String(bid), days: "1" }));
+  }
+
+  return <HorizontalSections labels={labels}>
+    <section id="start" className="p-home-slide" aria-labelledby="home-title">
+      <div className="p-home-content p-home-intro">
+        <div className="p-home-copy">
+          <span className="p-eyebrow"><span className="p-status-dot"/>{pick(lang, "SODDA REKLAMA. ANIQ NARX.", "SIMPLE ADS. CLEAR PRICING.", "ПРОСТАЯ РЕКЛАМА. ЯСНАЯ ЦЕНА.")}</span>
+          <h1 id="home-title">{pick(lang, "Brendingiz", "Your brand,", "Ваш бренд —")}<br/><span className="p-gradient-text">{pick(lang, "ko‘rinsin.", "seen.", "на виду.")}</span></h1>
+          <p>{pick(lang, "Havolani kiriting. AI tekshiradi. To‘lovdan so‘ng reklamangiz ko‘rinadi.", "Add your link. AI reviews it. Pay, and your ad goes live.", "Добавьте ссылку. AI проверит. После оплаты объявление появится.")}</p>
+          <form className="p-home-form" onSubmit={start}>
+            <div className="p-home-price" aria-live="polite"><span>{pick(lang, "Hozir TOP-1 uchun", "TOP-1 right now", "Сейчас для TOP-1")} · {categoryName(category, lang)}</span><strong>{topPrice === null ? "—" : money(topPrice)}<small> / {pick(lang, "kun", "day", "день")}</small></strong></div>
+            <div className="p-home-placement" role="group" aria-label={pick(lang, "Joylashuv", "Placement", "Размещение")}>
+              <button type="button" aria-pressed={placement === "top"} onClick={() => setPlacement("top")}>TOP-1</button>
+              <button type="button" aria-pressed={placement === "standard"} onClick={() => setPlacement("standard")}>{pick(lang, "$1/kun dan", "From $1/day", "От $1/день")}</button>
             </div>
-            <div className="p-scene-floor"><span>PRIMIO</span><span>↑</span></div>
-          </div>
-          <div className="p-floating-win"><span className="p-win-icon"><ChartNoAxesCombined size={18}/></span><div><small>{pick(lang,"Sizning o‘rningiz","Your position","Ваша позиция")}</small><strong>#{position} <span>{pick(lang,"yuqoriga yo‘l ochiq","room to rise","путь наверх открыт")}</span></strong></div></div>
+            <label>{pick(lang, "Sayt yoki ijtimoiy sahifa", "Website or social page", "Сайт или соцсеть")}<input required inputMode="url" autoComplete="url" placeholder="example.com" value={url} onChange={event => setURL(event.target.value)}/></label>
+            <label>{pick(lang, "Toifa", "Category", "Категория")}<select value={category} onChange={event => setCategory(event.target.value as typeof category)}>{CATEGORY_IDS.map(id => <option key={id} value={id}>{categoryName(id, lang)}</option>)}</select></label>
+            <button className="p-btn p-btn-primary" disabled={placement === "top" && topPrice === null}>{pick(lang, "Reklama joylash", "Place an ad", "Разместить рекламу")}<ArrowUpRight size={17}/></button>
+          </form>
+          {publicAds.error ? <p className="p-home-note" role="status">{pick(lang, "TOP narxi yuklanmadi.", "TOP price is unavailable.", "Цена TOP недоступна.")} <button type="button" onClick={publicAds.retry}>{pick(lang, "Qayta tekshirish", "Retry", "Повторить")}</button></p> : <p className="p-home-note">{pick(lang, "Profil kerak emas · 1 kunlik narx · O‘rin to‘lovgacha o‘zgarishi mumkin", "No profile needed · Daily pricing · Position can change before payment", "Без профиля · Цена за день · Место может измениться до оплаты")}</p>}
         </div>
-        <div className="p-scene-controller">
-          <div><span><SlidersHorizontal size={14}/>{pick(lang,"Taklifni o‘zgartirib ko‘ring","Try changing your bid","Попробуйте изменить ставку")}</span><button className="p-icon-btn" onClick={() => setPaused(!paused)} aria-label={paused ? pick(lang,"Animatsiyani boshlash","Play animation","Включить анимацию") : pick(lang,"Animatsiyani to‘xtatish","Pause animation","Остановить анимацию")}>{paused ? <Play size={14}/> : <Pause size={14}/>}</button></div>
-          <label className="p-slider-label" htmlFor="hero-bid"><span>{pick(lang,"Kunlik taklif","Daily bid","Дневная ставка")}</span><b>{money(bid)}</b></label>
-          <input id="hero-bid" type="range" min={100} max={1200} step={50} value={bid} onChange={event => setBid(Number(event.target.value))} aria-valuetext={money(bid)}/>
-        </div>
+        <aside className="p-home-live" aria-label={pick(lang, "Toifadagi jonli reyting", "Live category ranking", "Рейтинг категории")}>
+          <div className="p-home-live-heading"><span className="p-eyebrow"><span className="p-status-dot"/>PRIMIO / LIVE</span><span>{categoryName(category, lang)}</span></div>
+          <h2>{pick(lang, "Yuqoriga yo‘l ochiq.", "Room at the top.", "Путь наверх открыт.")}</h2>
+          <div className="p-home-ranks">{publicAds.loading ? <p role="status">{pick(lang, "Reklamalar yuklanmoqda…", "Loading ads…", "Загрузка объявлений…")}</p> : publicAds.error ? <p>{pick(lang, "Jonli reyting hozir ochilmadi.", "Live ranking is unavailable.", "Рейтинг сейчас недоступен.")}</p> : topAds.length ? topAds.map((ad, index) => <Link key={ad.id} href={`/project/${ad.id}`} className="p-home-rank"><span className="p-home-rank-number">0{index + 1}</span><div><strong>{ad.title}</strong><small>{money(rankingBidCents(ad, now))} · {pick(lang, "reyting taklifi", "ranking offer", "рейтинговая ставка")}</small></div><ArrowUpRight size={20}/></Link>) : <div className="p-home-empty"><Sparkles size={30}/><strong>{pick(lang, "Birinchi bo‘ling.", "Be the first.", "Станьте первым.")}</strong><span>{pick(lang, "Bu toifada joy $1/kun dan boshlanadi.", "This category starts at $1/day.", "В этой категории — от $1/день.")}</span></div>}</div>
+          <Link className="p-text-link" href={`/browse?category=${category}`}>{pick(lang, "Barcha reklamalar", "Explore all ads", "Все объявления")}<ArrowUpRight size={16}/></Link>
+        </aside>
       </div>
-      <div className="p-hero-bottom"><span>01 — {pick(lang,"O‘rningizni o‘zingiz belgilang","YOUR POSITION. YOUR CHOICE.","ВАША ПОЗИЦИЯ. ВАШ ВЫБОР.")}</span><a href="#how">{pick(lang,"Yana ko‘proq","Discover more","Узнать больше")}<ArrowRight size={14}/></a></div>
     </section>
-    <section className="p-live-list p-container" aria-label={pick(lang,"Hozirgi reklamalar","Current ads","Текущие объявления")}>
-      <div className="p-live-list-heading"><div><span className="p-eyebrow p-muted">PRIMIO / LIVE · {categoryName(quickCategory,lang)}</span><h2>{pick(lang,"Toifadagi yuqori o‘rinlar","Top in this category","Лидеры категории")}</h2></div><Link className="p-text-link" href={`/browse?category=${quickCategory}`}>{pick(lang,"Barcha reklamalar","All ads","Все объявления")}<ArrowUpRight size={17}/></Link></div>
-      {topAds.length>0?<div className="p-live-cards">{topAds.map((ad,index)=><Link key={ad.id} className="p-live-card" href={`/project/${ad.id}`}><span className="p-live-rank">#{index+1}</span><span className="p-live-detail"><strong>{ad.title}</strong><small>{categoryName(ad.category,lang)}</small></span><span className="p-live-offer">{money(rankingBidCents(ad, now))}<small>{pick(lang,"reyting taklifi","ranking offer","рейтинговая ставка")}</small></span><ArrowUpRight size={18}/></Link>)}</div>:<Link className="p-live-empty" href="/browse">{pick(lang,"Reklamalar katalogini ko‘rish","Explore the ad directory","Открыть каталог объявлений")} <ArrowUpRight size={17}/></Link>}
-    </section>
-    <div className="p-value-strip"><div className="p-container">{[
-      [ShieldCheck,pick(lang,"Avval AI tekshiruvi","AI review first","Сначала проверка AI")],
-      [Zap,pick(lang,"Jonli reyting","Live rankings","Живой рейтинг")],
-      [Globe2,pick(lang,"Har qanday qurilmada","Every screen, everywhere","На любом устройстве")],
-      [ChartNoAxesCombined,pick(lang,"Haqiqiy ko‘rsatkichlar","Actual performance","Реальные показатели")]
-    ].map(([Icon,label],index) => { const Glyph=Icon as typeof Zap; return <span key={index}><Glyph size={18}/>{label as string}</span>; })}</div></div>
-    <section id="how" className="p-section p-container">
-      <div className="p-section-heading"><div><span className="p-eyebrow p-muted">01 / {pick(lang,"QANDAY ISHLAYDI","HOW IT WORKS","КАК ЭТО РАБОТАЕТ")}</span><h2>{pick(lang,"Oddiy qoida.","Simple rules.","Простые правила.")}<br/><span className="p-dim">{pick(lang,"Sizda to‘liq nazorat.","You’re in control.","Контроль у вас.")}</span></h2></div><p>{pick(lang,"Murakkab sozlamalarsiz. Reklamadan natijagacha bo‘lgan yo‘l bir joyda.","No complicated setup. One clear path from your first ad to your next move.","Без сложных настроек. Понятный путь от первого объявления до следующего шага.")}</p></div>
-      <div className="p-step-grid">{[
-        [Layers3,pick(lang,"Loyihangizni tanishtiring","Introduce your project","Представьте свой проект"),pick(lang,"Rasm, qisqa tavsif va sayt yoki ijtimoiy sahifa havolasini qo‘shing. Toifani tanlang.","Add an image, a short description, and your website or social page. Choose a category.","Добавьте изображение, короткое описание и ссылку на сайт или соцсеть. Выберите категорию.")],
-        [SlidersHorizontal,pick(lang,"Taklifingizni belgilang","Make your move","Задайте ставку"),pick(lang,"Kunlik stavka va muddatni tanlang. Jami xarajatni oldindan ko‘ring.","Choose your daily bid and duration. See the full placement price up front.","Выберите дневную ставку и срок. Сразу увидьте стоимость размещения.")],
-        [MoveUpRight,pick(lang,"Faollashing va kuzating","Go live. Keep growing.","Запускайте и наблюдайте"),pick(lang,"AI tekshiruvidan so‘ng to‘lovni yakunlang. Reklama avtomatik faollashadi; natijani kuzating.","After AI review, complete payment. Your ad goes live automatically; track its results.","После проверки AI завершите оплату. Реклама запустится автоматически; следите за результатами.")]
-      ].map(([Icon,title,body],index) => { const Glyph=Icon as typeof Zap; return <article className="p-step-card" key={index}><div className="p-step-card-top"><Glyph size={24}/><span>0{index+1}</span></div><h3>{title as string}</h3><p>{body as string}</p><div className="p-step-line"/></article>; })}</div>
-    </section>
-    <section className="p-product-section p-container">
-      <div className="p-product-copy"><span className="p-eyebrow">{pick(lang,"KATTA RASMNI KO‘RING","SEE THE BIGGER PICTURE","ВИДЕТЬ ПОЛНУЮ КАРТИНУ")}</span><h2>{pick(lang,"Har bir qaror.","Every decision.","Каждое решение.")}<br/><span className="p-dim">{pick(lang,"Aniq ma’lumot bilan.","Backed by clarity.","На основе данных.")}</span></h2><p>{pick(lang,"O‘rningiz, reklama holati va natijalar — bir qarashda. Kerakli vaqtda kerakli amal.","Your position, ad status and results at a glance. The right action at the right moment.","Позиция, статус и результаты — с первого взгляда. Нужное действие в нужный момент.")}</p>
-        <ul className="p-check-list"><li><Check/>{pick(lang,"Ko‘rilish va bosishlarni kuzating","Follow views and clicks","Отслеживайте просмотры и клики")}</li><li><Check/>{pick(lang,"Raqobatchilar taklifini solishtiring","Compare competing bids","Сравнивайте ставки конкурентов")}</li><li><Check/>{pick(lang,"Muddat va xarajatni boshqaring","Stay on top of time and spend","Контролируйте сроки и расходы")}</li></ul>
-        <Link href="/dashboard/demo" className="p-text-link">{pick(lang,"Demo kabinetni ochish","Open the demo dashboard","Открыть демо-кабинет")}<ArrowUpRight size={18}/></Link>
+
+    <section id="ads" className="p-home-slide" aria-labelledby="discover-title">
+      <div className="p-home-content p-home-discover">
+        <div className="p-home-section-heading"><span className="p-eyebrow">02 / {pick(lang, "KASHF ETING", "DISCOVER", "ОТКРОЙТЕ")}</span><h2 id="discover-title">{pick(lang, "Reklamalar bir joyda.", "One place to discover.", "Объявления в одном месте.")}</h2><p>{pick(lang, "Kerakli toifani tanlang va yangi loyihalarni toping.", "Choose a category and find your next discovery.", "Выберите категорию и найдите новые проекты.")}</p></div>
+        <div className="p-home-categories">{CATEGORY_IDS.map((id, index) => <Link key={id} href={`/browse?category=${id}`}><span>0{index + 1}</span><strong>{categoryName(id, lang)}</strong><ArrowUpRight size={20}/></Link>)}</div>
+        <Link className="p-btn p-btn-secondary" href="/browse">{pick(lang, "Barcha reklamalarni ko‘rish", "Browse all ads", "Посмотреть все объявления")}<ArrowUpRight size={18}/></Link>
       </div>
-      <div className="p-product-preview"><div className="p-preview-top"><span className="p-mini-logo">P</span><b>{pick(lang,"Umumiy holat","Overview","Обзор")}</b><span className="p-demo-tag">{pick(lang,"NAMUNA","DEMO","ПРИМЕР")}</span></div><div className="p-preview-metrics"><div><span>{pick(lang,"Ko‘rilish","Impressions","Показы")}</span><strong>12,480</strong><small>↑ 18.6%</small></div><div><span>{pick(lang,"Bosish","Clicks","Клики")}</span><strong>486</strong><small>↑ 12.4%</small></div><div><span>CTR</span><strong>3.89<span>%</span></strong><small>{pick(lang,"Namuna ma’lumot","Sample data","Пример данных")}</small></div></div><div className="p-mini-chart"><div className="p-chart-grid"/><svg viewBox="0 0 560 150" fill="none" aria-hidden="true"><defs><linearGradient id="preview-fill" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#9b75ff" stopOpacity=".3"/><stop offset="1" stopColor="#9b75ff" stopOpacity="0"/></linearGradient></defs><path d="M0 126 C30 125 25 95 62 103 S115 136 150 95 S190 107 225 80 S270 108 310 63 S350 85 395 41 S440 56 470 26 S525 40 560 8 V150 H0Z" fill="url(#preview-fill)"/><path d="M0 126 C30 125 25 95 62 103 S115 136 150 95 S190 107 225 80 S270 108 310 63 S350 85 395 41 S440 56 470 26 S525 40 560 8" stroke="#B79AFF" strokeWidth="3"/></svg></div><div className="p-preview-row"><span className="p-brand-avatar violet">P</span><div><b>{pick(lang,"Sizning reklamangiz","Your campaign","Ваша кампания")}</b><small>{pick(lang,"Texnologiya","Technology","Технологии")}</small></div><span className="p-status-badge active">{pick(lang,"Faol","Active","Активно")}</span><strong>#2</strong></div></div>
     </section>
-    <section id="categories" className="p-section p-container"><div className="p-section-heading"><div><span className="p-eyebrow p-muted">02 / {pick(lang,"O‘Z MAYDONINGIZNI TOPING","FIND YOUR SPACE","НАЙДИТЕ СВОЮ НИШУ")}</span><h2>{pick(lang,"Har bir brendga","A place for","Место для")}<br/><span className="p-dim">{pick(lang,"o‘z maydoni.","every kind of brand.","каждого бренда.")}</span></h2></div><Link href="/browse" className="p-text-link">{pick(lang,"Barcha reklamalar","Explore all ads","Все объявления")}<ArrowUpRight size={18}/></Link></div>
-      <div className="p-category-grid">{CATEGORY_IDS.map((category,index) => { const Icon=icons[index]; return <Link key={category} href={`/browse?category=${category}`} className="p-category-tile"><Icon size={24}/><span>{categoryName(category,lang)}</span><ArrowUpRight size={16}/></Link>; })}</div>
+
+    <section id="how" className="p-home-slide" aria-labelledby="how-title">
+      <div className="p-home-content p-home-how">
+        <div className="p-home-section-heading"><span className="p-eyebrow">03 / {pick(lang, "UCHTA QADAM", "THREE STEPS", "ТРИ ШАГА")}</span><h2 id="how-title">{pick(lang, "Joylang. Tekshirtiring. Ko‘rining.", "Add it. Review it. Go live.", "Добавьте. Проверьте. Запустите.")}</h2></div>
+        <div className="p-home-steps">{[
+          [Globe2, pick(lang, "Havolani kiriting", "Add your link", "Добавьте ссылку"), pick(lang, "Toifa, narx va muddatni tanlang.", "Choose a category, price and duration.", "Выберите категорию, цену и срок.")],
+          [ShieldCheck, pick(lang, "AI tekshiradi", "AI reviews it", "AI проверит"), pick(lang, "Tekshiruvdan o‘tsa, to‘lovga o‘tasiz.", "After approval, continue to payment.", "После одобрения переходите к оплате.")],
+          [CheckCircle2, pick(lang, "To‘lang va ko‘rining", "Pay and go live", "Оплатите и появитесь"), pick(lang, "To‘lov tasdiqlangach, reklama avtomatik faollashadi.", "Your ad activates automatically after payment confirmation.", "После подтверждения оплаты объявление активируется автоматически.")]
+        ].map(([Icon, title, text], index) => { const Glyph = Icon as typeof Globe2; return <article key={index}><span>0{index + 1}</span><Glyph size={26}/><h3>{title as string}</h3><p>{text as string}</p></article>; })}</div>
+        <div id="pricing" className="p-home-rule"><strong>{pick(lang, "$1/kun dan. Jami narx oldindan.", "From $1/day. Know the total upfront.", "От $1/день. Итоговая цена заранее.")}</strong><p>{pick(lang, "Yuqori reyting taklifi oldinda turadi. Yangi pulli taklif 168 soat saqlanadi, keyin 24 soat ichida bosqichma-bosqich $1 ga tushadi. Reklama to‘langan muddatgacha ko‘rinadi.", "Higher ranking offers appear first. New paid offers hold for 168 hours, then gradually fall to $1 over 24 hours. Ads display until their paid expiry.", "Более высокая рейтинговая ставка выше. Новая оплаченная ставка сохраняется 168 часов, затем за 24 часа постепенно снижается до $1. Показ длится до конца оплаченного срока.")}</p></div>
+        <Link className="p-btn p-btn-primary" href="/create">{pick(lang, "Reklama joylash", "Place an ad", "Разместить рекламу")}<ArrowUpRight size={18}/></Link>
+        <footer className="p-home-legal"><span>© {new Date().getFullYear()} PRIMIO</span><Link href="/terms">{pick(lang, "Shartlar", "Terms", "Условия")}</Link><Link href="/privacy">{pick(lang, "Maxfiylik", "Privacy", "Конфиденциальность")}</Link><Link href="/contact">{pick(lang, "Bog‘lanish", "Contact", "Связаться")}</Link></footer>
+      </div>
     </section>
-    <section id="pricing" className="p-pricing-section p-container"><div><span className="p-eyebrow">{pick(lang,"ANIQ NARX. ANIQ TANLOV.","CLEAR PRICE. CLEAR CHOICE.","ПОНЯТНАЯ ЦЕНА. ВАШ ВЫБОР.")}</span><h2>{pick(lang,"Byudjet sizniki.","Your budget.","Ваш бюджет.")}<br/><span className="p-dim">{pick(lang,"Qaror ham sizniki.","Your next move.","Ваше решение.")}</span></h2><p>{pick(lang,"Profilsiz reklama $1/kun dan boshlanadi. Tasdiqlangan hisobning dastlabki 7 kuni bepul. Taklif × muddat narxini oldindan ko‘rasiz.","Guest placement starts at $1/day. Verified accounts have a first seven-day free period. See bid × duration before paying.","Размещение без профиля — от $1 в день. Подтверждённому аккаунту доступны первые семь дней бесплатно. Цена: ставка × срок.")}</p><span className="p-price-note"><ShieldCheck size={17}/>{pick(lang,"Avval AI tekshiruvi · keyin to‘lov","AI review first · then payment","Сначала проверка AI · затем оплата")}</span></div>
-      <div className="p-price-calculator"><div className="p-calculator-heading"><span>{pick(lang,"Joylashuv kalkulyatori","Placement calculator","Калькулятор размещения")}</span><SlidersHorizontal size={18}/></div><label htmlFor="price-bid" className="p-slider-label"><span>{pick(lang,"Kunlik taklif","Daily bid","Дневная ставка")}</span><strong>{money(bid)}<small> / {pick(lang,"kun","day","день")}</small></strong></label><input id="price-bid" type="range" min={100} max={1200} step={50} value={bid} onChange={event => setBid(Number(event.target.value))}/><div className="p-duration-buttons" aria-label={pick(lang,"Muddat","Duration","Срок")}>{[7,14,30].map(day => <button key={day} aria-pressed={days === day} onClick={() => setDays(day)}>{day} {pick(lang,"kun","days","дней")}</button>)}</div><div className="p-price-total"><div><span>{pick(lang,"Keyingi pullik reklama narxi","Next paid campaign","Цена следующего платного продвижения")}</span><small>{money(bid)} × {days} {pick(lang,"kun","days","дней")}</small></div><strong>{money(bid*days)}</strong></div><Link href={`/create?minBid=${bid}&days=${days}`} className="p-btn p-btn-primary">{pick(lang,"Shu taklif bilan boshlash","Start with this bid","Начать с этой ставкой")}<ArrowUpRight size={18}/></Link><p className="p-fine-print">{pick(lang,"Bu narx keyingi pullik kampaniya uchun. Bepul reklama bepul haftangiz tugaganda to‘xtaydi; hech qanday avtomatik to‘lov olinmaydi.","This is the price of a future paid campaign. Free promotion ends with your free week; nothing is charged automatically.","Это цена следующего платного продвижения. Бесплатная реклама завершится вместе с бесплатной неделей; автоматического списания нет.")}</p></div>
-    </section>
-    <section className="p-section p-container p-faq-section"><div><span className="p-eyebrow p-muted">03 / FAQ</span><h2>{pick(lang,"Savollaringiz","Your questions,","Ваши вопросы —")}<br/><span className="p-dim">{pick(lang,"javobsiz qolmaydi.","answered.","наши ответы.")}</span></h2><a className="p-text-link" href="mailto:support@primio.com.uz">{pick(lang,"Biz bilan bog‘laning","Talk to us","Свяжитесь с нами")}<ArrowUpRight size={16}/></a></div><div className="p-faq-list">{faqs.map(([question,answer],index) => <div className="p-faq-item" key={question}><button aria-expanded={faq === index} aria-controls={`faq-${index}`} onClick={() => setFaq(faq === index ? null : index)}>{question}<Plus size={18} className={faq === index ? "is-open" : ""}/></button><div id={`faq-${index}`} hidden={faq !== index}><p>{answer}</p></div></div>)}</div></section>
-    <section className="p-final-cta p-container"><span className="p-eyebrow">{pick(lang,"KEYINGI O‘RIN — SIZNIKI","THE NEXT SPOT IS YOURS","СЛЕДУЮЩЕЕ МЕСТО — ВАШЕ")}</span><h2>{pick(lang,"Brendingiz ko‘rinsin.","Let your brand be seen.","Пусть ваш бренд заметят.")}<ArrowUpRight/></h2><p>{pick(lang,"Birinchi reklamangizni yarating. Keyingi qadamni birga qo‘yamiz.","Create your first ad. Make your next move with Primio.","Создайте первое объявление. Сделайте следующий шаг с Primio.")}</p><Link href="/create" className="p-btn p-btn-light">{pick(lang,"Hozir boshlash","Get started today","Начать сейчас")}<ArrowUpRight size={18}/></Link><MousePointer2 className="p-cta-cursor"/></section>
-    <Footer lang={lang}/>
-  </div>;
+  </HorizontalSections>;
 }

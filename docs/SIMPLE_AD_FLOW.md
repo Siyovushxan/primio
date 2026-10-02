@@ -1,0 +1,11 @@
+# Simple ad flow and horizontal home page
+
+The public UI has no dashboard, demo workspace, Google sign-in, or Google account-linking step. Old `/dashboard`, `/dashboard/demo`, and `/auth` bookmarks redirect to `/create`. Unused dashboard UI and analytics components were removed. Existing ads, payment history, and account data are retained.
+
+The flow is `/create` → image upload and AI review → save the exact reviewed content → `/ads/{adId}/pay` → payment provider → payment confirmation and ad status. An ad only activates after the server verifies a successful payment. Existing trial grants retain their server-side terms; the UI does not offer new sign-ups or a free trial.
+
+Firebase Anonymous Auth remains an internal ownership mechanism. No sign-in page is shown. The checkout receipt email stays required for paid orders. Losing the browser session does not bypass ownership: payment status explains how to return to the original browser or contact support with a receipt. Payment validation and the 168-hour ranking policy are unchanged.
+
+The home page contains three panels: placement with live TOP pricing, categories, and a short explanation of review/payment/ranking. A vertical mouse-wheel gesture advances the horizontal deck; content moves from right to left. Reverse scrolling goes back. Native horizontal trackpad and touch swipes, section buttons, arrows, and keyboard navigation are supported. The page has no document-level vertical movement. Panels allow internal overflow at high zoom or very short viewports so content remains reachable. Reduced-motion preferences disable smooth transitions; zoom gestures and form controls keep their normal behavior.
+
+Validation: business test suite, TypeScript, lint for changed source files, and production build. Live checks must distinguish the build result from actual deployed UI behavior and should stop before accepting terms or collecting a real payment.
