@@ -4,10 +4,10 @@ const fs=require("node:fs");
 const path=require("node:path");
 const vm=require("node:vm");
 const ts=require("typescript");
-function loadSource(file,dependencies={},environment={}){
+function loadSource(file,dependencies={},environment={},globals={}){
  const source=fs.readFileSync(path.join(__dirname,"..",file),"utf8");
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:environment},URL,Date,Buffer,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");}};
+ const exports={};const context={exports,require:name=>{if(!(name in dependencies))throw new Error("Unexpected dependency: "+name);return dependencies[name];},process:{env:environment},URL,Date,Buffer,console,AbortSignal,fetch:()=>{throw new Error("Tests must not contact services");},...globals};
  vm.runInNewContext(code,context,{filename:file});return exports;
 }
 const auction=loadSource("src/lib/auction.ts");
@@ -185,18 +185,20 @@ test("the trial profile grant is persisted once and repeat logins do not restart
  await new Promise(resolve=>setTimeout(resolve,5));const second=await POST(request());
  assert.equal(second.body.trialEndsAt,expiry);assert.equal(data.get("users/u1").trialExpiresAt.getTime(),expiry);
 });
-test("an anonymous guest cannot restart the free trial by creating a new browser identity",async()=>{
+test("anonymous and server-created guests cannot gain a free trial with a fresh browser identity",async()=>{
+ for (const identity of [{uid:"anonymous-guest",firebase:{sign_in_provider:"anonymous"}},{uid:"server-guest",firebase:{sign_in_provider:"custom"},primioGuest:true}]) {
  const data=new Map();const ref=path=>({path});
  const db={doc:ref,runTransaction:async work=>work({get:async r=>({exists:data.has(r.path),data:()=>data.get(r.path)}),create:(r,v)=>data.set(r.path,v),update:(r,v)=>data.set(r.path,{...data.get(r.path),...v})})};
  const {POST}=loadSource("src/app/api/profile/route.ts",{
   "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200})}},
   "firebase-admin/firestore":{FieldValue:{serverTimestamp:()=>"server-time"}},
-  "@/lib/verifyFirebaseToken":{verifiedIdentity:async()=>({uid:"guest",firebase:{sign_in_provider:"anonymous"}})},
+  "@/lib/verifyFirebaseToken":{verifiedIdentity:async()=>identity},
   "@/lib/firebaseAdmin":{adminDb:db},"@/lib/trial":loadSource("src/lib/trial.ts",{"./auction":auction}),"@/lib/auction":auction
  });
  const result=await POST({json:async()=>({})});
  assert.equal(result.status,200);assert.equal(result.body.trialActive,false);
- assert.ok(data.get("users/guest").trialExpiresAt.getTime()<=Date.now());
+ assert.ok(data.get(`users/${identity.uid}`).trialExpiresAt.getTime()<=Date.now());
+ }
 });
 test("trial activation skips checkout, costs zero, and ends within the account's remaining free week",async()=>{
  const trialEndsAt=new Date(Date.now()+2*DAY_MS);const data=new Map([
@@ -310,4 +312,57 @@ test("only a confirmed new-policy payment stamps the ranking clock, exactly once
  assert.equal(ad.rankingVersion,2);assert.equal(anchor,ad.startsAt.getTime());
  await applyPayment(payment);assert.equal(db.data.get("ads/ad1").rankingBidAt.getTime(),anchor);
  const old=fixture();await old.applyPayment(old.payment);assert.equal(old.db.data.get("ads/ad1").rankingVersion,undefined);
+});
+
+
+test("guest tokens accept no chosen identity or claims and reject foreign origins",async()=>{
+ const minted=[];const data=new Map();
+ const db={doc:path=>({path}),runTransaction:async work=>work({get:async ref=>({data:()=>data.get(ref.path)}),set:(ref,value)=>data.set(ref.path,value)})};
+ const {POST}=loadSource("src/app/api/guest-session/route.ts",{
+  "node:crypto":require("node:crypto"),
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200,headers:options.headers})}},
+  "@/lib/firebaseAdmin":{adminDb:db,adminAuth:{createUser:async args=>{assert.deepEqual(Object.keys(args),["uid"]);},setCustomUserClaims:async(uid,claims)=>{assert.deepEqual(JSON.parse(JSON.stringify(claims)),{primioGuest:true});},createCustomToken:async(uid,claims)=>{minted.push({uid,claims});return "signed-token";}}}
+ },{CRON_SECRET:"test-only-hash-key"});
+ const request=(body="{}",origin="https://www.primio.com.uz")=>({headers:{get:name=>({origin,"content-type":"application/json","x-vercel-forwarded-for":"192.0.2.1"})[name]||null},nextUrl:{origin:"https://www.primio.com.uz"},text:async()=>body});
+ assert.equal((await POST(request("{}","https://other.example"))).status,403);
+ assert.equal((await POST(request('{"uid":"victim","admin":true}'))).status,400);
+ assert.equal(minted.length,0);
+ const first=await POST(request());const second=await POST(request());
+ assert.equal(first.status,200);assert.equal(first.headers["Cache-Control"],"private, no-store");
+ assert.equal(first.body.token,"signed-token");assert.equal(second.status,200);
+ assert.match(minted[0].uid,/^guest_[0-9a-f-]{36}$/);assert.notEqual(minted[0].uid,minted[1].uid);
+ assert.deepEqual(JSON.parse(JSON.stringify(minted[0].claims)),{primioGuest:true});
+ assert.equal(data.size,1);assert.equal(JSON.stringify([...data]).includes("192.0.2.1"),false);
+});
+
+test("guest minting is rate-limited and signing failures reveal no credentials",async()=>{
+ const data=new Map();let calls=0;let fail=false;
+ const db={doc:path=>({path}),runTransaction:async work=>work({get:async ref=>({data:()=>data.get(ref.path)}),set:(ref,value)=>data.set(ref.path,value)})};
+ class Clock extends Date { static now(){return now;} }
+ const {POST}=loadSource("src/app/api/guest-session/route.ts",{
+  "node:crypto":require("node:crypto"),
+  "next/server":{NextResponse:{json:(body,options={})=>({body,status:options.status||200,headers:options.headers})}},
+  "@/lib/firebaseAdmin":{adminDb:db,adminAuth:{createUser:async()=>{},setCustomUserClaims:async()=>{},createCustomToken:async()=>{calls++;if(fail)throw new Error("private-key-must-not-escape");return "token";}}}
+ },{CRON_SECRET:"test-only-hash-key"},{Date:Clock});
+ const request=ip=>({headers:{get:name=>({origin:"https://www.primio.com.uz","content-type":"application/json","x-vercel-forwarded-for":ip})[name]||null},nextUrl:{origin:"https://www.primio.com.uz"},text:async()=>"{}"});
+ for(let i=0;i<20;i++)assert.equal((await POST(request("192.0.2.1"))).status,200);
+ const blocked=await POST(request("192.0.2.1"));assert.equal(blocked.status,429);assert.equal(blocked.headers["Retry-After"],"60");assert.equal(calls,20);
+ fail=true;const result=await POST(request("192.0.2.2"));assert.equal(result.status,503);assert.equal(JSON.stringify(result).includes("private-key-must-not-escape"),false);
+});
+
+test("guest fallback restores ownership, deduplicates concurrent calls and never masks other auth errors",async()=>{
+ const user={uid:"guest-fresh"};const auth={currentUser:null,authStateReady:async()=>{}};let anonymous=0;let fallback=0;
+ const {ensureGuestSession}=loadSource("src/lib/guest-session.ts",{
+  "firebase/auth":{signInAnonymously:async()=>{anonymous++;throw {code:"auth/admin-restricted-operation"};},signInWithCustomToken:async(got,token)=>{assert.equal(got,auth);assert.equal(token,"signed");got.currentUser=user;return {user};}},
+  "./firebase":{auth}
+ },{},{fetch:async(path,options)=>{fallback++;assert.equal(path,"/api/guest-session");assert.equal(options.body,"{}");return {ok:true,json:async()=>({token:"signed"})};}});
+ const [a,b]=await Promise.all([ensureGuestSession(),ensureGuestSession()]);
+ assert.equal(a,user);assert.equal(b,user);assert.equal(anonymous,1);assert.equal(fallback,1);
+ assert.equal(await ensureGuestSession(),user);assert.equal(fallback,1);
+ const restored={uid:"existing-owner"};const existing={currentUser:null,authStateReady:async()=>{existing.currentUser=restored;}};
+ const restoration=loadSource("src/lib/guest-session.ts",{"firebase/auth":{signInAnonymously:async()=>{throw new Error("Must not create a new identity");}},"./firebase":{auth:existing}});
+ assert.equal(await restoration.ensureGuestSession(),restored);
+ const networkError={code:"auth/network-request-failed"};
+ const network=loadSource("src/lib/guest-session.ts",{"firebase/auth":{signInAnonymously:async()=>{throw networkError;}},"./firebase":{auth:{currentUser:null,authStateReady:async()=>{}}}});
+ await assert.rejects(network.ensureGuestSession(),error=>error===networkError);
 });
